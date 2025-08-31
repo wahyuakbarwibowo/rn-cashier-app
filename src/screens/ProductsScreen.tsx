@@ -1,46 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, FlatList, StyleSheet } from "react-native";
-import { Product } from "../types/database";
-import { addProduct, getProducts, deleteProduct, updateProduct } from "../database/products";
+import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
+import { getAllProducts, deleteProduct } from "../database/products";
+import { Product } from "../types/product";
 
 export default function ProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [name, setName] = useState("");
-  const [sellingPrice, setSellingPrice] = useState("");
-  const [editId, setEditId] = useState<number | null>(null);
-
-  const loadProducts = async () => {
-    const items = await getProducts();
-    setProducts(items);
-  };
+  const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    if (isFocused) loadProducts();
+  }, [isFocused]);
 
-  const handleSave = async () => {
-    if (!name) return;
-    if (editId) {
-      await updateProduct(editId, {
-        name,
-        selling_price: parseFloat(sellingPrice) || 0,
-      });
-      setEditId(null);
-    } else {
-      await addProduct({
-        name,
-        selling_price: parseFloat(sellingPrice) || 0,
-      });
-    }
-    setName("");
-    setSellingPrice("");
-    loadProducts();
-  };
-
-  const handleEdit = (item: Product) => {
-    setEditId(item.id ?? null);
-    setName(item.name);
-    setSellingPrice(String(item.selling_price ?? ""));
+  const loadProducts = async () => {
+    const data = await getAllProducts();
+    setProducts(data);
   };
 
   const handleDelete = async (id: number) => {
@@ -49,59 +24,37 @@ export default function ProductsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Atur Barang</Text>
-
-      <TextInput
-        placeholder="Nama Produk"
-        value={name}
-        onChangeText={setName}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Harga Jual"
-        value={sellingPrice}
-        onChangeText={setSellingPrice}
-        keyboardType="numeric"
-        style={styles.input}
-      />
-      <Button title={editId ? "Update Produk" : "Tambah Produk"} onPress={handleSave} />
+    <View className="flex-1 p-4 bg-gray-100">
+      <TouchableOpacity
+        onPress={() => navigation.navigate("ProductForm")}
+        className="bg-green-600 p-3 rounded-xl mb-4"
+      >
+        <Text className="text-white font-bold text-center">+ Tambah Produk</Text>
+      </TouchableOpacity>
 
       <FlatList
         data={products}
         keyExtractor={(item) => item.id?.toString() ?? ""}
         renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text>
-              {item.name} - Rp {item.selling_price}
-            </Text>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <Button title="Edit" onPress={() => handleEdit(item)} />
-              <Button title="Hapus" onPress={() => item.id && handleDelete(item.id)} />
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ProductForm", { product: item })}
+            className="bg-white p-4 mb-3 rounded-xl shadow flex-row justify-between items-center"
+          >
+            <View>
+              <Text className="text-lg font-semibold">{item.name}</Text>
+              <Text className="text-gray-600">Kode: {item.code}</Text>
+              <Text className="text-gray-600">Harga Jual: Rp {item.salePrice}</Text>
+              <Text className="text-gray-600">Stok: {item.stock}</Text>
             </View>
-          </View>
+            <TouchableOpacity
+              onPress={() => handleDelete(item.id!)}
+              className="bg-red-500 px-3 py-2 rounded-lg"
+            >
+              <Text className="text-white font-medium">Hapus</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
         )}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, marginTop: 40 },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 12 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 8,
-    marginBottom: 8,
-    borderRadius: 6,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-});

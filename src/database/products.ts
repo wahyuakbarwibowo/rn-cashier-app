@@ -1,49 +1,78 @@
-import { getDB } from "./initDB";
-import { Product } from "../types/database";
+import * as SQLite from "expo-sqlite";
+import { Product } from "../types/product";
 
-// Tambah produk
-export const addProduct = async (product: Product): Promise<void> => {
-  const db = await getDB();
-  await db.runAsync(
-    `INSERT INTO products (code, name, purchase_price, selling_price, stock, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+const db = SQLite.openDatabaseSync("kasir.db");
+
+// CREATE
+export async function addProduct(product: Product): Promise<number> {
+  const now = new Date().toISOString();
+  const result = await db.runAsync(
+    `INSERT INTO products 
+      (code, name, purchase_price, purchase_unit, purchase_package_qty, 
+       sale_price, sale_unit, sale_package_qty, discount, stock, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      product.code ?? null,
+      product.code,
       product.name,
-      product.purchase_price ?? 0,
-      product.selling_price ?? 0,
-      product.stock ?? 0,
+      product.purchasePrice,
+      product.purchaseUnit || null,
+      product.purchasePackageQty || null,
+      product.salePrice,
+      product.saleUnit || null,
+      product.salePackageQty || null,
+      product.discount || 0,
+      product.stock || 0,
+      now,
+      now,
     ]
   );
-};
+  return result.lastInsertRowId as number;
+}
 
-// Ambil semua produk
-export const getProducts = async (): Promise<Product[]> => {
-  const db = await getDB();
-  const result = await db.getAllAsync<Product>("SELECT * FROM products ORDER BY id DESC");
+// READ (all)
+export async function getAllProducts(): Promise<Product[]> {
+  const result = await db.getAllAsync<Product>(
+    "SELECT * FROM products ORDER BY id DESC"
+  );
   return result;
-};
+}
 
-// Update produk
-export const updateProduct = async (id: number, product: Product): Promise<void> => {
-  const db = await getDB();
+// READ (by id)
+export async function getProductById(id: number): Promise<Product | null> {
+  const result = await db.getFirstAsync<Product>(
+    "SELECT * FROM products WHERE id = ?",
+    [id]
+  );
+  return result || null;
+}
+
+// UPDATE
+export async function updateProduct(id: number, product: Product): Promise<void> {
+  const now = new Date().toISOString();
   await db.runAsync(
     `UPDATE products 
-     SET code = ?, name = ?, purchase_price = ?, selling_price = ?, stock = ?, updated_at = datetime('now')
+     SET code = ?, name = ?, purchase_price = ?, purchase_unit = ?, purchase_package_qty = ?, 
+         sale_price = ?, sale_unit = ?, sale_package_qty = ?, discount = ?, stock = ?, updated_at = ?
      WHERE id = ?`,
     [
-      product.code ?? null,
+      product.code,
       product.name,
-      product.purchase_price ?? 0,
-      product.selling_price ?? 0,
-      product.stock ?? 0,
+      product.purchasePrice,
+      product.purchaseUnit || null,
+      product.purchasePackageQty || null,
+      product.salePrice,
+      product.saleUnit || null,
+      product.salePackageQty || null,
+      product.discount || 0,
+      product.stock || 0,
+      now,
       id,
     ]
   );
-};
+}
 
-// Hapus produk
-export const deleteProduct = async (id: number): Promise<void> => {
-  const db = await getDB();
+// DELETE
+export async function deleteProduct(id: number): Promise<void> {
   await db.runAsync("DELETE FROM products WHERE id = ?", [id]);
-};
+}
+
