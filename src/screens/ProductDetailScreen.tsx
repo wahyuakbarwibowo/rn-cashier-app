@@ -90,6 +90,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F3F4F6",
     padding: 16,
+    paddingBottom: 32,
   },
   card: {
     backgroundColor: "#FFFFFF",
