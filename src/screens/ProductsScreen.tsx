@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, FlatList, StyleSheet } from "react-native";
+import { View, Text, TextInput, Button, FlatList, StyleSheet, TouchableOpacity } from "react-native";
 import { Product } from "../types/database";
 import { addProduct, getProducts, deleteProduct, updateProduct } from "../database/products";
+import { DrawerScreenProps } from "@react-navigation/drawer";
+import { DrawerParamList } from "../navigation/types";
 
-export default function ProductsScreen() {
+type Props = DrawerScreenProps<
+  DrawerParamList,
+  "Product"
+>;
+
+export default function ProductsScreen({ navigation }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
   const [name, setName] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
@@ -71,15 +78,19 @@ export default function ProductsScreen() {
         data={products}
         keyExtractor={(item) => item.id?.toString() ?? ""}
         renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text>
-              {item.name} - Rp {item.selling_price}
-            </Text>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <Button title="Edit" onPress={() => handleEdit(item)} />
-              <Button title="Hapus" onPress={() => item.id && handleDelete(item.id)} />
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ProductDetail", { product: item })}
+          >
+            <View style={styles.row}>
+              <Text>
+                {item.name} - Rp {item.selling_price}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Button title="Edit" onPress={() => handleEdit(item)} />
+                <Button title="Hapus" onPress={() => item.id && handleDelete(item.id)} />
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
