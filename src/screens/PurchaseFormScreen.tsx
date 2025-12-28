@@ -8,9 +8,9 @@ import {
   StyleSheet,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { getAllProducts } from "../database/products";
+import { getProducts } from "../database/products";
 import { addPurchase } from "../database/purchases";
-import { Product } from "../types/product";
+import { Product } from "../types/database";
 
 export default function PurchaseFormScreen() {
   const navigation = useNavigation<any>();
@@ -25,7 +25,7 @@ export default function PurchaseFormScreen() {
   }, []);
 
   const loadProducts = async () => {
-    const data = await getAllProducts();
+    const data = await getProducts();
     setProducts(data);
   };
 
@@ -33,7 +33,7 @@ export default function PurchaseFormScreen() {
     if (!selectedItems.find((i) => i.product.id === product.id)) {
       setSelectedItems([
         ...selectedItems,
-        { product, qty: 1, price: product.purchasePrice },
+        { product, qty: 1, price: product.purchase_price || 0 },
       ]);
     }
   };
