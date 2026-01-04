@@ -10,7 +10,7 @@ export default function DrawerNavigator() {
   return (
     <Drawer.Navigator initialRouteName="Product">
       <Drawer.Screen name="Product" component={ProductsScreen} />
-      <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} />
+      <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: 'Purchase Form' }} />
       <Drawer.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: "Detail Product" }} />
     </Drawer.Navigator>
   )
