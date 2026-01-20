@@ -1,12 +1,11 @@
-import * as SQLite from "expo-sqlite";
+import { getDB } from "./initDB";
 import { Sale, SaleItem } from "../types/database";
-
-const db = SQLite.openDatabaseSync("kasir.db");
 
 export async function addSale(
   sale: Omit<Sale, "id">,
   items: { product_id: number; qty: number; price: number; subtotal: number }[]
 ): Promise<number> {
+  const db = await getDB();
   const createdAt = new Date().toISOString();
   
   const result = await db.runAsync(
@@ -37,16 +36,26 @@ export async function addSale(
     );
   }
 
+  // Create receivable if payment is less than total
+  if (sale.paid < sale.total && sale.customer_id) {
+    await db.runAsync(
+      "INSERT INTO receivables (sale_id, customer_id, amount, due_date, status) VALUES (?, ?, ?, ?, ?)",
+      [saleId, sale.customer_id, sale.total - sale.paid, createdAt, 'pending']
+    );
+  }
+
   return saleId;
 }
 
 export async function getAllSales() {
+  const db = await getDB();
   return await db.getAllAsync<Sale>(
     "SELECT * FROM sales ORDER BY id DESC"
   );
 }
 
 export async function getSaleItems(saleId: number) {
+  const db = await getDB();
   return await db.getAllAsync<SaleItem>(
     "SELECT * FROM sales_items WHERE sale_id = ?",
     [saleId]

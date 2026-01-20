@@ -15,12 +15,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { getProducts } from "../database/products";
 import { addSale } from "../database/sales";
-import { Product } from "../types/database";
+import { getCustomers } from "../database/customers";
+import { getPaymentMethods } from "../database/payment_methods";
+import { Product, Customer, PaymentMethod } from "../types/database";
 
 type CartItem = {
   product: Product;
   qty: number;
   price: number;
+  isPackage: boolean;
 };
 
 export default function SalesTransactionScreen() {
@@ -31,31 +34,53 @@ export default function SalesTransactionScreen() {
   const [paidAmount, setPaidAmount] = useState<string>("0");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<number | null>(null);
+
   useEffect(() => {
-    loadProducts();
+    loadInitialData();
   }, []);
+
+  const loadInitialData = async () => {
+    const [p, c, m] = await Promise.all([
+      getProducts(),
+      getCustomers(),
+      getPaymentMethods()
+    ]);
+    setProducts(p);
+    setCustomers(c);
+    setPaymentMethods(m);
+    if (m.length > 0) setSelectedPaymentMethodId(m[0].id!);
+  };
 
   const loadProducts = async () => {
     const data = await getProducts();
     setProducts(data);
   };
 
+
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const handleAddToCart = (product: Product) => {
-    const existing = cart.find((i) => i.product.id === product.id);
-    if (existing) {
-      updateCartItem(product.id!, { qty: existing.qty + 1 });
+  const handleAddToCart = (product: Product, asPackage: boolean = false) => {
+    const existingIndex = cart.findIndex((i) => i.product.id === product.id && i.isPackage === asPackage);
+    
+    if (existingIndex > -1) {
+      const newCart = [...cart];
+      newCart[existingIndex].qty += 1;
+      setCart(newCart);
     } else {
       setCart([
         ...cart,
         {
           product,
           qty: 1,
-          price: product.selling_price || 0,
+          price: asPackage ? (product.package_price || 0) : (product.selling_price || 0),
+          isPackage: asPackage,
         },
       ]);
     }
@@ -63,17 +88,18 @@ export default function SalesTransactionScreen() {
 
   const updateCartItem = (
     id: number,
+    isPackage: boolean,
     changes: Partial<Pick<CartItem, "qty" | "price">>
   ) => {
     setCart((prev) =>
       prev.map((i) =>
-        i.product.id === id ? { ...i, ...changes } : i
+        (i.product.id === id && i.isPackage === isPackage) ? { ...i, ...changes } : i
       )
     );
   };
 
-  const handleRemoveFromCart = (id: number) => {
-    setCart((prev) => prev.filter((i) => i.product.id !== id));
+  const handleRemoveFromCart = (id: number, isPackage: boolean) => {
+    setCart((prev) => prev.filter((i) => !(i.product.id === id && i.isPackage === isPackage)));
   };
 
   const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
@@ -92,17 +118,21 @@ export default function SalesTransactionScreen() {
     try {
       await addSale(
         {
+          customer_id: selectedCustomerId,
+          payment_method_id: selectedPaymentMethodId,
           total,
           paid: Number(paidAmount),
           change: change,
         },
         cart.map((i) => ({
           product_id: i.product.id!,
-          qty: i.qty,
+          qty: i.isPackage ? i.qty * (i.product.package_qty || 1) : i.qty,
           price: i.price,
           subtotal: i.qty * i.price,
         }))
       );
+
+
 
       Alert.alert("Sukses", "Transaksi berhasil disimpan", [
         { text: "OK", onPress: () => navigation.navigate("Product") },
@@ -121,7 +151,41 @@ export default function SalesTransactionScreen() {
       <View style={styles.container}>
         <Text style={styles.header}>🛒 Penjualan Baru</Text>
 
+        {/* Customer & Payment Method */}
+        <View style={styles.topSelectors}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
+            <TouchableOpacity 
+              style={[styles.selectorPill, !selectedCustomerId && styles.activeSelectorPill]}
+              onPress={() => setSelectedCustomerId(null)}
+            >
+              <Text style={[styles.selectorPillText, !selectedCustomerId && styles.activeSelectorPillText]}>Umum</Text>
+            </TouchableOpacity>
+            {customers.map(c => (
+              <TouchableOpacity 
+                key={c.id} 
+                style={[styles.selectorPill, selectedCustomerId === c.id && styles.activeSelectorPill]}
+                onPress={() => setSelectedCustomerId(c.id!)}
+              >
+                <Text style={[styles.selectorPillText, selectedCustomerId === c.id && styles.activeSelectorPillText]}>{c.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
+            {paymentMethods.map(m => (
+              <TouchableOpacity 
+                key={m.id} 
+                style={[styles.selectorPill, selectedPaymentMethodId === m.id && styles.activeSelectorPill]}
+                onPress={() => setSelectedPaymentMethodId(m.id!)}
+              >
+                <Text style={[styles.selectorPillText, selectedPaymentMethodId === m.id && styles.activeSelectorPillText]}>{m.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Search & Product Selection */}
+
         <View style={styles.card}>
           <TextInput
             placeholder="Cari produk atau barcode..."
@@ -136,15 +200,28 @@ export default function SalesTransactionScreen() {
             showsHorizontalScrollIndicator={false}
             style={styles.productList}
             renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.productPill}
-                onPress={() => handleAddToCart(item)}
-              >
-                <Text style={styles.productPillText}>{item.name}</Text>
-                <Text style={styles.productPillPrice}>
-                  Rp {item.selling_price?.toLocaleString("id-ID")}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.productPillContainer}>
+                <TouchableOpacity
+                  style={styles.productPill}
+                  onPress={() => handleAddToCart(item, false)}
+                >
+                  <Text style={styles.productPillText}>{item.name}</Text>
+                  <Text style={styles.productPillPrice}>
+                    Rp {item.selling_price?.toLocaleString("id-ID")}
+                  </Text>
+                </TouchableOpacity>
+                {item.package_price ? (
+                  <TouchableOpacity
+                    style={[styles.productPill, styles.packagePill]}
+                    onPress={() => handleAddToCart(item, true)}
+                  >
+                    <Text style={styles.productPillText}>Paket ({item.package_qty})</Text>
+                    <Text style={styles.productPillPrice}>
+                      Rp {item.package_price?.toLocaleString("id-ID")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             )}
           />
         </View>
@@ -154,11 +231,13 @@ export default function SalesTransactionScreen() {
           <Text style={styles.cardTitle}>Keranjang</Text>
           <FlatList
             data={cart}
-            keyExtractor={(item) => item.product.id?.toString() ?? ""}
+            keyExtractor={(item, index) => `${item.product.id}-${item.isPackage}-${index}`}
             renderItem={({ item }) => (
               <View style={styles.cartItem}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.cartItemName}>{item.product.name}</Text>
+                  <Text style={styles.cartItemName}>
+                    {item.product.name} {item.isPackage ? '(Paket)' : ''}
+                  </Text>
                   <Text style={styles.cartItemPrice}>
                     @Rp {item.price.toLocaleString("id-ID")}
                   </Text>
@@ -166,7 +245,7 @@ export default function SalesTransactionScreen() {
                 <View style={styles.qtyContainer}>
                   <TouchableOpacity
                     onPress={() =>
-                      updateCartItem(item.product.id!, {
+                      updateCartItem(item.product.id!, item.isPackage, {
                         qty: Math.max(1, item.qty - 1),
                       })
                     }
@@ -178,7 +257,7 @@ export default function SalesTransactionScreen() {
                     value={item.qty.toString()}
                     keyboardType="numeric"
                     onChangeText={(t) =>
-                      updateCartItem(item.product.id!, {
+                      updateCartItem(item.product.id!, item.isPackage, {
                         qty: parseInt(t) || 0,
                       })
                     }
@@ -186,7 +265,7 @@ export default function SalesTransactionScreen() {
                   />
                   <TouchableOpacity
                     onPress={() =>
-                      updateCartItem(item.product.id!, { qty: item.qty + 1 })
+                      updateCartItem(item.product.id!, item.isPackage, { qty: item.qty + 1 })
                     }
                     style={styles.qtyBtn}
                   >
@@ -194,7 +273,7 @@ export default function SalesTransactionScreen() {
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity
-                  onPress={() => handleRemoveFromCart(item.product.id!)}
+                  onPress={() => handleRemoveFromCart(item.product.id!, item.isPackage)}
                   style={styles.removeBtn}
                 >
                   <Text style={{ color: "red" }}>✕</Text>
@@ -206,6 +285,7 @@ export default function SalesTransactionScreen() {
             }
           />
         </View>
+
 
         {/* Payment & Total */}
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
@@ -267,7 +347,36 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: "#111827",
   },
+  topSelectors: {
+    marginBottom: 12,
+  },
+  selectorScroll: {
+    marginBottom: 8,
+  },
+  selectorPill: {
+    backgroundColor: "#FFF",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    height: 40,
+    justifyContent: 'center',
+  },
+  activeSelectorPill: {
+    backgroundColor: "#111827",
+    borderColor: "#111827",
+  },
+  selectorPillText: {
+    color: "#6B7280",
+    fontWeight: "600",
+  },
+  activeSelectorPillText: {
+    color: "#FFF",
+  },
   card: {
+
     backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 16,
@@ -290,14 +399,23 @@ const styles = StyleSheet.create({
   productList: {
     marginBottom: 8,
   },
+  productPillContainer: {
+    flexDirection: 'row',
+    marginRight: 8,
+  },
   productPill: {
     backgroundColor: "#EFF6FF",
     padding: 10,
     borderRadius: 8,
-    marginRight: 8,
     borderWidth: 1,
     borderColor: "#BFDBFE",
   },
+  packagePill: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FDE68A",
+    marginLeft: 4,
+  },
+
   productPillText: {
     fontWeight: "600",
     fontSize: 14,

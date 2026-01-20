@@ -11,7 +11,12 @@
   "dependencies": {
     "@react-navigation/drawer": "^7.7.10",
     "@react-navigation/native": "^7.1.26",
-    "expo": "^54.0.0",
+    "expo": "^54.0.31",
+    "expo-barcode-scanner": "^13.0.1",
+    "expo-camera": "^17.0.10",
+    "expo-document-picker": "~14.0.8",
+    "expo-file-system": "~19.0.21",
+    "expo-sharing": "~14.0.8",
     "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",

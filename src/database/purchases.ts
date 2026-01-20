@@ -1,13 +1,12 @@
-import * as SQLite from "expo-sqlite";
+import { getDB } from "./initDB";
 import { Purchase, PurchaseItem } from "../types/purchase";
-
-const db = SQLite.openDatabaseSync("kasir.db");
 
 // CREATE Purchase
 export async function addPurchase(
   purchase: Omit<Purchase, "id">,
   items: Omit<PurchaseItem, "id" | "purchaseId">[]
 ): Promise<number> {
+  const db = await getDB();
   const result = await db.runAsync(
     "INSERT INTO purchases (date, supplier, total) VALUES (?, ?, ?)",
     [purchase.date, purchase.supplier || null, purchase.total]
@@ -34,6 +33,7 @@ export async function addPurchase(
 
 // READ all purchases
 export async function getAllPurchases() {
+  const db = await getDB();
   return await db.getAllAsync<Purchase>(
     "SELECT * FROM purchases ORDER BY id DESC"
   );
@@ -41,6 +41,7 @@ export async function getAllPurchases() {
 
 // READ purchase detail items
 export async function getPurchaseItems(purchaseId: number) {
+  const db = await getDB();
   return await db.getAllAsync<PurchaseItem>(
     "SELECT * FROM purchase_items WHERE purchase_id = ?",
     [purchaseId]

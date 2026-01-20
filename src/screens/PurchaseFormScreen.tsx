@@ -17,6 +17,7 @@ type SelectedItem = {
   product: Product;
   qty: number;
   price: number;
+  isPackage: boolean;
 };
 
 export default function PurchaseFormScreen() {
@@ -25,42 +26,53 @@ export default function PurchaseFormScreen() {
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [supplier, setSupplier] = useState("");
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
   const loadProducts = async () => {
     const data = await getProducts();
     setProducts(data);
   };
 
-  const handleAddItem = (product: Product) => {
-    if (selectedItems.find((i) => i.product.id === product.id)) return;
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadProducts();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
-    setSelectedItems([
-      ...selectedItems,
-      {
-        product,
-        qty: 1,
-        price: product.purchase_price || 0,
-      },
-    ]);
+  const handleAddItem = (product: Product, asPackage: boolean = false) => {
+    const existingIndex = selectedItems.findIndex((i) => i.product.id === product.id && i.isPackage === asPackage);
+    
+    if (existingIndex > -1) {
+      const newList = [...selectedItems];
+      newList[existingIndex].qty += 1;
+      setSelectedItems(newList);
+    } else {
+      setSelectedItems([
+        ...selectedItems,
+        {
+          product,
+          qty: 1,
+          price: asPackage ? (product.purchase_package_price || 0) : (product.purchase_price || 0),
+          isPackage: asPackage,
+        },
+      ]);
+    }
   };
 
   const updateItem = (
     id: number,
+    isPackage: boolean,
     changes: Partial<Pick<SelectedItem, "qty" | "price">>
   ) => {
     setSelectedItems((prev) =>
       prev.map((i) =>
-        i.product.id === id ? { ...i, ...changes } : i
+        (i.product.id === id && i.isPackage === isPackage) ? { ...i, ...changes } : i
       )
     );
   };
 
-  const handleRemoveItem = (id: number) => {
+  const handleRemoveItem = (id: number, isPackage: boolean) => {
     setSelectedItems((prev) =>
-      prev.filter((i) => i.product.id !== id)
+      prev.filter((i) => !(i.product.id === id && i.isPackage === isPackage))
     );
   };
 
@@ -87,18 +99,28 @@ export default function PurchaseFormScreen() {
       },
       selectedItems.map((i) => ({
         productId: i.product.id!,
-        qty: i.qty,
+        qty: i.isPackage ? (i.qty * (i.product.purchase_package_qty || 1)) : i.qty,
         price: i.price,
       }))
     );
 
-    navigation.goBack();
+    Alert.alert("Sukses", "Pembelian berhasil disimpan", [
+      { text: "OK", onPress: () => navigation.goBack() }
+    ]);
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <Text style={styles.header}>🧾 Pembelian</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>🧾 Pembelian</Text>
+        <TouchableOpacity 
+          style={styles.addNewBtn} 
+          onPress={() => navigation.navigate("Product")}
+        >
+          <Text style={styles.addNewBtnText}>+ Barang Baru</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Supplier */}
       <View style={styles.card}>
@@ -120,61 +142,74 @@ export default function PurchaseFormScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.productPill}
-              onPress={() => handleAddItem(item)}
-            >
-              <Text style={styles.productPillText}>{item.name}</Text>
-            </TouchableOpacity>
+            <View style={styles.productOption}>
+              <TouchableOpacity
+                style={styles.productPill}
+                onPress={() => handleAddItem(item, false)}
+              >
+                <Text style={styles.productPillText}>{item.name}</Text>
+              </TouchableOpacity>
+              {item.purchase_package_price ? (
+                <TouchableOpacity
+                  style={[styles.productPill, styles.packagePill]}
+                  onPress={() => handleAddItem(item, true)}
+                >
+                  <Text style={styles.productPillText}>Paket ({item.purchase_package_qty})</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           )}
         />
       </View>
 
       {/* Selected Items */}
-      <View style={styles.card}>
+      <View style={[styles.card, { flex: 1 }]}>
         <Text style={styles.cardTitle}>Item Dipilih</Text>
 
-        {selectedItems.length === 0 && (
-          <Text style={styles.emptyText}>
-            Belum ada barang dipilih
-          </Text>
-        )}
+        <FlatList
+          data={selectedItems}
+          keyExtractor={(item, index) => `${item.product.id}-${item.isPackage}-${index}`}
+          renderItem={({ item }) => (
+            <View style={styles.itemRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemName}>
+                  {item.product.name} {item.isPackage ? '(Paket)' : ''}
+                </Text>
+                <Text style={styles.itemSubtotal}>
+                  Subtotal: Rp {(item.qty * item.price).toLocaleString("id-ID")}
+                </Text>
+              </View>
 
-        {selectedItems.map((i) => (
-          <View key={i.product.id} style={styles.itemRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>{i.product.name}</Text>
-              <Text style={styles.itemSubtotal}>
-                Subtotal: Rp {(i.qty * i.price).toLocaleString("id-ID")}
-              </Text>
+              <View style={styles.counter}>
+                <TextInput
+                  value={item.qty.toString()}
+                  onChangeText={(t) =>
+                    updateItem(item.product.id!, item.isPackage, { qty: Number(t) || 0 })
+                  }
+                  keyboardType="numeric"
+                  style={styles.counterInput}
+                />
+                <TextInput
+                  value={item.price.toString()}
+                  onChangeText={(t) =>
+                    updateItem(item.product.id!, item.isPackage, { price: Number(t) || 0 })
+                  }
+                  keyboardType="numeric"
+                  style={styles.counterInput}
+                />
+              </View>
+
+              <TouchableOpacity
+                onPress={() => handleRemoveItem(item.product.id!, item.isPackage)}
+              >
+                <Text style={styles.remove}>✕</Text>
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.counter}>
-              <TextInput
-                value={i.qty.toString()}
-                onChangeText={(t) =>
-                  updateItem(i.product.id!, { qty: Number(t) || 0 })
-                }
-                keyboardType="numeric"
-                style={styles.counterInput}
-              />
-              <TextInput
-                value={i.price.toString()}
-                onChangeText={(t) =>
-                  updateItem(i.product.id!, { price: Number(t) || 0 })
-                }
-                keyboardType="numeric"
-                style={styles.counterInput}
-              />
-            </View>
-
-            <TouchableOpacity
-              onPress={() => handleRemoveItem(i.product.id!)}
-            >
-              <Text style={styles.remove}>✕</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+          )}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>Belum ada barang dipilih</Text>
+          }
+        />
       </View>
 
       {/* Footer */}
@@ -199,6 +234,7 @@ export default function PurchaseFormScreen() {
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -210,8 +246,34 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "700",
     color: "#111827",
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
+  addNewBtn: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  addNewBtnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  productOption: {
+    flexDirection: 'row',
+    marginRight: 8,
+  },
+  packagePill: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FDE68A",
+    marginLeft: 4,
+  },
+
 
   card: {
     backgroundColor: "#FFFFFF",

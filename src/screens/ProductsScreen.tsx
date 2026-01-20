@@ -7,7 +7,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Modal,
 } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { Product } from "../types/database";
 import {
   addProduct,
@@ -25,12 +27,18 @@ export default function ProductsScreen({ navigation }: Props) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
+  const [purchasePackagePrice, setPurchasePackagePrice] = useState("");
+  const [purchasePackageQty, setPurchasePackageQty] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
   const [packagePrice, setPackagePrice] = useState("");
   const [packageQty, setPackageQty] = useState("");
   const [discount, setDiscount] = useState("");
   const [stock, setStock] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
+
+  // Camera state
+  const [permission, requestPermission] = useCameraPermissions();
+  const [isScanning, setIsScanning] = useState(false);
 
   const loadProducts = async () => {
     const items = await getProducts();
@@ -45,6 +53,8 @@ export default function ProductsScreen({ navigation }: Props) {
     setCode("");
     setName("");
     setPurchasePrice("");
+    setPurchasePackagePrice("");
+    setPurchasePackageQty("");
     setSellingPrice("");
     setPackagePrice("");
     setPackageQty("");
@@ -63,6 +73,8 @@ export default function ProductsScreen({ navigation }: Props) {
       code: code.trim() || undefined,
       name: name.trim(),
       purchase_price: parseFloat(purchasePrice) || 0,
+      purchase_package_price: parseFloat(purchasePackagePrice) || 0,
+      purchase_package_qty: parseInt(purchasePackageQty) || 0,
       selling_price: parseFloat(sellingPrice) || 0,
       package_price: parseFloat(packagePrice) || 0,
       package_qty: parseInt(packageQty) || 0,
@@ -85,11 +97,29 @@ export default function ProductsScreen({ navigation }: Props) {
     setCode(item.code || "");
     setName(item.name);
     setPurchasePrice(String(item.purchase_price ?? ""));
+    setPurchasePackagePrice(String(item.purchase_package_price ?? ""));
+    setPurchasePackageQty(String(item.purchase_package_qty ?? ""));
     setSellingPrice(String(item.selling_price ?? ""));
     setPackagePrice(String(item.package_price ?? ""));
     setPackageQty(String(item.package_qty ?? ""));
     setDiscount(String(item.discount ?? ""));
     setStock(String(item.stock ?? ""));
+  };
+
+  const handleScan = async () => {
+    if (!permission) {
+      const res = await requestPermission();
+      if (!res.granted) {
+        Alert.alert("Permission", "Akses kamera dibutuhkan untuk scan barcode");
+        return;
+      }
+    }
+    setIsScanning(true);
+  };
+
+  const onBarcodeScanned = ({ data }: { data: string }) => {
+    setCode(data);
+    setIsScanning(false);
   };
 
   const handleDelete = (id: number) => {
@@ -121,87 +151,116 @@ export default function ProductsScreen({ navigation }: Props) {
           {editId ? "Edit Produk" : "Tambah Produk"}
         </Text>
 
-        <View>
-          <View style={styles.row}>
-            <TextInput
-              placeholder="Kode (Scan)"
-              value={code}
-              onChangeText={setCode}
-              style={[styles.input, { flex: 1, marginRight: 8 }]}
-            />
-            <TextInput
-              placeholder="Stok"
-              value={stock}
-              onChangeText={setStock}
-              keyboardType="numeric"
-              style={[styles.input, { width: 80 }]}
-            />
-          </View>
+        <FlatList
+          data={[1]}
+          keyExtractor={() => "form"}
+          renderItem={() => (
+            <View>
+              {/* Basic Info */}
+              <View style={styles.row}>
+                <TextInput
+                  placeholder="Kode (Scan)"
+                  value={code}
+                  onChangeText={setCode}
+                  style={[styles.input, { flex: 1, marginRight: 8 }]}
+                />
+                <TouchableOpacity style={styles.scanBtn} onPress={handleScan}>
+                  <Text style={styles.scanBtnText}>Scan</Text>
+                </TouchableOpacity>
+              </View>
 
-          <TextInput
-            placeholder="Nama produk"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-          />
+              <TextInput
+                placeholder="Nama produk"
+                value={name}
+                onChangeText={setName}
+                style={styles.input}
+              />
 
-          <View style={styles.row}>
-            <TextInput
-              placeholder="Harga Beli"
-              value={purchasePrice}
-              onChangeText={setPurchasePrice}
-              keyboardType="numeric"
-              style={[styles.input, { flex: 1, marginRight: 8 }]}
-            />
-            <TextInput
-              placeholder="Harga Jual"
-              value={sellingPrice}
-              onChangeText={setSellingPrice}
-              keyboardType="numeric"
-              style={[styles.input, { flex: 1 }]}
-            />
-          </View>
+              <TextInput
+                placeholder="Stok"
+                value={stock}
+                onChangeText={setStock}
+                keyboardType="numeric"
+                style={styles.input}
+              />
 
-          <View style={styles.row}>
-            <TextInput
-              placeholder="Harga Paket"
-              value={packagePrice}
-              onChangeText={setPackagePrice}
-              keyboardType="numeric"
-              style={[styles.input, { flex: 1, marginRight: 8 }]}
-            />
-            <TextInput
-              placeholder="Isi Paket"
-              value={packageQty}
-              onChangeText={setPackageQty}
-              keyboardType="numeric"
-              style={[styles.input, { flex: 1 }]}
-            />
-          </View>
+              {/* Purchase Pricing */}
+              <Text style={styles.subTitle}>Harga Beli</Text>
+              <View style={styles.row}>
+                <TextInput
+                  placeholder="Satuan"
+                  value={purchasePrice}
+                  onChangeText={setPurchasePrice}
+                  keyboardType="numeric"
+                  style={[styles.input, { flex: 1, marginRight: 8 }]}
+                />
+                <TextInput
+                  placeholder="Paket"
+                  value={purchasePackagePrice}
+                  onChangeText={setPurchasePackagePrice}
+                  keyboardType="numeric"
+                  style={[styles.input, { flex: 1, marginRight: 8 }]}
+                />
+                <TextInput
+                  placeholder="Isi"
+                  value={purchasePackageQty}
+                  onChangeText={setPurchasePackageQty}
+                  keyboardType="numeric"
+                  style={[styles.input, { width: 60 }]}
+                />
+              </View>
 
-          <TextInput
-            placeholder="Diskon (%)"
-            value={discount}
-            onChangeText={setDiscount}
-            keyboardType="numeric"
-            style={styles.input}
-          />
+              {/* Selling Pricing */}
+              <Text style={styles.subTitle}>Harga Jual</Text>
+              <View style={styles.row}>
+                <TextInput
+                  placeholder="Satuan"
+                  value={sellingPrice}
+                  onChangeText={setSellingPrice}
+                  keyboardType="numeric"
+                  style={[styles.input, { flex: 1, marginRight: 8 }]}
+                />
+                <TextInput
+                  placeholder="Paket"
+                  value={packagePrice}
+                  onChangeText={setPackagePrice}
+                  keyboardType="numeric"
+                  style={[styles.input, { flex: 1, marginRight: 8 }]}
+                />
+                <TextInput
+                  placeholder="Isi"
+                  value={packageQty}
+                  onChangeText={setPackageQty}
+                  keyboardType="numeric"
+                  style={[styles.input, { width: 60 }]}
+                />
+              </View>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
-            <Text style={styles.primaryButtonText}>
-              {editId ? "Update" : "Simpan"}
-            </Text>
-          </TouchableOpacity>
-          
-          {editId && (
-            <TouchableOpacity 
-              style={[styles.secondaryButton, { marginTop: 8 }]} 
-              onPress={resetForm}
-            >
-              <Text style={styles.secondaryButtonText}>Batal</Text>
-            </TouchableOpacity>
+              <TextInput
+                placeholder="Diskon (%)"
+                value={discount}
+                onChangeText={setDiscount}
+                keyboardType="numeric"
+                style={styles.input}
+              />
+
+              <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
+                <Text style={styles.primaryButtonText}>
+                  {editId ? "Update" : "Simpan"}
+                </Text>
+              </TouchableOpacity>
+              
+              {editId && (
+                <TouchableOpacity 
+                  style={[styles.secondaryButton, { marginTop: 8 }]} 
+                  onPress={resetForm}
+                >
+                  <Text style={styles.secondaryButtonText}>Batal</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
-        </View>
+        />
       </View>
 
       {/* Product List */}
@@ -244,6 +303,22 @@ export default function ProductsScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
       />
+
+      {/* Barcode Scanner Modal */}
+      <Modal visible={isScanning} animationType="slide">
+        <View style={styles.scannerContainer}>
+          <CameraView
+            onBarcodeScanned={isScanning ? onBarcodeScanned : undefined}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={styles.overlay}>
+             <Text style={styles.scanText}>Scan Barcode Barang</Text>
+             <TouchableOpacity style={styles.closeBtn} onPress={() => setIsScanning(false)}>
+                <Text style={styles.closeBtnText}>Batal</Text>
+             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -260,6 +335,13 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 16,
   },
+  subTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#374151",
+    marginBottom: 8,
+    marginTop: 4,
+  },
 
   /* Form */
   card: {
@@ -267,6 +349,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     marginBottom: 20,
+    maxHeight: 400, // Limit form height to keep list visible
 
     elevation: 6,
     shadowColor: "#000",
@@ -292,6 +375,18 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     marginBottom: 2,
+    alignItems: 'center',
+  },
+  scanBtn: {
+    backgroundColor: "#3B82F6",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  scanBtnText: {
+    color: "#FFF",
+    fontWeight: "bold",
   },
   primaryButton: {
     backgroundColor: "#111827",
@@ -379,4 +474,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+
+  /* Scanner */
+  scannerContainer: {
+    flex: 1,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scanText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  closeBtn: {
+    backgroundColor: '#FF3B30',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  closeBtnText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  }
 });
+
