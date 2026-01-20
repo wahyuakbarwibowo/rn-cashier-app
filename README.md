@@ -73,7 +73,7 @@ Aplikasi ini menggunakan `bun` untuk manajemen package tercepat:
 
 1. **Clone & Install**
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/wahyuakbarwibowo/rn-cashier-app
    cd rn-cashier-app
    bun install
    ```
