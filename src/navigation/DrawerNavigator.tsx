@@ -14,24 +14,34 @@ import PulsaTransactionScreen from "../screens/PulsaTransactionScreen";
 import ReceivablesScreen from "../screens/ReceivablesScreen";
 import PayablesScreen from "../screens/PayablesScreen";
 import BackupScreen from "../screens/BackupScreen";
+import DashboardScreen from "../screens/DashboardScreen";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
 export default function DrawerNavigator() {
   return (
-    <Drawer.Navigator initialRouteName="Product">
-      <Drawer.Screen name="Product" component={ProductsScreen} />
-      <Drawer.Screen name="SalesTransaction" component={SalesTransactionScreen} options={{ title: 'Transaksi Penjualan' }} />
-      <Drawer.Screen name="SalesHistory" component={SalesHistoryScreen} options={{ title: 'Riwayat Transaksi' }} />
-      <Drawer.Screen name="Reports" component={ReportsScreen} options={{ title: 'Laporan' }} />
-      <Drawer.Screen name="Pulsa" component={PulsaTransactionScreen} options={{ title: 'Transaksi Pulsa' }} />
-      <Drawer.Screen name="Customers" component={CustomersScreen} options={{ title: 'Daftar Pelanggan' }} />
-      <Drawer.Screen name="Receivables" component={ReceivablesScreen} options={{ title: 'Piutang Pelanggan' }} />
-      <Drawer.Screen name="Payables" component={PayablesScreen} options={{ title: 'Hutang ke Supplier' }} />
-      <Drawer.Screen name="Backup" component={BackupScreen} options={{ title: 'Backup & Restore' }} />
-      <Drawer.Screen name="PaymentMethods" component={PaymentMethodsScreen} options={{ title: 'Cara Bayar' }} />
-      <Drawer.Screen name="Settings" component={SettingsScreen} options={{ title: 'Pengaturan Toko' }} />
-      <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: 'Purchase Form' }} />
+    <Drawer.Navigator 
+      initialRouteName="Dashboard"
+      screenOptions={{
+        headerStyle: { backgroundColor: '#FFF' },
+        drawerActiveTintColor: '#3B82F6',
+        drawerInactiveTintColor: '#6B7280',
+        drawerLabelStyle: { fontWeight: '600' }
+      }}
+    >
+      <Drawer.Screen name="Dashboard" component={DashboardScreen} options={{ title: '🏠 Dashboard' }} />
+      <Drawer.Screen name="SalesTransaction" component={SalesTransactionScreen} options={{ title: '🛒 Transaksi Kasir' }} />
+      <Drawer.Screen name="Product" component={ProductsScreen} options={{ title: '📦 Stok Barang' }} />
+      <Drawer.Screen name="SalesHistory" component={SalesHistoryScreen} options={{ title: '🕒 Riwayat Transaksi' }} />
+      <Drawer.Screen name="Reports" component={ReportsScreen} options={{ title: '📊 Laporan & Grafik' }} />
+      <Drawer.Screen name="Pulsa" component={PulsaTransactionScreen} options={{ title: '📱 Transaksi Pulsa' }} />
+      <Drawer.Screen name="Customers" component={CustomersScreen} options={{ title: '👥 Daftar Pelanggan' }} />
+      <Drawer.Screen name="Receivables" component={ReceivablesScreen} options={{ title: '💰 Piutang Pelanggan' }} />
+      <Drawer.Screen name="Payables" component={PayablesScreen} options={{ title: '💸 Hutang Supplier' }} />
+      <Drawer.Screen name="Backup" component={BackupScreen} options={{ title: '💾 Backup & Restore' }} />
+      <Drawer.Screen name="PaymentMethods" component={PaymentMethodsScreen} options={{ title: '💳 Cara Bayar' }} />
+      <Drawer.Screen name="Settings" component={SettingsScreen} options={{ title: '⚙️ Pengaturan Toko' }} />
+      <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: '📥 Tambah Stok (Beli)' }} />
       <Drawer.Screen 
         name="SaleDetail" 
         component={SaleDetailScreen} 
@@ -49,5 +59,6 @@ export default function DrawerNavigator() {
         }} 
       />
     </Drawer.Navigator>
+
   )
 }
