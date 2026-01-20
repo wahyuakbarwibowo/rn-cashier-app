@@ -3,6 +3,7 @@ import { DrawerParamList } from "./types";
 import ProductsScreen from "../screens/ProductsScreen";
 import PurchaseFormScreen from "../screens/PurchaseFormScreen";
 import ProductDetailScreen from "../screens/ProductDetailScreen";
+import SalesTransactionScreen from "../screens/SalesTransactionScreen";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -10,6 +11,7 @@ export default function DrawerNavigator() {
   return (
     <Drawer.Navigator initialRouteName="Product">
       <Drawer.Screen name="Product" component={ProductsScreen} />
+      <Drawer.Screen name="SalesTransaction" component={SalesTransactionScreen} options={{ title: 'Transaksi Penjualan' }} />
       <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: 'Purchase Form' }} />
       <Drawer.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: "Detail Product" }} />
     </Drawer.Navigator>
