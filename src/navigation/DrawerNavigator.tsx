@@ -13,6 +13,7 @@ import PaymentMethodsScreen from "../screens/PaymentMethodsScreen";
 import PulsaTransactionScreen from "../screens/PulsaTransactionScreen";
 import ReceivablesScreen from "../screens/ReceivablesScreen";
 import PayablesScreen from "../screens/PayablesScreen";
+import BackupScreen from "../screens/BackupScreen";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -27,6 +28,7 @@ export default function DrawerNavigator() {
       <Drawer.Screen name="Customers" component={CustomersScreen} options={{ title: 'Daftar Pelanggan' }} />
       <Drawer.Screen name="Receivables" component={ReceivablesScreen} options={{ title: 'Piutang Pelanggan' }} />
       <Drawer.Screen name="Payables" component={PayablesScreen} options={{ title: 'Hutang ke Supplier' }} />
+      <Drawer.Screen name="Backup" component={BackupScreen} options={{ title: 'Backup & Restore' }} />
       <Drawer.Screen name="PaymentMethods" component={PaymentMethodsScreen} options={{ title: 'Cara Bayar' }} />
       <Drawer.Screen name="Settings" component={SettingsScreen} options={{ title: 'Pengaturan Toko' }} />
       <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: 'Purchase Form' }} />
