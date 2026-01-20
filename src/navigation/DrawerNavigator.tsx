@@ -13,7 +13,14 @@ export default function DrawerNavigator() {
       <Drawer.Screen name="Product" component={ProductsScreen} />
       <Drawer.Screen name="SalesTransaction" component={SalesTransactionScreen} options={{ title: 'Transaksi Penjualan' }} />
       <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: 'Purchase Form' }} />
-      <Drawer.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: "Detail Product" }} />
+      <Drawer.Screen 
+        name="ProductDetail" 
+        component={ProductDetailScreen} 
+        options={{ 
+          title: "Detail Product",
+          drawerItemStyle: { display: 'none' } 
+        }} 
+      />
     </Drawer.Navigator>
   )
 }

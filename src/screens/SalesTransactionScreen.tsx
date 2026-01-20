@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { getProducts } from "../database/products";
 import { addSale } from "../database/sales";
@@ -24,6 +25,7 @@ type CartItem = {
 
 export default function SalesTransactionScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paidAmount, setPaidAmount] = useState<string>("0");
@@ -206,7 +208,7 @@ export default function SalesTransactionScreen() {
         </View>
 
         {/* Payment & Total */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <View style={styles.paymentInfo}>
             <View style={styles.paymentRow}>
               <Text style={styles.totalLabel}>Total</Text>

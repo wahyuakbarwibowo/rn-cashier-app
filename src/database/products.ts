@@ -5,13 +5,16 @@ import { Product } from "../types/database";
 export const addProduct = async (product: Product): Promise<void> => {
   const db = await getDB();
   await db.runAsync(
-    `INSERT INTO products (code, name, purchase_price, selling_price, stock, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+    `INSERT INTO products (code, name, purchase_price, selling_price, package_price, package_qty, discount, stock, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
     [
       product.code ?? null,
       product.name,
       product.purchase_price ?? 0,
       product.selling_price ?? 0,
+      product.package_price ?? 0,
+      product.package_qty ?? 0,
+      product.discount ?? 0,
       product.stock ?? 0,
     ]
   );
@@ -29,18 +32,22 @@ export const updateProduct = async (id: number, product: Product): Promise<void>
   const db = await getDB();
   await db.runAsync(
     `UPDATE products 
-     SET code = ?, name = ?, purchase_price = ?, selling_price = ?, stock = ?, updated_at = datetime('now')
+     SET code = ?, name = ?, purchase_price = ?, selling_price = ?, package_price = ?, package_qty = ?, discount = ?, stock = ?, updated_at = datetime('now')
      WHERE id = ?`,
     [
       product.code ?? null,
       product.name,
       product.purchase_price ?? 0,
       product.selling_price ?? 0,
+      product.package_price ?? 0,
+      product.package_qty ?? 0,
+      product.discount ?? 0,
       product.stock ?? 0,
       id,
     ]
   );
 };
+
 
 // Hapus produk
 export const deleteProduct = async (id: number): Promise<void> => {

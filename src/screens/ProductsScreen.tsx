@@ -22,8 +22,14 @@ type Props = DrawerScreenProps<DrawerParamList, "Product">;
 
 export default function ProductsScreen({ navigation }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
+  const [packagePrice, setPackagePrice] = useState("");
+  const [packageQty, setPackageQty] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [stock, setStock] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
 
   const loadProducts = async () => {
@@ -36,8 +42,14 @@ export default function ProductsScreen({ navigation }: Props) {
   }, []);
 
   const resetForm = () => {
+    setCode("");
     setName("");
+    setPurchasePrice("");
     setSellingPrice("");
+    setPackagePrice("");
+    setPackageQty("");
+    setDiscount("");
+    setStock("");
     setEditId(null);
   };
 
@@ -47,12 +59,21 @@ export default function ProductsScreen({ navigation }: Props) {
       return;
     }
 
-    const price = parseFloat(sellingPrice) || 0;
+    const productData: Product = {
+      code: code.trim() || undefined,
+      name: name.trim(),
+      purchase_price: parseFloat(purchasePrice) || 0,
+      selling_price: parseFloat(sellingPrice) || 0,
+      package_price: parseFloat(packagePrice) || 0,
+      package_qty: parseInt(packageQty) || 0,
+      discount: parseFloat(discount) || 0,
+      stock: parseInt(stock) || 0,
+    };
 
     if (editId) {
-      await updateProduct(editId, { name, selling_price: price });
+      await updateProduct(editId, productData);
     } else {
-      await addProduct({ name, selling_price: price });
+      await addProduct(productData);
     }
 
     resetForm();
@@ -61,8 +82,14 @@ export default function ProductsScreen({ navigation }: Props) {
 
   const handleEdit = (item: Product) => {
     setEditId(item.id ?? null);
+    setCode(item.code || "");
     setName(item.name);
+    setPurchasePrice(String(item.purchase_price ?? ""));
     setSellingPrice(String(item.selling_price ?? ""));
+    setPackagePrice(String(item.package_price ?? ""));
+    setPackageQty(String(item.package_qty ?? ""));
+    setDiscount(String(item.discount ?? ""));
+    setStock(String(item.stock ?? ""));
   };
 
   const handleDelete = (id: number) => {
@@ -94,25 +121,87 @@ export default function ProductsScreen({ navigation }: Props) {
           {editId ? "Edit Produk" : "Tambah Produk"}
         </Text>
 
-        <TextInput
-          placeholder="Nama produk"
-          value={name}
-          onChangeText={setName}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Harga jual"
-          value={sellingPrice}
-          onChangeText={setSellingPrice}
-          keyboardType="numeric"
-          style={styles.input}
-        />
+        <View>
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Kode (Scan)"
+              value={code}
+              onChangeText={setCode}
+              style={[styles.input, { flex: 1, marginRight: 8 }]}
+            />
+            <TextInput
+              placeholder="Stok"
+              value={stock}
+              onChangeText={setStock}
+              keyboardType="numeric"
+              style={[styles.input, { width: 80 }]}
+            />
+          </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
-          <Text style={styles.primaryButtonText}>
-            {editId ? "Update" : "Simpan"}
-          </Text>
-        </TouchableOpacity>
+          <TextInput
+            placeholder="Nama produk"
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+          />
+
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Harga Beli"
+              value={purchasePrice}
+              onChangeText={setPurchasePrice}
+              keyboardType="numeric"
+              style={[styles.input, { flex: 1, marginRight: 8 }]}
+            />
+            <TextInput
+              placeholder="Harga Jual"
+              value={sellingPrice}
+              onChangeText={setSellingPrice}
+              keyboardType="numeric"
+              style={[styles.input, { flex: 1 }]}
+            />
+          </View>
+
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Harga Paket"
+              value={packagePrice}
+              onChangeText={setPackagePrice}
+              keyboardType="numeric"
+              style={[styles.input, { flex: 1, marginRight: 8 }]}
+            />
+            <TextInput
+              placeholder="Isi Paket"
+              value={packageQty}
+              onChangeText={setPackageQty}
+              keyboardType="numeric"
+              style={[styles.input, { flex: 1 }]}
+            />
+          </View>
+
+          <TextInput
+            placeholder="Diskon (%)"
+            value={discount}
+            onChangeText={setDiscount}
+            keyboardType="numeric"
+            style={styles.input}
+          />
+
+          <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
+            <Text style={styles.primaryButtonText}>
+              {editId ? "Update" : "Simpan"}
+            </Text>
+          </TouchableOpacity>
+          
+          {editId && (
+            <TouchableOpacity 
+              style={[styles.secondaryButton, { marginTop: 8 }]} 
+              onPress={resetForm}
+            >
+              <Text style={styles.secondaryButtonText}>Batal</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Product List */}
@@ -127,11 +216,15 @@ export default function ProductsScreen({ navigation }: Props) {
             }
             style={styles.productCard}
           >
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.productName}>{item.name}</Text>
-              <Text style={styles.productPrice}>
-                Rp {(item.selling_price ?? 0).toLocaleString("id-ID")}
-              </Text>
+              <View style={styles.productMeta}>
+                <Text style={styles.productPrice}>
+                  Rp {(item.selling_price ?? 0).toLocaleString("id-ID")}
+                </Text>
+                <Text style={styles.productStock}> | Stok: {item.stock}</Text>
+              </View>
+              {item.code && <Text style={styles.productCode}>{item.code}</Text>}
             </View>
 
             <View style={styles.actions}>
@@ -193,6 +286,12 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 15,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  row: {
+    flexDirection: "row",
+    marginBottom: 2,
   },
   primaryButton: {
     backgroundColor: "#111827",
@@ -203,6 +302,17 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  secondaryButton: {
+    backgroundColor: "#E5E7EB",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  secondaryButtonText: {
+    color: "#111827",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -229,11 +339,24 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-  productPrice: {
+  productMeta: {
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 4,
+  },
+  productPrice: {
     fontSize: 14,
     color: "#16A34A",
-    fontWeight: "500",
+    fontWeight: "600",
+  },
+  productStock: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  productCode: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginTop: 2,
   },
 
   actions: {
@@ -241,7 +364,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   editBtn: {
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#EFF6FF",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -254,6 +377,6 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "600",
   },
 });
