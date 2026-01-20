@@ -12,7 +12,8 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import { getProducts } from "../database/products";
 import { addSale } from "../database/sales";
 import { getCustomers } from "../database/customers";
@@ -29,6 +30,7 @@ type CartItem = {
 export default function SalesTransactionScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const route = useRoute<any>();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paidAmount, setPaidAmount] = useState<string>("0");
@@ -42,6 +44,28 @@ export default function SalesTransactionScreen() {
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const params = route.params as { addProductId?: number };
+      if (params?.addProductId) {
+        const productId = params.addProductId;
+        // Search in current products
+        const product = products.find(p => p.id === productId);
+        if (product) {
+          handleAddToCart(product);
+          navigation.setParams({ addProductId: undefined });
+        } else {
+          // If not found (initial load), wait or refetch
+          getProducts().then(allProducts => {
+            const p = allProducts.find(x => x.id === productId);
+            if (p) handleAddToCart(p);
+            navigation.setParams({ addProductId: undefined });
+          });
+        }
+      }
+    }, [route.params, products])
+  );
 
   const loadInitialData = async () => {
     const [p, c, m] = await Promise.all([

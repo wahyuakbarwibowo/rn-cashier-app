@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   RefreshControl,
+  InteractionManager,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { getDB } from "../database/initDB";
@@ -28,26 +29,13 @@ export default function DashboardScreen() {
       const db = await getDB();
       const today = new Date().toISOString().split("T")[0];
 
-      // Total Penjualan Hari Ini
-      const salesRes = await db.getFirstAsync<{ total: number }>(
-        "SELECT SUM(total) as total FROM sales WHERE created_at LIKE ?",
-        [`${today}%`]
-      );
-
-      // Barang Stok Rendah (< 10)
-      const stockRes = await db.getFirstAsync<{ count: number }>(
-        "SELECT COUNT(*) as count FROM products WHERE stock < 10"
-      );
-
-      // Total Pelanggan
-      const customerRes = await db.getFirstAsync<{ count: number }>(
-        "SELECT COUNT(*) as count FROM customers"
-      );
-
-      // Total Piutang Belum Lunas
-      const receivableRes = await db.getFirstAsync<{ total: number }>(
-        "SELECT SUM(amount) as total FROM receivables WHERE status = 'pending'"
-      );
+      // Jalankan query secara paralel untuk efisiensi
+      const [salesRes, stockRes, customerRes, receivableRes] = await Promise.all([
+        db.getFirstAsync<{ total: number }>("SELECT SUM(total) as total FROM sales WHERE created_at LIKE ?", [`${today}%`]),
+        db.getFirstAsync<{ count: number }>("SELECT COUNT(*) as count FROM products WHERE stock < 10"),
+        db.getFirstAsync<{ count: number }>("SELECT COUNT(*) as count FROM customers"),
+        db.getFirstAsync<{ total: number }>("SELECT SUM(amount) as total FROM receivables WHERE status = 'pending'")
+      ]);
 
       setStats({
         todaySales: salesRes?.total || 0,
@@ -61,10 +49,22 @@ export default function DashboardScreen() {
   };
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", loadStats);
-    loadStats();
-    return unsubscribe;
+    const task = InteractionManager.runAfterInteractions(() => {
+      loadStats();
+    });
+
+    const unsubscribe = navigation.addListener("focus", () => {
+      InteractionManager.runAfterInteractions(() => {
+        loadStats();
+      });
+    });
+
+    return () => {
+      task.cancel();
+      unsubscribe();
+    };
   }, [navigation]);
+
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
-    elevation: 2,
+    elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 16,
     borderLeftWidth: 4,
-    elevation: 3,
+    elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

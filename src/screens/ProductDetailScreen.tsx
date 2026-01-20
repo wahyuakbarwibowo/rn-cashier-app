@@ -4,7 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type Props = DrawerScreenProps<DrawerParamList, "ProductDetail">;
 
-export default function ProductDetailScreen({ route }: Props) {
+export default function ProductDetailScreen({ route, navigation }: Props) {
   const { product } = route.params;
 
   const formatPrice = (value?: number) =>
@@ -62,10 +62,14 @@ export default function ProductDetailScreen({ route }: Props) {
 
       {/* Action Button */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity 
+          style={styles.button}
+          onPress={() => navigation.navigate("SalesTransaction", { addProductId: product.id })}
+        >
           <Text style={styles.buttonText}>Tambah ke Keranjang</Text>
         </TouchableOpacity>
       </View>
+
     </View>
   )
 }

@@ -4,7 +4,7 @@ export type DrawerParamList = {
   Dashboard: undefined;
   Product: undefined;
   PurchaseForm: undefined;
-  SalesTransaction: undefined;
+  SalesTransaction: { addProductId?: number };
   SalesHistory: undefined;
   SaleDetail: { saleId: number };
   Reports: undefined;
