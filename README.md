@@ -1,82 +1,95 @@
-# 📦 Aplikasi Kasir (React Native + Expo + TypeScript + SQLite)
+# 📦 Cashier Apps (React Native + Expo + SQLite)
 
-Aplikasi kasir sederhana berbasis **React Native (Expo)** menggunakan **SQLite** untuk penyimpanan data offline.  
-Dibangun dengan **TypeScript** supaya lebih aman dan mudah dikembangkan.  
+Aplikasi kasir (Point of Sale) profesional berbasis **React Native (Expo)** yang dirancang untuk bekerja sepenuhnya **offline** menggunakan **SQLite**. Cocok untuk UMKM, toko kelontong, atau usaha jasa.
 
-## 🚀 Fitur (Roadmap)
-- **Produk / Barang**
-  - Tambah, Edit, Hapus produk
-  - Stok, harga beli, harga jual, diskon, paket
-- **Transaksi**
-  - Penjualan (keranjang belanja, pengurangan stok)
-  - Pembelian (stok masuk)
-- **Laporan**
-  - Penjualan harian, mingguan, bulanan, tahunan
-  - Laba, piutang, stok
-- **Pengaturan**
-  - Profil toko (nama, catatan kaki struk)
-  - Metode pembayaran (Tunai, Kartu, E-Wallet, QRIS)
+## 🚀 Fitur Utama
 
-## 🛠️ Teknologi
-- Expo (React Native framework)
-- TypeScript
-- expo-sqlite (database lokal)
+### 1. 🏠 Dashboard Pintar
+- Ringkasan penjualan harian secara real-time.
+- Notifikasi otomatis untuk stok barang yang menipis (< 10).
+- Statistik jumlah pelanggan dan akses cepat ke fitur utama via Grid Menu.
 
-## 📂 Struktur Project
-src/  
- ├── database/  
- │    ├── initDB.ts        # Inisialisasi database SQLite  
- │    ├── products.ts      # CRUD produk  
- ├── screens/  
- │    ├── ProductsScreen.tsx  # UI atur produk  
- ├── types/  
- │    ├── database.ts      # Tipe data TypeScript  
-App.tsx                    # Entry point aplikasi  
+### 2. 🛒 Manajemen Transaksi & Kasir
+- **Kasir Cepat**: Keranjang belanja dengan dukungan harga Satuan vs Paket.
+- **Dukungan Barcode**: Scan kode barang menggunakan kamera HP.
+- **Multi-Pelanggan**: Pilih pelanggan saat transaksi atau gunakan "Umum".
+- **Metode Pembayaran**: Dukungan Tunai, Kartu Debit, E-Wallet, dan QRIS.
+- **Piutang Otomatis**: Jika pembayaran kurang, sisa tagihan otomatis tercatat sebagai piutang pelanggan.
+
+### 3. 📱 Transaksi Pulsa & Paket Data
+- Input nomor HP dengan **Riwayat Nomor** (nomor yang sering dipakai muncul otomatis).
+- Pencatatan harga modal vs harga jual untuk perhitungan laba bersih pulsa.
+
+### 4. 📦 Inventori & Stok (Advanced)
+- **Satuan & Paket**: Mendukung konversi stok otomatis (misal: beli 1 dus isi 12 pcs).
+- **Pembelian (Stock In)**: Alur pembelian stok dari supplier dengan pencatatan hutang otomatis jika belum lunas.
+- **Diskon**: Fitur diskon per produk.
+
+### 5. 💰 Manajemen Keuangan & Hutang
+- **Piutang Pelanggan**: Pantau siapa saja yang belum lunas dan tandai sebagai lunas.
+- **Hutang Supplier**: Pantau tagihan barang masuk ke supplier.
+
+### 6. 📊 Laporan Lengkap (Filter Harian/Bulanan/Tahunan)
+- Laporan Penjualan (Omzet).
+- Laporan Stok (Aset).
+- Laporan Laba Bersih (Profit).
+- Laporan Pembelian Barang.
+
+### 7. 💾 Backup & Restore (Offline Data Portability)
+- **Ekspor JSON**: Backup seluruh data aplikasi ke dalam file `.json`.
+- **Berbagi Data**: Kirim file backup via WhatsApp, Email, atau Drive.
+- **Restore Data**: Pindahkan data ke HP baru hanya dengan mengimpor file backup.
+
+## 🛠️ Stack Teknologi
+- **Core**: React Native & Expo SDK 54.
+- **Language**: TypeScript.
+- **Database**: `expo-sqlite` (Local, High Performance).
+- **Navigation**: React Navigation (Drawer & Stack).
+- **Utilities**: `expo-camera`, `expo-sharing`, `expo-file-system`, `expo-document-picker`.
+
+## 📂 Struktur Folder
+```text
+src/
+ ├── database/
+ │    ├── initDB.ts        # Inisialisasi & Proteksi Race Condition
+ │    ├── products.ts      # Logika database Produk
+ │    ├── sales.ts         # Logika Transaksi & Stok
+ │    ├── backup.ts        # Koding Ekspor/Impor JSON
+ │    └── ...              # Modul DB lainnya
+ ├── screens/
+ │    ├── DashboardScreen.tsx   # Hub Utama
+ │    ├── SalesTransaction.tsx # UI Kasir
+ │    ├── ReportsScreen.tsx    # Statistik & Grafik
+ │    └── ...                  # Layar fitur lainnya
+ ├── types/
+ │    └── database.ts      # Definisi Interface Data
+ └── navigation/
+      ├── DrawerNavigator.tsx # Konfigurasi Menu
+      └── types.ts            # Tipe Navigasi
+```
 
 ## ⚡ Instalasi
-1. Buat project baru dengan Expo  
-   npx create-expo-app kasir-app  
-   cd kasir-app  
+Aplikasi ini menggunakan `bun` untuk manajemen package tercepat:
 
-2. Install dependency  
-   npx expo install expo-sqlite  
-   npm install --save-dev typescript @types/react @types/react-native  
+1. **Clone & Install**
+   ```bash
+   git clone <repo-url>
+   cd rn-cashier-app
+   bun install
+   ```
 
-3. Tambahkan folder `src/` dan isi dengan kode:  
-   - src/database/initDB.ts  
-   - src/database/products.ts  
-   - src/types/database.ts  
-   - src/screens/ProductsScreen.tsx  
+2. **Jalankan Project**
+   ```bash
+   bun start
+   ```
 
-4. Update App.tsx agar menggunakan ProductsScreen.  
+3. **Running di HP**
+   - Install **Expo Go** di Android/iOS.
+   - Scan QR Code yang muncul di terminal.
 
-5. Jalankan project  
-   npx expo start  
+## 📌 Catatan Pengembangan
+- **Stabilitas Database**: Menggunakan sistem *Promise Locking* di `initDB.ts` untuk mencegah `NullPointerException` di Android.
+- **UI/UX**: Mengadaptasi *Glassmorphism* ringan dan *Premium Dark/Light* elemen.
 
-## 📱 Menjalankan di Perangkat Asli
-1. Install aplikasi Expo Go di Android / iOS.  
-2. Jalankan:  
-   npx expo start  
-3. Scan QR Code dari terminal / browser dengan kamera HP.  
-4. Aplikasi langsung running di device! 🎉  
-
-## 🗄️ Database
-Database default: kasir.db (tersimpan di device).  
-Tabel utama:  
-- products  
-- customers  
-- payment_methods  
-- sales  
-- sales_items  
-- shop_profile  
-
-## ✅ Status
-- [x] Init database  
-- [x] CRUD Produk  
-- [ ] Transaksi Penjualan  
-- [ ] Laporan  
-- [ ] Modul Lain (sesuai roadmap)  
-
-## 📌 Catatan
-- Saat ini masih berbasis Expo Managed Workflow.  
-- Kalau nanti butuh Bluetooth Printer atau integrasi hardware, kemungkinan harus eject ke Bare Workflow.  
+---
+*Dikembangkan dengan ❤️ untuk kemajuan UMKM Digital.*
