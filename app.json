@@ -28,8 +28,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite",
-      "expo-barcode-scanner"
+      "expo-sqlite"
     ],
     "extra": {
       "eas": {

@@ -12,6 +12,18 @@ buildscript {
   }
 }
 
+android {
+  splits {
+    abi {
+      enable true
+      reset()
+      include "armeabi-v7a", "arm64-v8a"
+      universalApk false
+    }
+  }
+}
+
+
 allprojects {
   repositories {
     google()
@@ -19,6 +31,20 @@ allprojects {
     maven { url 'https://www.jitpack.io' }
   }
 }
+
+buildTypes {
+  release {
+    minifyEnabled true
+    shrinkResources true
+    proguardFiles getDefaultProguardFile(
+      'proguard-android-optimize.txt'
+    ), 'proguard-rules.pro'
+  }
+}
+
+project.ext.react = [
+  enableHermes: true
+]
 
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"
