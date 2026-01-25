@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -27,6 +27,76 @@ type CartItem = {
   isPackage: boolean;
 };
 
+// Helper function to optimize cart items - convert to package when qty >= package_qty
+const optimizeCartItems = (items: CartItem[]): CartItem[] => {
+  const result: CartItem[] = [];
+
+  // Group items by product ID
+  const productGroups = new Map<number, { individual?: CartItem; package?: CartItem }>();
+
+  for (const item of items) {
+    const productId = item.product.id!;
+    if (!productGroups.has(productId)) {
+      productGroups.set(productId, {});
+    }
+    const group = productGroups.get(productId)!;
+    if (item.isPackage) {
+      group.package = item;
+    } else {
+      group.individual = item;
+    }
+  }
+
+  // Process each product group
+  for (const [, group] of productGroups) {
+    const individual = group.individual;
+    const packageItem = group.package;
+
+    // If there's an individual item and product has package pricing
+    if (individual && individual.product.package_price && individual.product.package_qty) {
+      const packageQty = individual.product.package_qty;
+
+      if (individual.qty >= packageQty) {
+        // Convert to packages
+        const numPackages = Math.floor(individual.qty / packageQty);
+        const remainder = individual.qty % packageQty;
+
+        // Add/merge package items
+        const existingPackageQty = packageItem?.qty || 0;
+        result.push({
+          product: individual.product,
+          qty: existingPackageQty + numPackages,
+          price: individual.product.package_price,
+          isPackage: true,
+        });
+
+        // Add remaining individual items if any
+        if (remainder > 0) {
+          result.push({
+            product: individual.product,
+            qty: remainder,
+            price: individual.product.selling_price || 0,
+            isPackage: false,
+          });
+        }
+      } else {
+        // Keep individual as is
+        result.push(individual);
+        // Keep existing package if any
+        if (packageItem) {
+          result.push(packageItem);
+        }
+      }
+    } else {
+      // No package pricing available, keep items as is
+      if (individual) result.push(individual);
+      if (packageItem) result.push(packageItem);
+    }
+  }
+
+  return result;
+};
+
 export default function SalesTransactionScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -40,7 +110,7 @@ export default function SalesTransactionScreen() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<number | null>(null);
-
+  const [isProductsExpanded, setIsProductsExpanded] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -71,11 +141,6 @@ export default function SalesTransactionScreen() {
     if (m.length > 0) setSelectedPaymentMethodId(m[0].id!);
   };
 
-  const loadProducts = async () => {
-    const data = await getProducts();
-    setProducts(data);
-  };
-
 
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -88,12 +153,12 @@ export default function SalesTransactionScreen() {
         (i) => i.product.id === product.id && i.isPackage === asPackage
       );
 
+      let newCart: CartItem[];
       if (existingIndex > -1) {
-        const newCart = [...prevCart];
+        newCart = [...prevCart];
         newCart[existingIndex].qty += 1;
-        return newCart;
       } else {
-        return [
+        newCart = [
           ...prevCart,
           {
             product,
@@ -103,6 +168,9 @@ export default function SalesTransactionScreen() {
           },
         ];
       }
+
+      // Auto-convert to package if qty reaches package_qty
+      return optimizeCartItems(newCart);
     });
   };
 
@@ -111,11 +179,63 @@ export default function SalesTransactionScreen() {
     isPackage: boolean,
     changes: Partial<Pick<CartItem, "qty" | "price">>
   ) => {
-    setCart((prev) =>
-      prev.map((i) =>
+    setCart((prev) => {
+      const updated = prev.map((i) =>
         (i.product.id === id && i.isPackage === isPackage) ? { ...i, ...changes } : i
-      )
-    );
+      );
+      // Auto-convert to package if qty reaches package_qty
+      return optimizeCartItems(updated);
+    });
+  };
+
+  const decreaseCartItemQty = (id: number, isPackage: boolean) => {
+    setCart((prev) => {
+      const item = prev.find((i) => i.product.id === id && i.isPackage === isPackage);
+      if (!item) return prev;
+
+      // For package items with qty = 1, convert to individual items
+      if (isPackage && item.qty === 1 && item.product.package_qty) {
+        const newIndividualQty = item.product.package_qty - 1;
+
+        // Remove the package item
+        let updated = prev.filter((i) => !(i.product.id === id && i.isPackage === true));
+
+        // Find existing individual item for this product
+        const existingIndividual = updated.find((i) => i.product.id === id && !i.isPackage);
+
+        if (existingIndividual) {
+          // Add to existing individual qty
+          updated = updated.map((i) =>
+            (i.product.id === id && !i.isPackage)
+              ? { ...i, qty: i.qty + newIndividualQty }
+              : i
+          );
+        } else {
+          // Create new individual item
+          updated.push({
+            product: item.product,
+            qty: newIndividualQty,
+            price: item.product.selling_price || 0,
+            isPackage: false,
+          });
+        }
+
+        return updated;
+      }
+
+      // For regular decrease (non-package or package with qty > 1)
+      if (item.qty <= 1) {
+        // Remove item if qty would go to 0
+        return prev.filter((i) => !(i.product.id === id && i.isPackage === isPackage));
+      }
+
+      // Normal decrease
+      return prev.map((i) =>
+        (i.product.id === id && i.isPackage === isPackage)
+          ? { ...i, qty: i.qty - 1 }
+          : i
+      );
+    });
   };
 
   const handleRemoveFromCart = (id: number, isPackage: boolean) => {
@@ -205,45 +325,104 @@ export default function SalesTransactionScreen() {
         </View>
 
         {/* Search & Product Selection */}
+        <View style={[styles.card, isProductsExpanded && styles.expandedCard]}>
+          <View style={styles.searchRow}>
+            <TextInput
+              placeholder="Cari produk atau barcode...disini"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={[styles.searchInput, styles.searchInputFlex]}
+            />
+            <TouchableOpacity
+              style={styles.expandBtn}
+              onPress={() => setIsProductsExpanded(!isProductsExpanded)}
+            >
+              <Text style={styles.expandBtnText}>
+                {isProductsExpanded ? "Tutup" : "Expand"}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.card}>
-          <TextInput
-            placeholder="Cari produk atau barcode..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            style={styles.searchInput}
-          />
-          <FlatList
-            data={filteredProducts.slice(0, 10)} // Limit to visible
-            keyExtractor={(item) => item.id?.toString() ?? ""}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.productList}
-            renderItem={({ item }) => (
-              <View style={styles.productPillContainer}>
-                <TouchableOpacity
-                  style={styles.productPill}
-                  onPress={() => handleAddToCart(item, false)}
-                >
-                  <Text style={styles.productPillText}>{item.name}</Text>
-                  <Text style={styles.productPillPrice}>
-                    Rp {item.selling_price?.toLocaleString("id-ID")}
-                  </Text>
-                </TouchableOpacity>
-                {item.package_price ? (
+          {isProductsExpanded ? (
+            <FlatList
+              key="products-grid"
+              data={filteredProducts}
+              keyExtractor={(item) => item.id?.toString() ?? ""}
+              numColumns={2}
+              columnWrapperStyle={styles.productGrid}
+              showsVerticalScrollIndicator={false}
+              style={styles.expandedProductList}
+              renderItem={({ item }) => (
+                <View style={styles.productGridItem}>
                   <TouchableOpacity
-                    style={[styles.productPill, styles.packagePill]}
-                    onPress={() => handleAddToCart(item, true)}
+                    style={styles.productGridCard}
+                    onPress={() => handleAddToCart(item, false)}
                   >
-                    <Text style={styles.productPillText}>Paket ({item.package_qty})</Text>
+                    <Text style={styles.productGridName} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.productGridPrice}>
+                      Rp {item.selling_price?.toLocaleString("id-ID")}
+                    </Text>
+                    {item.code && (
+                      <Text style={styles.productGridCode}>{item.code}</Text>
+                    )}
+                  </TouchableOpacity>
+                  {item.package_price ? (
+                    <TouchableOpacity
+                      style={[styles.productGridCard, styles.packageGridCard]}
+                      onPress={() => handleAddToCart(item, true)}
+                    >
+                      <Text style={styles.productGridName}>
+                        Paket ({item.package_qty})
+                      </Text>
+                      <Text style={styles.productGridPrice}>
+                        Rp {item.package_price?.toLocaleString("id-ID")}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              )}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>Tidak ada produk</Text>
+              }
+            />
+          ) : (
+            <FlatList
+              key="products-horizontal"
+              data={filteredProducts.slice(0, 10)}
+              keyExtractor={(item) => item.id?.toString() ?? ""}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.productList}
+              renderItem={({ item }) => (
+                <View style={styles.productPillContainer}>
+                  <TouchableOpacity
+                    style={styles.productPill}
+                    onPress={() => handleAddToCart(item, false)}
+                  >
+                    <Text style={styles.productPillText}>{item.name}</Text>
                     <Text style={styles.productPillPrice}>
-                      Rp {item.package_price?.toLocaleString("id-ID")}
+                      Rp {item.selling_price?.toLocaleString("id-ID")}
                     </Text>
                   </TouchableOpacity>
-                ) : null}
-              </View>
-            )}
-          />
+                  {item.package_price ? (
+                    <TouchableOpacity
+                      style={[styles.productPill, styles.packagePill]}
+                      onPress={() => handleAddToCart(item, true)}
+                    >
+                      <Text style={styles.productPillText}>
+                        Paket ({item.package_qty})
+                      </Text>
+                      <Text style={styles.productPillPrice}>
+                        Rp {item.package_price?.toLocaleString("id-ID")}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              )}
+            />
+          )}
         </View>
 
         {/* Cart Items */}
@@ -264,11 +443,7 @@ export default function SalesTransactionScreen() {
                 </View>
                 <View style={styles.qtyContainer}>
                   <TouchableOpacity
-                    onPress={() =>
-                      updateCartItem(item.product.id!, item.isPackage, {
-                        qty: Math.max(1, item.qty - 1),
-                      })
-                    }
+                    onPress={() => decreaseCartItemQty(item.product.id!, item.isPackage)}
                     style={styles.qtyBtn}
                   >
                     <Text>-</Text>
@@ -396,31 +571,92 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   card: {
-
     backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     elevation: 2,
   },
+  expandedCard: {
+    flex: 1,
+    maxHeight: 300,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: "600",
+    marginBottom: 12,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   searchInput: {
     backgroundColor: "#F9FAFB",
     padding: 12,
     borderRadius: 8,
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+  },
+  searchInputFlex: {
+    flex: 1,
+    marginRight: 8,
+    marginBottom: 0,
+  },
+  expandBtn: {
+    backgroundColor: "#3B82F6",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  expandBtnText: {
+    color: "#FFF",
+    fontWeight: "600",
+    fontSize: 14,
   },
   productList: {
     marginBottom: 8,
   },
+  expandedProductList: {
+    flex: 1,
+  },
+  productGrid: {
+    marginBottom: 8,
+  },
+  productGridItem: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  productGridCard: {
+    backgroundColor: "#EFF6FF",
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    marginBottom: 6,
+  },
+  packageGridCard: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FDE68A",
+  },
+  productGridName: {
+    fontWeight: "600",
+    fontSize: 14,
+    color: "#111827",
+    marginBottom: 4,
+  },
+  productGridPrice: {
+    fontSize: 13,
+    color: "#3B82F6",
+    fontWeight: "600",
+  },
+  productGridCode: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    marginTop: 2,
+  },
   productPillContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginRight: 8,
   },
   productPill: {
@@ -435,7 +671,6 @@ const styles = StyleSheet.create({
     borderColor: "#FDE68A",
     marginLeft: 4,
   },
-
   productPillText: {
     fontWeight: "600",
     fontSize: 14,
