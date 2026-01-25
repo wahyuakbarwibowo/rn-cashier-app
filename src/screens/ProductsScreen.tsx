@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  ScrollView,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Product } from "../types/database";
@@ -22,64 +23,65 @@ import { DrawerParamList } from "../navigation/types";
 
 type Props = DrawerScreenProps<DrawerParamList, "Product">;
 
-export default function ProductsScreen({ navigation }: Props) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [purchasePrice, setPurchasePrice] = useState("");
-  const [purchasePackagePrice, setPurchasePackagePrice] = useState("");
-  const [purchasePackageQty, setPurchasePackageQty] = useState("");
-  const [sellingPrice, setSellingPrice] = useState("");
-  const [packagePrice, setPackagePrice] = useState("");
-  const [packageQty, setPackageQty] = useState("");
-  const [discount, setDiscount] = useState("");
-  const [stock, setStock] = useState("");
+interface ProductFormData {
+  code: string;
+  name: string;
+  purchasePrice: string;
+  purchasePackagePrice: string;
+  purchasePackageQty: string;
+  sellingPrice: string;
+  packagePrice: string;
+  packageQty: string;
+  discount: string;
+  stock: string;
+}
+
+const initialFormData: ProductFormData = {
+  code: "",
+  name: "",
+  purchasePrice: "",
+  purchasePackagePrice: "",
+  purchasePackageQty: "",
+  sellingPrice: "",
+  packagePrice: "",
+  packageQty: "",
+  discount: "",
+  stock: "",
+};
+
+function useProductForm(onSave: () => void) {
+  const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [editId, setEditId] = useState<number | null>(null);
 
-  // Camera state
-  const [permission, requestPermission] = useCameraPermissions();
-  const [isScanning, setIsScanning] = useState(false);
+  const updateField = useCallback(
+    <K extends keyof ProductFormData>(field: K, value: ProductFormData[K]) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
-  const loadProducts = async () => {
-    const items = await getProducts();
-    setProducts(items);
-  };
-
-  useEffect(() => {
-    loadProducts();
+  const resetForm = useCallback(() => {
+    setFormData(initialFormData);
+    setEditId(null);
   }, []);
 
-  const resetForm = () => {
-    setCode("");
-    setName("");
-    setPurchasePrice("");
-    setPurchasePackagePrice("");
-    setPurchasePackageQty("");
-    setSellingPrice("");
-    setPackagePrice("");
-    setPackageQty("");
-    setDiscount("");
-    setStock("");
-    setEditId(null);
-  };
-
-  const handleSave = async () => {
-    if (!name.trim()) {
+  const handleSave = useCallback(async () => {
+    if (!formData.name.trim()) {
       Alert.alert("Validasi", "Nama produk wajib diisi");
       return;
     }
 
     const productData: Product = {
-      code: code.trim() || undefined,
-      name: name.trim(),
-      purchase_price: parseFloat(purchasePrice) || 0,
-      purchase_package_price: parseFloat(purchasePackagePrice) || 0,
-      purchase_package_qty: parseInt(purchasePackageQty) || 0,
-      selling_price: parseFloat(sellingPrice) || 0,
-      package_price: parseFloat(packagePrice) || 0,
-      package_qty: parseInt(packageQty) || 0,
-      discount: parseFloat(discount) || 0,
-      stock: parseInt(stock) || 0,
+      code: formData.code.trim() || undefined,
+      name: formData.name.trim(),
+      purchase_price: parseFloat(formData.purchasePrice) || 0,
+      purchase_package_price: parseFloat(formData.purchasePackagePrice) || 0,
+      purchase_package_qty: parseInt(formData.purchasePackageQty) || 0,
+      selling_price: parseFloat(formData.sellingPrice) || 0,
+      package_price: parseFloat(formData.packagePrice) || 0,
+      package_qty: parseInt(formData.packageQty) || 0,
+      discount: parseFloat(formData.discount) || 0,
+      stock: parseInt(formData.stock) || 0,
     };
 
     if (editId) {
@@ -89,25 +91,34 @@ export default function ProductsScreen({ navigation }: Props) {
     }
 
     resetForm();
-    loadProducts();
-  };
+    onSave();
+  }, [formData, editId, resetForm, onSave]);
 
-  const handleEdit = (item: Product) => {
+  const populateForm = useCallback((item: Product) => {
     setEditId(item.id ?? null);
-    setCode(item.code || "");
-    setName(item.name);
-    setPurchasePrice(String(item.purchase_price ?? ""));
-    setPurchasePackagePrice(String(item.purchase_package_price ?? ""));
-    setPurchasePackageQty(String(item.purchase_package_qty ?? ""));
-    setSellingPrice(String(item.selling_price ?? ""));
-    setPackagePrice(String(item.package_price ?? ""));
-    setPackageQty(String(item.package_qty ?? ""));
-    setDiscount(String(item.discount ?? ""));
-    setStock(String(item.stock ?? ""));
-  };
+    setFormData({
+      code: item.code || "",
+      name: item.name,
+      purchasePrice: String(item.purchase_price ?? ""),
+      purchasePackagePrice: String(item.purchase_package_price ?? ""),
+      purchasePackageQty: String(item.purchase_package_qty ?? ""),
+      sellingPrice: String(item.selling_price ?? ""),
+      packagePrice: String(item.package_price ?? ""),
+      packageQty: String(item.package_qty ?? ""),
+      discount: String(item.discount ?? ""),
+      stock: String(item.stock ?? ""),
+    });
+  }, []);
 
-  const handleScan = async () => {
-    if (!permission) {
+  return { formData, editId, updateField, resetForm, handleSave, populateForm };
+}
+
+function useBarcodeScanner(onScanned: (code: string) => void) {
+  const [permission, requestPermission] = useCameraPermissions();
+  const [isScanning, setIsScanning] = useState(false);
+
+  const startScan = useCallback(async () => {
+    if (!permission?.granted) {
       const res = await requestPermission();
       if (!res.granted) {
         Alert.alert("Permission", "Akses kamera dibutuhkan untuk scan barcode");
@@ -115,18 +126,103 @@ export default function ProductsScreen({ navigation }: Props) {
       }
     }
     setIsScanning(true);
-  };
+  }, [permission, requestPermission]);
 
-  const onBarcodeScanned = ({ data }: { data: string }) => {
-    setCode(data);
-    setIsScanning(false);
-  };
+  const handleBarcodeScanned = useCallback(
+    ({ data }: { data: string }) => {
+      onScanned(data);
+      setIsScanning(false);
+    },
+    [onScanned]
+  );
 
-  const handleDelete = (id: number) => {
-    Alert.alert(
-      "Hapus Produk",
-      "Yakin mau hapus produk ini?",
-      [
+  const closeScan = useCallback(() => setIsScanning(false), []);
+
+  return { isScanning, startScan, handleBarcodeScanned, closeScan };
+}
+
+interface ProductCardProps {
+  item: Product;
+  onEdit: () => void;
+  onDelete: () => void;
+  onPress: () => void;
+}
+
+function ProductCard({ item, onEdit, onDelete, onPress }: ProductCardProps) {
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.productCard}>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName}>{item.name}</Text>
+        <View style={styles.productMeta}>
+          <Text style={styles.productPrice}>
+            Rp {(item.selling_price ?? 0).toLocaleString("id-ID")}
+          </Text>
+          <Text style={styles.productStock}> | Stok: {item.stock}</Text>
+        </View>
+        {item.code && <Text style={styles.productCode}>{item.code}</Text>}
+      </View>
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.editBtn} onPress={onEdit}>
+          <Text style={styles.actionText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
+          <Text style={styles.actionText}>Hapus</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+interface BarcodeScannerModalProps {
+  visible: boolean;
+  onScanned: (event: { data: string }) => void;
+  onClose: () => void;
+}
+
+function BarcodeScannerModal({
+  visible,
+  onScanned,
+  onClose,
+}: BarcodeScannerModalProps) {
+  return (
+    <Modal visible={visible} animationType="slide">
+      <View style={styles.scannerContainer}>
+        <CameraView
+          onBarcodeScanned={visible ? onScanned : undefined}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={styles.overlay}>
+          <Text style={styles.scanText}>Scan Barcode Barang</Text>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Text style={styles.closeBtnText}>Batal</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+export default function ProductsScreen({ navigation }: Props) {
+  const [products, setProducts] = useState<Product[]>([]);
+
+  const loadProducts = useCallback(async () => {
+    const items = await getProducts();
+    setProducts(items);
+  }, []);
+
+  const { formData, editId, updateField, resetForm, handleSave, populateForm } =
+    useProductForm(loadProducts);
+
+  const { isScanning, startScan, handleBarcodeScanned, closeScan } =
+    useBarcodeScanner((code) => updateField("code", code));
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const handleDelete = useCallback(
+    (id: number) => {
+      Alert.alert("Hapus Produk", "Yakin mau hapus produk ini?", [
         { text: "Batal", style: "cancel" },
         {
           text: "Hapus",
@@ -136,189 +232,147 @@ export default function ProductsScreen({ navigation }: Props) {
             loadProducts();
           },
         },
-      ]
-    );
-  };
+      ]);
+    },
+    [loadProducts]
+  );
+
+  const renderProductItem = useCallback(
+    ({ item }: { item: Product }) => (
+      <ProductCard
+        item={item}
+        onEdit={() => populateForm(item)}
+        onDelete={() => item.id && handleDelete(item.id)}
+        onPress={() => navigation.navigate("ProductDetail", { product: item })}
+      />
+    ),
+    [populateForm, handleDelete, navigation]
+  );
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <Text style={styles.header}>📦 Produk</Text>
+      <Text style={styles.header}>Produk</Text>
 
-      {/* Form Card */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>
           {editId ? "Edit Produk" : "Tambah Produk"}
         </Text>
 
-        <FlatList
-          data={[1]}
-          keyExtractor={() => "form"}
-          renderItem={() => (
-            <View>
-              {/* Basic Info */}
-              <View style={styles.row}>
-                <TextInput
-                  placeholder="Kode (Scan)"
-                  value={code}
-                  onChangeText={setCode}
-                  style={[styles.input, { flex: 1, marginRight: 8 }]}
-                />
-                <TouchableOpacity style={styles.scanBtn} onPress={handleScan}>
-                  <Text style={styles.scanBtnText}>Scan</Text>
-                </TouchableOpacity>
-              </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Kode (Scan)"
+              value={formData.code}
+              onChangeText={(v) => updateField("code", v)}
+              style={[styles.input, styles.flexInput]}
+            />
+            <TouchableOpacity style={styles.scanBtn} onPress={startScan}>
+              <Text style={styles.scanBtnText}>Scan</Text>
+            </TouchableOpacity>
+          </View>
 
-              <TextInput
-                placeholder="Nama produk"
-                value={name}
-                onChangeText={setName}
-                style={styles.input}
-              />
+          <TextInput
+            placeholder="Nama produk"
+            value={formData.name}
+            onChangeText={(v) => updateField("name", v)}
+            style={styles.input}
+          />
 
-              <TextInput
-                placeholder="Stok"
-                value={stock}
-                onChangeText={setStock}
-                keyboardType="numeric"
-                style={styles.input}
-              />
+          <TextInput
+            placeholder="Stok"
+            value={formData.stock}
+            onChangeText={(v) => updateField("stock", v)}
+            keyboardType="numeric"
+            style={styles.input}
+          />
 
-              {/* Purchase Pricing */}
-              <Text style={styles.subTitle}>Harga Beli</Text>
-              <View style={styles.row}>
-                <TextInput
-                  placeholder="Satuan"
-                  value={purchasePrice}
-                  onChangeText={setPurchasePrice}
-                  keyboardType="numeric"
-                  style={[styles.input, { flex: 1, marginRight: 8 }]}
-                />
-                <TextInput
-                  placeholder="Paket"
-                  value={purchasePackagePrice}
-                  onChangeText={setPurchasePackagePrice}
-                  keyboardType="numeric"
-                  style={[styles.input, { flex: 1, marginRight: 8 }]}
-                />
-                <TextInput
-                  placeholder="Isi"
-                  value={purchasePackageQty}
-                  onChangeText={setPurchasePackageQty}
-                  keyboardType="numeric"
-                  style={[styles.input, { width: 60 }]}
-                />
-              </View>
+          <Text style={styles.subTitle}>Harga Beli</Text>
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Satuan"
+              value={formData.purchasePrice}
+              onChangeText={(v) => updateField("purchasePrice", v)}
+              keyboardType="numeric"
+              style={[styles.input, styles.flexInput]}
+            />
+            <TextInput
+              placeholder="Paket"
+              value={formData.purchasePackagePrice}
+              onChangeText={(v) => updateField("purchasePackagePrice", v)}
+              keyboardType="numeric"
+              style={[styles.input, styles.flexInput]}
+            />
+            <TextInput
+              placeholder="Isi"
+              value={formData.purchasePackageQty}
+              onChangeText={(v) => updateField("purchasePackageQty", v)}
+              keyboardType="numeric"
+              style={[styles.input, styles.qtyInput]}
+            />
+          </View>
 
-              {/* Selling Pricing */}
-              <Text style={styles.subTitle}>Harga Jual</Text>
-              <View style={styles.row}>
-                <TextInput
-                  placeholder="Satuan"
-                  value={sellingPrice}
-                  onChangeText={setSellingPrice}
-                  keyboardType="numeric"
-                  style={[styles.input, { flex: 1, marginRight: 8 }]}
-                />
-                <TextInput
-                  placeholder="Paket"
-                  value={packagePrice}
-                  onChangeText={setPackagePrice}
-                  keyboardType="numeric"
-                  style={[styles.input, { flex: 1, marginRight: 8 }]}
-                />
-                <TextInput
-                  placeholder="Isi"
-                  value={packageQty}
-                  onChangeText={setPackageQty}
-                  keyboardType="numeric"
-                  style={[styles.input, { width: 60 }]}
-                />
-              </View>
+          <Text style={styles.subTitle}>Harga Jual</Text>
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Satuan"
+              value={formData.sellingPrice}
+              onChangeText={(v) => updateField("sellingPrice", v)}
+              keyboardType="numeric"
+              style={[styles.input, styles.flexInput]}
+            />
+            <TextInput
+              placeholder="Paket"
+              value={formData.packagePrice}
+              onChangeText={(v) => updateField("packagePrice", v)}
+              keyboardType="numeric"
+              style={[styles.input, styles.flexInput]}
+            />
+            <TextInput
+              placeholder="Isi"
+              value={formData.packageQty}
+              onChangeText={(v) => updateField("packageQty", v)}
+              keyboardType="numeric"
+              style={[styles.input, styles.qtyInput]}
+            />
+          </View>
 
-              <TextInput
-                placeholder="Diskon (%)"
-                value={discount}
-                onChangeText={setDiscount}
-                keyboardType="numeric"
-                style={styles.input}
-              />
+          <TextInput
+            placeholder="Diskon (%)"
+            value={formData.discount}
+            onChangeText={(v) => updateField("discount", v)}
+            keyboardType="numeric"
+            style={styles.input}
+          />
 
-              <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
-                <Text style={styles.primaryButtonText}>
-                  {editId ? "Update" : "Simpan"}
-                </Text>
-              </TouchableOpacity>
-              
-              {editId && (
-                <TouchableOpacity 
-                  style={[styles.secondaryButton, { marginTop: 8 }]} 
-                  onPress={resetForm}
-                >
-                  <Text style={styles.secondaryButtonText}>Batal</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
+            <Text style={styles.primaryButtonText}>
+              {editId ? "Update" : "Simpan"}
+            </Text>
+          </TouchableOpacity>
+
+          {editId && (
+            <TouchableOpacity
+              style={[styles.secondaryButton, styles.cancelButton]}
+              onPress={resetForm}
+            >
+              <Text style={styles.secondaryButtonText}>Batal</Text>
+            </TouchableOpacity>
           )}
-        />
+        </ScrollView>
       </View>
 
-      {/* Product List */}
       <FlatList
         data={products}
         keyExtractor={(item) => item.id?.toString() ?? ""}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("ProductDetail", { product: item })
-            }
-            style={styles.productCard}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.productName}>{item.name}</Text>
-              <View style={styles.productMeta}>
-                <Text style={styles.productPrice}>
-                  Rp {(item.selling_price ?? 0).toLocaleString("id-ID")}
-                </Text>
-                <Text style={styles.productStock}> | Stok: {item.stock}</Text>
-              </View>
-              {item.code && <Text style={styles.productCode}>{item.code}</Text>}
-            </View>
-
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.editBtn}
-                onPress={() => handleEdit(item)}
-              >
-                <Text style={styles.actionText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteBtn}
-                onPress={() => item.id && handleDelete(item.id)}
-              >
-                <Text style={styles.actionText}>Hapus</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        )}
+        contentContainerStyle={styles.listContent}
+        renderItem={renderProductItem}
       />
 
-      {/* Barcode Scanner Modal */}
-      <Modal visible={isScanning} animationType="slide">
-        <View style={styles.scannerContainer}>
-          <CameraView
-            onBarcodeScanned={isScanning ? onBarcodeScanned : undefined}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.overlay}>
-             <Text style={styles.scanText}>Scan Barcode Barang</Text>
-             <TouchableOpacity style={styles.closeBtn} onPress={() => setIsScanning(false)}>
-                <Text style={styles.closeBtnText}>Batal</Text>
-             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <BarcodeScannerModal
+        visible={isScanning}
+        onScanned={handleBarcodeScanned}
+        onClose={closeScan}
+      />
     </View>
   );
 }
@@ -343,14 +397,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  /* Form */
+  // Form
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 16,
     marginBottom: 20,
-    maxHeight: 400, // Limit form height to keep list visible
-
+    maxHeight: 400,
     elevation: 6,
     shadowColor: "#000",
     shadowOpacity: 0.08,
@@ -372,10 +425,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
+  flexInput: {
+    flex: 1,
+    marginRight: 8,
+  },
+  qtyInput: {
+    width: 60,
+  },
   row: {
     flexDirection: "row",
     marginBottom: 2,
-    alignItems: 'center',
+    alignItems: "center",
   },
   scanBtn: {
     backgroundColor: "#3B82F6",
@@ -411,23 +471,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  cancelButton: {
+    marginTop: 8,
+  },
+  listContent: {
+    paddingBottom: 40,
+  },
 
-  /* Product Card */
+  // Product Card
   productCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-
     elevation: 3,
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
+  },
+  productInfo: {
+    flex: 1,
   },
   productName: {
     fontSize: 16,
@@ -453,7 +520,6 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     marginTop: 2,
   },
-
   actions: {
     flexDirection: "row",
     gap: 8,
@@ -475,31 +541,31 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* Scanner */
+  // Scanner Modal
   scannerContainer: {
     flex: 1,
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   scanText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
   },
   closeBtn: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: "#FF3B30",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
   },
   closeBtnText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  }
+    color: "#FFF",
+    fontWeight: "bold",
+  },
 });
 
