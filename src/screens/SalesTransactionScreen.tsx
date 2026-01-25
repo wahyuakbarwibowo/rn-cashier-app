@@ -41,30 +41,22 @@ export default function SalesTransactionScreen() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
 
   useFocusEffect(
     React.useCallback(() => {
+      loadInitialData();
+
       const params = route.params as { addProductId?: number };
       if (params?.addProductId) {
         const productId = params.addProductId;
-        // Search in current products
-        const product = products.find(p => p.id === productId);
-        if (product) {
-          handleAddToCart(product);
+        // Search in fresh products
+        getProducts().then(allProducts => {
+          const p = allProducts.find(x => x.id === productId);
+          if (p) handleAddToCart(p);
           navigation.setParams({ addProductId: undefined });
-        } else {
-          // If not found (initial load), wait or refetch
-          getProducts().then(allProducts => {
-            const p = allProducts.find(x => x.id === productId);
-            if (p) handleAddToCart(p);
-            navigation.setParams({ addProductId: undefined });
-          });
-        }
+        });
       }
-    }, [route.params, products])
+    }, [route.params])
   );
 
   const loadInitialData = async () => {
@@ -91,23 +83,27 @@ export default function SalesTransactionScreen() {
   );
 
   const handleAddToCart = (product: Product, asPackage: boolean = false) => {
-    const existingIndex = cart.findIndex((i) => i.product.id === product.id && i.isPackage === asPackage);
-    
-    if (existingIndex > -1) {
-      const newCart = [...cart];
-      newCart[existingIndex].qty += 1;
-      setCart(newCart);
-    } else {
-      setCart([
-        ...cart,
-        {
-          product,
-          qty: 1,
-          price: asPackage ? (product.package_price || 0) : (product.selling_price || 0),
-          isPackage: asPackage,
-        },
-      ]);
-    }
+    setCart((prevCart) => {
+      const existingIndex = prevCart.findIndex(
+        (i) => i.product.id === product.id && i.isPackage === asPackage
+      );
+
+      if (existingIndex > -1) {
+        const newCart = [...prevCart];
+        newCart[existingIndex].qty += 1;
+        return newCart;
+      } else {
+        return [
+          ...prevCart,
+          {
+            product,
+            qty: 1,
+            price: asPackage ? product.package_price || 0 : product.selling_price || 0,
+            isPackage: asPackage,
+          },
+        ];
+      }
+    });
   };
 
   const updateCartItem = (
