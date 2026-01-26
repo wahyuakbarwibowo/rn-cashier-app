@@ -16,7 +16,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useFocusEffect } from "@react-navigation/native";
 import { getProducts } from "../database/products";
 import { addSale } from "../database/sales";
-import { getCustomers } from "../database/customers";
+import { getCustomers, addCustomer } from "../database/customers";
 import { getPaymentMethods } from "../database/payment_methods";
 import { Product, Customer, PaymentMethod } from "../types/database";
 
@@ -110,6 +110,7 @@ export default function SalesTransactionScreen() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<number | null>(null);
+  const [customerName, setCustomerName] = useState("");
   const [isProductsExpanded, setIsProductsExpanded] = useState(false);
 
   useFocusEffect(
@@ -250,19 +251,39 @@ export default function SalesTransactionScreen() {
       Alert.alert("Error", "Keranjang kosong");
       return;
     }
-    if (Number(paidAmount) < total) {
+    const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethodId);
+    const isDebt = selectedMethod?.name.toLowerCase().includes("hutang");
+
+    if (Number(paidAmount) < total && !isDebt) {
       Alert.alert("Error", "Pembayaran kurang");
       return;
     }
 
+    if (isDebt && !selectedCustomerId && !customerName.trim()) {
+      Alert.alert("Error", "Nama pelanggan harus diisi untuk transaksi hutang");
+      return;
+    }
+
     try {
+      let finalCustomerId = selectedCustomerId;
+
+      // If manual name is entered, create customer
+      if (!finalCustomerId && customerName.trim()) {
+        const newCustomerId = await addCustomer({
+          name: customerName.trim(),
+          phone: "",
+          address: ""
+        });
+        finalCustomerId = newCustomerId;
+      }
+
       await addSale(
         {
-          customer_id: selectedCustomerId,
+          customer_id: finalCustomerId,
           payment_method_id: selectedPaymentMethodId,
           total,
           paid: Number(paidAmount),
-          change: change,
+          change: isDebt ? 0 : change,
         },
         cart.map((i) => ({
           product_id: i.product.id!,
@@ -295,21 +316,39 @@ export default function SalesTransactionScreen() {
         <View style={styles.topSelectors}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
             <TouchableOpacity 
-              style={[styles.selectorPill, !selectedCustomerId && styles.activeSelectorPill]}
-              onPress={() => setSelectedCustomerId(null)}
+              style={[styles.selectorPill, !selectedCustomerId && !customerName && styles.activeSelectorPill]}
+              onPress={() => {
+                setSelectedCustomerId(null);
+                setCustomerName("");
+              }}
             >
-              <Text style={[styles.selectorPillText, !selectedCustomerId && styles.activeSelectorPillText]}>Umum</Text>
+              <Text style={[styles.selectorPillText, !selectedCustomerId && !customerName && styles.activeSelectorPillText]}>Umum</Text>
             </TouchableOpacity>
             {customers.map(c => (
               <TouchableOpacity 
                 key={c.id} 
                 style={[styles.selectorPill, selectedCustomerId === c.id && styles.activeSelectorPill]}
-                onPress={() => setSelectedCustomerId(c.id!)}
+                onPress={() => {
+                  setSelectedCustomerId(c.id!);
+                  setCustomerName("");
+                }}
               >
                 <Text style={[styles.selectorPillText, selectedCustomerId === c.id && styles.activeSelectorPillText]}>{c.name}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          <View style={styles.customerInputRow}>
+            <TextInput
+              placeholder="Atau input nama pelanggan baru..."
+              value={customerName}
+              onChangeText={(t) => {
+                setCustomerName(t);
+                if (t) setSelectedCustomerId(null);
+              }}
+              style={styles.customerInput}
+            />
+          </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
             {paymentMethods.map(m => (
@@ -502,14 +541,24 @@ export default function SalesTransactionScreen() {
               />
             </View>
             <View style={styles.paymentRow}>
-              <Text style={styles.label}>Kembalian</Text>
+              <Text style={styles.label}>
+                {paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang") 
+                  ? "Jumlah Hutang" 
+                  : "Kembalian"}
+              </Text>
               <Text
                 style={[
                   styles.changeValue,
-                  { color: change >= 0 ? "#16A34A" : "#DC2626" },
+                  { 
+                    color: paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang")
+                      ? "#DC2626"
+                      : (change >= 0 ? "#16A34A" : "#DC2626") 
+                  },
                 ]}
               >
-                Rp {Math.max(0, change).toLocaleString("id-ID")}
+                Rp {paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang")
+                  ? (total - Number(paidAmount)).toLocaleString("id-ID")
+                  : Math.max(0, change).toLocaleString("id-ID")}
               </Text>
             </View>
           </View>
@@ -517,10 +566,14 @@ export default function SalesTransactionScreen() {
           <TouchableOpacity
             style={[
               styles.checkoutBtn,
-              { backgroundColor: cart.length > 0 && change >= 0 ? "#111827" : "#9CA3AF" },
+              { 
+                backgroundColor: (cart.length > 0 && (change >= 0 || paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang"))) 
+                  ? "#111827" 
+                  : "#9CA3AF" 
+              },
             ]}
             onPress={handleFinishTransaction}
-            disabled={cart.length === 0 || change < 0}
+            disabled={cart.length === 0 || (change < 0 && !paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang"))}
           >
             <Text style={styles.checkoutBtnText}>Selesaikan Transaksi</Text>
           </TouchableOpacity>
@@ -544,6 +597,19 @@ const styles = StyleSheet.create({
   },
   topSelectors: {
     marginBottom: 12,
+  },
+  customerInputRow: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  customerInput: {
+    backgroundColor: "#FFF",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    fontSize: 14,
   },
   selectorScroll: {
     marginBottom: 8,

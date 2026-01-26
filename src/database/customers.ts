@@ -6,12 +6,13 @@ export const getCustomers = async (): Promise<Customer[]> => {
   return await db.getAllAsync<Customer>("SELECT * FROM customers ORDER BY name ASC");
 };
 
-export const addCustomer = async (customer: Omit<Customer, "id">): Promise<void> => {
+export const addCustomer = async (customer: Omit<Customer, "id">): Promise<number> => {
   const db = await getDB();
-  await db.runAsync(
+  const result = await db.runAsync(
     "INSERT INTO customers (name, phone, address, created_at, updated_at) VALUES (?, ?, ?, datetime('now'), datetime('now'))",
     [customer.name, customer.phone ?? "", customer.address ?? ""]
   );
+  return result.lastInsertRowId;
 };
 
 export const updateCustomer = async (id: number, customer: Omit<Customer, "id">): Promise<void> => {

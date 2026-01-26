@@ -7,13 +7,21 @@ export const getPaymentMethods = async (): Promise<PaymentMethod[]> => {
   
   if (methods.length === 0) {
     // Initial data
-    const defaults = ["Tunai", "Kartu Debit", "E-Wallet", "QRIS"];
+    const defaults = ["Tunai", "Hutang", "Kartu Debit", "E-Wallet", "QRIS"];
     for (const name of defaults) {
       await db.runAsync("INSERT INTO payment_methods (name) VALUES (?)", [name]);
     }
     return await db.getAllAsync<PaymentMethod>("SELECT * FROM payment_methods");
   }
   
+  if (methods.length > 0) {
+    const hasHutang = methods.some(m => m.name.toLowerCase() === "hutang");
+    if (!hasHutang) {
+      await db.runAsync("INSERT INTO payment_methods (name) VALUES (?)", ["Hutang"]);
+      return await db.getAllAsync<PaymentMethod>("SELECT * FROM payment_methods");
+    }
+  }
+
   return methods;
 };
 
