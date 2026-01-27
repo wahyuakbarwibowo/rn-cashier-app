@@ -25,6 +25,8 @@ export default function PurchaseFormScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [supplier, setSupplier] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isProductsExpanded, setIsProductsExpanded] = useState(false);
 
   const loadProducts = async () => {
     const data = await getProducts();
@@ -108,6 +110,11 @@ export default function PurchaseFormScreen() {
       { text: "OK", onPress: () => navigation.goBack() }
     ]);
   };
+  
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   return (
     <View style={styles.container}>
@@ -134,32 +141,92 @@ export default function PurchaseFormScreen() {
       </View>
 
       {/* Product Picker */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Pilih Barang</Text>
-        <FlatList
-          data={products}
-          keyExtractor={(item) => item.id?.toString() ?? ""}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <View style={styles.productOption}>
-              <TouchableOpacity
-                style={styles.productPill}
-                onPress={() => handleAddItem(item, false)}
-              >
-                <Text style={styles.productPillText}>{item.name}</Text>
-              </TouchableOpacity>
-              {item.purchase_package_price ? (
+      <View style={[styles.card, isProductsExpanded && styles.expandedCard]}>
+        <View style={styles.searchRow}>
+          <TextInput
+            placeholder="Cari produk..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={[styles.searchInput, styles.searchInputFlex]}
+          />
+          <TouchableOpacity
+            style={styles.expandBtn}
+            onPress={() => setIsProductsExpanded(!isProductsExpanded)}
+          >
+            <Text style={styles.expandBtnText}>
+              {isProductsExpanded ? "Tutup" : "Expand"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {isProductsExpanded ? (
+          <FlatList
+            key="products-grid"
+            data={filteredProducts}
+            keyExtractor={(item) => item.id?.toString() ?? ""}
+            numColumns={2}
+            columnWrapperStyle={styles.productGrid}
+            showsVerticalScrollIndicator={false}
+            style={styles.expandedProductList}
+            renderItem={({ item }) => (
+              <View style={styles.productGridItem}>
                 <TouchableOpacity
-                  style={[styles.productPill, styles.packagePill]}
-                  onPress={() => handleAddItem(item, true)}
+                  style={styles.productGridCard}
+                  onPress={() => handleAddItem(item, false)}
                 >
-                  <Text style={styles.productPillText}>Paket ({item.purchase_package_qty})</Text>
+                  <Text style={styles.productGridName} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.productGridPrice}>
+                    Rp {item.purchase_price?.toLocaleString("id-ID")}
+                  </Text>
                 </TouchableOpacity>
-              ) : null}
-            </View>
-          )}
-        />
+                {item.purchase_package_price ? (
+                  <TouchableOpacity
+                    style={[styles.productGridCard, styles.packageGridCard]}
+                    onPress={() => handleAddItem(item, true)}
+                  >
+                    <Text style={styles.productGridName}>
+                      Paket ({item.purchase_package_qty})
+                    </Text>
+                    <Text style={styles.productGridPrice}>
+                      Rp {item.purchase_package_price?.toLocaleString("id-ID")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>Tidak ada produk</Text>
+            }
+          />
+        ) : (
+          <FlatList
+            key="products-horizontal"
+            data={filteredProducts.slice(0, 10)}
+            keyExtractor={(item) => item.id?.toString() ?? ""}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <View style={styles.productOption}>
+                <TouchableOpacity
+                  style={styles.productPill}
+                  onPress={() => handleAddItem(item, false)}
+                >
+                  <Text style={styles.productPillText}>{item.name}</Text>
+                </TouchableOpacity>
+                {item.purchase_package_price ? (
+                  <TouchableOpacity
+                    style={[styles.productPill, styles.packagePill]}
+                    onPress={() => handleAddItem(item, true)}
+                  >
+                    <Text style={styles.productPillText}>Paket ({item.purchase_package_qty})</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )}
+          />
+        )}
       </View>
 
       {/* Selected Items */}
@@ -286,6 +353,68 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
+  },
+  expandedCard: {
+    maxHeight: 350,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  searchInput: {
+    backgroundColor: "#F9FAFB",
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  searchInputFlex: {
+    flex: 1,
+    marginRight: 8,
+  },
+  expandBtn: {
+    backgroundColor: "#3B82F6",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  expandBtnText: {
+    color: "#FFF",
+    fontWeight: "600",
+    fontSize: 12,
+  },
+  expandedProductList: {
+    flexGrow: 0,
+  },
+  productGrid: {
+    justifyContent: "space-between",
+  },
+  productGridItem: {
+    flex: 0.48,
+    marginBottom: 8,
+  },
+  productGridCard: {
+    backgroundColor: "#EFF6FF",
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    marginBottom: 4,
+  },
+  packageGridCard: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FDE68A",
+  },
+  productGridName: {
+    fontWeight: "600",
+    fontSize: 13,
+    color: "#111827",
+  },
+  productGridPrice: {
+    fontSize: 11,
+    color: "#3B82F6",
+    fontWeight: "600",
   },
   cardTitle: {
     fontSize: 17,

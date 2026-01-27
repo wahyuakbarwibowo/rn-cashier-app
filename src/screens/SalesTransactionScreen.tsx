@@ -22,79 +22,47 @@ import { Product, Customer, PaymentMethod } from "../types/database";
 
 type CartItem = {
   product: Product;
-  qty: number;
-  price: number;
-  isPackage: boolean;
+  qty: number; // Total units
 };
 
-// Helper function to optimize cart items - convert to package when qty >= package_qty
+// Simplified consolidation: one row per product ID
 const optimizeCartItems = (items: CartItem[]): CartItem[] => {
-  const result: CartItem[] = [];
-
-  // Group items by product ID
-  const productGroups = new Map<number, { individual?: CartItem; package?: CartItem }>();
-
+  const map = new Map<number, CartItem>();
   for (const item of items) {
-    const productId = item.product.id!;
-    if (!productGroups.has(productId)) {
-      productGroups.set(productId, {});
-    }
-    const group = productGroups.get(productId)!;
-    if (item.isPackage) {
-      group.package = item;
+    const id = item.product.id!;
+    if (map.has(id)) {
+      map.get(id)!.qty += item.qty;
     } else {
-      group.individual = item;
+      map.set(id, { ...item });
     }
   }
+  return Array.from(map.values()).filter(i => i.qty > 0);
+};
 
-  // Process each product group
-  for (const [, group] of productGroups) {
-    const individual = group.individual;
-    const packageItem = group.package;
-
-    // If there's an individual item and product has package pricing
-    if (individual && individual.product.package_price && individual.product.package_qty) {
-      const packageQty = individual.product.package_qty;
-
-      if (individual.qty >= packageQty) {
-        // Convert to packages
-        const numPackages = Math.floor(individual.qty / packageQty);
-        const remainder = individual.qty % packageQty;
-
-        // Add/merge package items
-        const existingPackageQty = packageItem?.qty || 0;
-        result.push({
-          product: individual.product,
-          qty: existingPackageQty + numPackages,
-          price: individual.product.package_price,
-          isPackage: true,
-        });
-
-        // Add remaining individual items if any
-        if (remainder > 0) {
-          result.push({
-            product: individual.product,
-            qty: remainder,
-            price: individual.product.selling_price || 0,
-            isPackage: false,
-          });
-        }
-      } else {
-        // Keep individual as is
-        result.push(individual);
-        // Keep existing package if any
-        if (packageItem) {
-          result.push(packageItem);
-        }
-      }
+// Helper to calculate effective price breakdown for display
+const getPriceBreakdown = (item: CartItem) => {
+  const p = item.product;
+  const qty = item.qty;
+  
+  if (p.package_price && p.package_qty && p.package_qty > 0) {
+    const numPacks = Math.floor(qty / p.package_qty);
+    const remainder = qty % p.package_qty;
+    const totalPrice = (numPacks * p.package_price) + (remainder * (p.selling_price || 0));
+    
+    let label = "";
+    if (numPacks > 0 && remainder > 0) {
+      label = `${numPacks} Pkt + ${remainder} Sat`;
+    } else if (numPacks > 0) {
+      label = `${numPacks} Paket`;
     } else {
-      // No package pricing available, keep items as is
-      if (individual) result.push(individual);
-      if (packageItem) result.push(packageItem);
+      label = `${remainder} Satuan`;
     }
+    
+    return { totalPrice, label, unitPrice: totalPrice / qty };
   }
-
-  return result;
+  
+  const totalPrice = qty * (p.selling_price || 0);
+  return { totalPrice, label: `${qty} Satuan`, unitPrice: p.selling_price || 0 };
 };
 
 export default function SalesTransactionScreen() {
@@ -149,101 +117,33 @@ export default function SalesTransactionScreen() {
   );
 
   const handleAddToCart = (product: Product, asPackage: boolean = false) => {
+    const unitsToAdd = asPackage ? (product.package_qty || 1) : 1;
     setCart((prevCart) => {
-      const existingIndex = prevCart.findIndex(
-        (i) => i.product.id === product.id && i.isPackage === asPackage
-      );
+      const existingIndex = prevCart.findIndex((i) => i.product.id === product.id);
 
-      let newCart: CartItem[];
       if (existingIndex > -1) {
-        newCart = [...prevCart];
-        newCart[existingIndex].qty += 1;
+        const newCart = [...prevCart];
+        newCart[existingIndex].qty += unitsToAdd;
+        return newCart;
       } else {
-        newCart = [
-          ...prevCart,
-          {
-            product,
-            qty: 1,
-            price: asPackage ? product.package_price || 0 : product.selling_price || 0,
-            isPackage: asPackage,
-          },
-        ];
+        return [...prevCart, { product, qty: unitsToAdd }];
       }
-
-      // Auto-convert to package if qty reaches package_qty
-      return optimizeCartItems(newCart);
     });
   };
 
-  const updateCartItem = (
-    id: number,
-    isPackage: boolean,
-    changes: Partial<Pick<CartItem, "qty" | "price">>
-  ) => {
-    setCart((prev) => {
-      const updated = prev.map((i) =>
-        (i.product.id === id && i.isPackage === isPackage) ? { ...i, ...changes } : i
-      );
-      // Auto-convert to package if qty reaches package_qty
-      return optimizeCartItems(updated);
-    });
+  const updateCartItemQty = (id: number, qty: number) => {
+    setCart((prev) => prev.map((i) => (i.product.id === id ? { ...i, qty } : i)).filter(i => i.qty > 0));
   };
 
-  const decreaseCartItemQty = (id: number, isPackage: boolean) => {
-    setCart((prev) => {
-      const item = prev.find((i) => i.product.id === id && i.isPackage === isPackage);
-      if (!item) return prev;
-
-      // For package items with qty = 1, convert to individual items
-      if (isPackage && item.qty === 1 && item.product.package_qty) {
-        const newIndividualQty = item.product.package_qty - 1;
-
-        // Remove the package item
-        let updated = prev.filter((i) => !(i.product.id === id && i.isPackage === true));
-
-        // Find existing individual item for this product
-        const existingIndividual = updated.find((i) => i.product.id === id && !i.isPackage);
-
-        if (existingIndividual) {
-          // Add to existing individual qty
-          updated = updated.map((i) =>
-            (i.product.id === id && !i.isPackage)
-              ? { ...i, qty: i.qty + newIndividualQty }
-              : i
-          );
-        } else {
-          // Create new individual item
-          updated.push({
-            product: item.product,
-            qty: newIndividualQty,
-            price: item.product.selling_price || 0,
-            isPackage: false,
-          });
-        }
-
-        return updated;
-      }
-
-      // For regular decrease (non-package or package with qty > 1)
-      if (item.qty <= 1) {
-        // Remove item if qty would go to 0
-        return prev.filter((i) => !(i.product.id === id && i.isPackage === isPackage));
-      }
-
-      // Normal decrease
-      return prev.map((i) =>
-        (i.product.id === id && i.isPackage === isPackage)
-          ? { ...i, qty: i.qty - 1 }
-          : i
-      );
-    });
+  const decreaseCartItemQty = (id: number) => {
+    setCart((prev) => prev.map((i) => (i.product.id === id ? { ...i, qty: i.qty - 1 } : i)).filter(i => i.qty > 0));
   };
 
-  const handleRemoveFromCart = (id: number, isPackage: boolean) => {
-    setCart((prev) => prev.filter((i) => !(i.product.id === id && i.isPackage === isPackage)));
+  const handleRemoveFromCart = (id: number) => {
+    setCart((prev) => prev.filter((i) => i.product.id !== id));
   };
 
-  const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
+  const total = cart.reduce((sum, item) => sum + getPriceBreakdown(item).totalPrice, 0);
   const change = Number(paidAmount) - total;
 
   const handleFinishTransaction = async () => {
@@ -277,6 +177,39 @@ export default function SalesTransactionScreen() {
         finalCustomerId = newCustomerId;
       }
 
+      const finalSalesItems: any[] = [];
+      for (const item of cart) {
+        const p = item.product;
+        if (p.package_qty && p.package_price) {
+          const numPacks = Math.floor(item.qty / p.package_qty);
+          const remainder = item.qty % p.package_qty;
+          
+          if (numPacks > 0) {
+            finalSalesItems.push({
+              product_id: p.id!,
+              qty: numPacks * p.package_qty,
+              price: p.package_price / p.package_qty,
+              subtotal: numPacks * p.package_price,
+            });
+          }
+          if (remainder > 0) {
+            finalSalesItems.push({
+              product_id: p.id!,
+              qty: remainder,
+              price: p.selling_price || 0,
+              subtotal: remainder * (p.selling_price || 0),
+            });
+          }
+        } else {
+          finalSalesItems.push({
+            product_id: p.id!,
+            qty: item.qty,
+            price: p.selling_price || 0,
+            subtotal: item.qty * (p.selling_price || 0),
+          });
+        }
+      }
+
       await addSale(
         {
           customer_id: finalCustomerId,
@@ -285,12 +218,7 @@ export default function SalesTransactionScreen() {
           paid: Number(paidAmount),
           change: isDebt ? 0 : change,
         },
-        cart.map((i) => ({
-          product_id: i.product.id!,
-          qty: i.isPackage ? i.qty * (i.product.package_qty || 1) : i.qty,
-          price: i.price,
-          subtotal: i.qty * i.price,
-        }))
+        finalSalesItems
       );
 
 
@@ -469,51 +397,46 @@ export default function SalesTransactionScreen() {
           <Text style={styles.cardTitle}>Keranjang</Text>
           <FlatList
             data={cart}
-            keyExtractor={(item, index) => `${item.product.id}-${item.isPackage}-${index}`}
-            renderItem={({ item }) => (
-              <View style={styles.cartItem}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cartItemName}>
-                    {item.product.name} {item.isPackage ? '(Paket)' : ''}
-                  </Text>
-                  <Text style={styles.cartItemPrice}>
-                    @Rp {item.price.toLocaleString("id-ID")}
-                  </Text>
-                </View>
-                <View style={styles.qtyContainer}>
+            keyExtractor={(item) => `${item.product.id}`}
+            renderItem={({ item }) => {
+              const info = getPriceBreakdown(item);
+              return (
+                <View style={styles.cartItem}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cartItemName}>{item.product.name}</Text>
+                    <Text style={styles.cartItemPrice}>
+                      {info.label} (@Rp {Math.round(info.unitPrice).toLocaleString("id-ID")})
+                    </Text>
+                  </View>
+                  <View style={styles.qtyContainer}>
+                    <TouchableOpacity
+                      onPress={() => decreaseCartItemQty(item.product.id!)}
+                      style={styles.qtyBtn}
+                    >
+                      <Text>-</Text>
+                    </TouchableOpacity>
+                    <TextInput
+                      value={item.qty.toString()}
+                      keyboardType="numeric"
+                      onChangeText={(t) => updateCartItemQty(item.product.id!, parseInt(t) || 0)}
+                      style={styles.qtyInput}
+                    />
+                    <TouchableOpacity
+                      onPress={() => handleAddToCart(item.product, false)}
+                      style={styles.qtyBtn}
+                    >
+                      <Text>+</Text>
+                    </TouchableOpacity>
+                  </View>
                   <TouchableOpacity
-                    onPress={() => decreaseCartItemQty(item.product.id!, item.isPackage)}
-                    style={styles.qtyBtn}
+                    onPress={() => handleRemoveFromCart(item.product.id!)}
+                    style={styles.removeBtn}
                   >
-                    <Text>-</Text>
-                  </TouchableOpacity>
-                  <TextInput
-                    value={item.qty.toString()}
-                    keyboardType="numeric"
-                    onChangeText={(t) =>
-                      updateCartItem(item.product.id!, item.isPackage, {
-                        qty: parseInt(t) || 0,
-                      })
-                    }
-                    style={styles.qtyInput}
-                  />
-                  <TouchableOpacity
-                    onPress={() =>
-                      updateCartItem(item.product.id!, item.isPackage, { qty: item.qty + 1 })
-                    }
-                    style={styles.qtyBtn}
-                  >
-                    <Text>+</Text>
+                    <Text style={{ color: "red" }}>✕</Text>
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  onPress={() => handleRemoveFromCart(item.product.id!, item.isPackage)}
-                  style={styles.removeBtn}
-                >
-                  <Text style={{ color: "red" }}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              );
+            }}
             ListEmptyComponent={
               <Text style={styles.emptyText}>Keranjang masih kosong</Text>
             }
