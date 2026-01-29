@@ -4,7 +4,7 @@
     "slug": "CashierApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/cashier-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -18,8 +18,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/cashier-icon.png",
+        "backgroundColor": "#FFC0CB"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.CashierApp"
@@ -28,7 +28,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Izinkan $(PRODUCT_NAME) mengakses kamera untuk scan barcode"
+        }
+      ]
     ],
     "extra": {
       "eas": {
