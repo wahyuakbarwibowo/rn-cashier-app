@@ -79,7 +79,6 @@ export default function SalesTransactionScreen() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState("");
-  const [isProductsExpanded, setIsProductsExpanded] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -292,102 +291,63 @@ export default function SalesTransactionScreen() {
         </View>
 
         {/* Search & Product Selection */}
-        <View style={[styles.card, isProductsExpanded && styles.expandedCard]}>
+        <View style={styles.card}>
           <View style={styles.searchRow}>
             <TextInput
-              placeholder="Cari produk atau barcode...disini"
+              placeholder="Cari produk atau barcode..."
               value={searchQuery}
               onChangeText={setSearchQuery}
               style={[styles.searchInput, styles.searchInputFlex]}
             />
-            <TouchableOpacity
-              style={styles.expandBtn}
-              onPress={() => setIsProductsExpanded(!isProductsExpanded)}
-            >
-              <Text style={styles.expandBtnText}>
-                {isProductsExpanded ? "Tutup" : "Expand"}
-              </Text>
-            </TouchableOpacity>
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearSearchBtn}
+                onPress={() => setSearchQuery("")}
+              >
+                <Text style={styles.clearSearchBtnText}>Batal</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {isProductsExpanded ? (
+          {searchQuery.length > 0 && (
             <FlatList
-              key="products-grid"
               data={filteredProducts}
               keyExtractor={(item) => item.id?.toString() ?? ""}
-              numColumns={2}
-              columnWrapperStyle={styles.productGrid}
               showsVerticalScrollIndicator={false}
-              style={styles.expandedProductList}
+              style={styles.searchResultList}
               renderItem={({ item }) => (
-                <View style={styles.productGridItem}>
-                  <TouchableOpacity
-                    style={styles.productGridCard}
-                    onPress={() => handleAddToCart(item, false)}
-                  >
-                    <Text style={styles.productGridName} numberOfLines={2}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.productGridPrice}>
-                      Rp {item.selling_price?.toLocaleString("id-ID")}
-                    </Text>
-                    {item.code && (
-                      <Text style={styles.productGridCode}>{item.code}</Text>
-                    )}
-                  </TouchableOpacity>
-                  {item.package_price ? (
+                <View style={styles.productListItem}>
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName}>{item.name}</Text>
+                    {item.code && <Text style={styles.productCode}>{item.code}</Text>}
+                  </View>
+                  <View style={styles.productActions}>
                     <TouchableOpacity
-                      style={[styles.productGridCard, styles.packageGridCard]}
-                      onPress={() => handleAddToCart(item, true)}
+                      style={styles.priceActionBtn}
+                      onPress={() => handleAddToCart(item, false)}
                     >
-                      <Text style={styles.productGridName}>
-                        Paket ({item.package_qty})
-                      </Text>
-                      <Text style={styles.productGridPrice}>
-                        Rp {item.package_price?.toLocaleString("id-ID")}
+                      <Text style={styles.priceActionLabel}>Satuan</Text>
+                      <Text style={styles.priceActionValue}>
+                        Rp {item.selling_price?.toLocaleString("id-ID")}
                       </Text>
                     </TouchableOpacity>
-                  ) : null}
+                    {item.package_price ? (
+                      <TouchableOpacity
+                        style={[styles.priceActionBtn, styles.packageActionBtn]}
+                        onPress={() => handleAddToCart(item, true)}
+                      >
+                        <Text style={styles.priceActionLabel}>Paket ({item.package_qty})</Text>
+                        <Text style={styles.priceActionValue}>
+                          Rp {item.package_price?.toLocaleString("id-ID")}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                 </View>
               )}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>Tidak ada produk</Text>
+                <Text style={styles.emptyText}>Produk tidak ditemukan</Text>
               }
-            />
-          ) : (
-            <FlatList
-              key="products-horizontal"
-              data={filteredProducts.slice(0, 10)}
-              keyExtractor={(item) => item.id?.toString() ?? ""}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.productList}
-              renderItem={({ item }) => (
-                <View style={styles.productPillContainer}>
-                  <TouchableOpacity
-                    style={styles.productPill}
-                    onPress={() => handleAddToCart(item, false)}
-                  >
-                    <Text style={styles.productPillText}>{item.name}</Text>
-                    <Text style={styles.productPillPrice}>
-                      Rp {item.selling_price?.toLocaleString("id-ID")}
-                    </Text>
-                  </TouchableOpacity>
-                  {item.package_price ? (
-                    <TouchableOpacity
-                      style={[styles.productPill, styles.packagePill]}
-                      onPress={() => handleAddToCart(item, true)}
-                    >
-                      <Text style={styles.productPillText}>
-                        Paket ({item.package_qty})
-                      </Text>
-                      <Text style={styles.productPillPrice}>
-                        Rp {item.package_price?.toLocaleString("id-ID")}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              )}
             />
           )}
         </View>
@@ -566,42 +526,88 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     elevation: 2,
   },
-  expandedCard: {
-    flex: 1,
-    maxHeight: 300,
-  },
   cardTitle: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 12,
+    color: "#111827",
   },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   searchInput: {
     backgroundColor: "#F9FAFB",
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
   searchInputFlex: {
     flex: 1,
-    marginRight: 8,
     marginBottom: 0,
   },
-  expandBtn: {
-    backgroundColor: "#3B82F6",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  clearSearchBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  expandBtnText: {
-    color: "#FFF",
+  clearSearchBtnText: {
+    color: "#EF4444",
     fontWeight: "600",
-    fontSize: 14,
+  },
+  searchResultList: {
+    maxHeight: 300,
+    marginTop: 4,
+  },
+  productListItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  productInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  productName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1F2937",
+  },
+  productCode: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginTop: 2,
+  },
+  productActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  priceActionBtn: {
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    alignItems: "center",
+  },
+  packageActionBtn: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FDE68A",
+  },
+  priceActionLabel: {
+    fontSize: 10,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  priceActionValue: {
+    fontSize: 12,
+    color: "#1D4ED8",
+    fontWeight: "bold",
   },
   productList: {
     marginBottom: 8,
