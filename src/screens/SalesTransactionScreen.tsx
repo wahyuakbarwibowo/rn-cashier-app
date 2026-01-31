@@ -145,6 +145,17 @@ export default function SalesTransactionScreen() {
   const total = cart.reduce((sum, item) => sum + getPriceBreakdown(item).totalPrice, 0);
   const change = Number(paidAmount) - total;
 
+  const resetForm = () => {
+    setCart([]);
+    setPaidAmount("0");
+    setSearchQuery("");
+    setSelectedCustomerId(null);
+    setCustomerName("");
+    if (paymentMethods.length > 0) {
+      setSelectedPaymentMethodId(paymentMethods[0].id!);
+    }
+  };
+
   const handleFinishTransaction = async () => {
     if (cart.length === 0) {
       Alert.alert("Error", "Keranjang kosong");
@@ -209,7 +220,7 @@ export default function SalesTransactionScreen() {
         }
       }
 
-      await addSale(
+      const saleId = await addSale(
         {
           customer_id: finalCustomerId,
           payment_method_id: selectedPaymentMethodId,
@@ -220,10 +231,14 @@ export default function SalesTransactionScreen() {
         finalSalesItems
       );
 
-
-
       Alert.alert("Sukses", "Transaksi berhasil disimpan", [
-        { text: "OK", onPress: () => navigation.navigate("Product") },
+        { 
+          text: "OK", 
+          onPress: () => {
+            resetForm();
+            navigation.navigate("SaleDetail", { saleId });
+          } 
+        },
       ]);
     } catch (error) {
       console.error(error);

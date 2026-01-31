@@ -125,39 +125,32 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Menu Grid */}
-        <Text style={styles.sectionTitle}>Menu Utama</Text>
+        {/* PRODUK Section */}
+        <Text style={styles.sectionTitle}>PRODUK</Text>
         <View style={styles.menuGrid}>
           <MenuCard
-            title="Kasir"
-            icon="🛒"
-            color="#3B82F6"
-            onPress={() => navigation.navigate("SalesTransaction")}
-          />
-          <MenuCard
-            title="Produk"
+            title="Stok Barang"
             icon="📦"
             color="#10B981"
             onPress={() => navigation.navigate("Product")}
             badge={stats.lowStockCount}
           />
           <MenuCard
-            title="Pulsa"
-            icon="📱"
-            color="#F59E0B"
-            onPress={() => navigation.navigate("Pulsa")}
+            title="Tambah Stok"
+            icon="📥"
+            color="#EC4899"
+            onPress={() => navigation.navigate("PurchaseForm")}
           />
+        </View>
+
+        {/* TRANSAKSI Section */}
+        <Text style={styles.sectionTitle}>TRANSAKSI</Text>
+        <View style={styles.menuGrid}>
           <MenuCard
-            title="Laporan"
-            icon="📊"
-            color="#8B5CF6"
-            onPress={() => navigation.navigate("Reports")}
-          />
-          <MenuCard
-            title="Piutang"
-            icon="💰"
-            color="#EF4444"
-            onPress={() => navigation.navigate("Receivables")}
+            title="Transaksi Kasir"
+            icon="🛒"
+            color="#3B82F6"
+            onPress={() => navigation.navigate("SalesTransaction")}
           />
           <MenuCard
             title="Riwayat"
@@ -166,10 +159,56 @@ export default function DashboardScreen() {
             onPress={() => navigation.navigate("SalesHistory")}
           />
           <MenuCard
-            title="Beli Stok"
-            icon="📥"
-            color="#EC4899"
-            onPress={() => navigation.navigate("PurchaseForm")}
+            title="Laporan"
+            icon="📊"
+            color="#8B5CF6"
+            onPress={() => navigation.navigate("Reports")}
+          />
+          <MenuCard
+            title="Pulsa"
+            icon="📱"
+            color="#F59E0B"
+            onPress={() => navigation.navigate("Pulsa")}
+          />
+        </View>
+
+        {/* PELANGGAN & HUTANG Section */}
+        <Text style={styles.sectionTitle}>PELANGGAN & HUTANG</Text>
+        <View style={styles.menuGrid}>
+          <MenuCard
+            title="Pelanggan"
+            icon="👥"
+            color="#6366F1"
+            onPress={() => navigation.navigate("Customers")}
+          />
+          <MenuCard
+            title="Piutang"
+            icon="💰"
+            color="#EF4444"
+            onPress={() => navigation.navigate("Receivables")}
+          />
+          <MenuCard
+            title="Hutang Supplier"
+            icon="💸"
+            color="#F43F5E"
+            onPress={() => navigation.navigate("Payables")}
+          />
+        </View>
+
+        {/* KONFIGURASI Section */}
+        <Text style={styles.sectionTitle}>KONFIGURASI</Text>
+        <View style={styles.menuGrid}>
+          <MenuCard
+            title="Cara Bayar"
+            icon="💳"
+            color="#14B8A6"
+            onPress={() => navigation.navigate("PaymentMethods")}
+          />
+          <MenuCard
+            title="Pengaturan"
+            icon="⚙️"
+            color="#4B5563"
+            onPress={() => navigation.navigate("Settings")}
           />
           <MenuCard
             title="Backup"

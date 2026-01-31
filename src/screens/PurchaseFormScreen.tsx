@@ -26,7 +26,6 @@ export default function PurchaseFormScreen() {
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [supplier, setSupplier] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isProductsExpanded, setIsProductsExpanded] = useState(false);
 
   const loadProducts = async () => {
     const data = await getProducts();
@@ -83,6 +82,12 @@ export default function PurchaseFormScreen() {
     0
   );
 
+  const resetForm = () => {
+    setSelectedItems([]);
+    setSupplier("");
+    setSearchQuery("");
+  };
+
   const handleSave = async () => {
     if (!supplier.trim()) {
       Alert.alert("Validasi", "Supplier wajib diisi");
@@ -93,22 +98,33 @@ export default function PurchaseFormScreen() {
       return;
     }
 
-    await addPurchase(
-      {
-        date: new Date().toISOString(),
-        supplier,
-        total,
-      },
-      selectedItems.map((i) => ({
-        productId: i.product.id!,
-        qty: i.isPackage ? (i.qty * (i.product.purchase_package_qty || 1)) : i.qty,
-        price: i.price,
-      }))
-    );
+    try {
+      await addPurchase(
+        {
+          date: new Date().toISOString(),
+          supplier,
+          total,
+        },
+        selectedItems.map((i) => ({
+          productId: i.product.id!,
+          qty: i.isPackage ? (i.qty * (i.product.purchase_package_qty || 1)) : i.qty,
+          price: i.price,
+        }))
+      );
 
-    Alert.alert("Sukses", "Pembelian berhasil disimpan", [
-      { text: "OK", onPress: () => navigation.goBack() }
-    ]);
+      Alert.alert("Sukses", "Pembelian berhasil disimpan", [
+        { 
+          text: "OK", 
+          onPress: () => {
+            resetForm();
+            navigation.navigate("Product");
+          } 
+        }
+      ]);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Gagal menyimpan pembelian");
+    }
   };
   
   const filteredProducts = products.filter((p) =>
@@ -141,7 +157,7 @@ export default function PurchaseFormScreen() {
       </View>
 
       {/* Product Picker */}
-      <View style={[styles.card, isProductsExpanded && styles.expandedCard]}>
+      <View style={styles.card}>
         <View style={styles.searchRow}>
           <TextInput
             placeholder="Cari produk..."
@@ -149,82 +165,55 @@ export default function PurchaseFormScreen() {
             onChangeText={setSearchQuery}
             style={[styles.searchInput, styles.searchInputFlex]}
           />
-          <TouchableOpacity
-            style={styles.expandBtn}
-            onPress={() => setIsProductsExpanded(!isProductsExpanded)}
-          >
-            <Text style={styles.expandBtnText}>
-              {isProductsExpanded ? "Tutup" : "Expand"}
-            </Text>
-          </TouchableOpacity>
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearSearchBtn}
+              onPress={() => setSearchQuery("")}
+            >
+              <Text style={styles.clearSearchBtnText}>Batal</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {isProductsExpanded ? (
+        {searchQuery.length > 0 && (
           <FlatList
-            key="products-grid"
             data={filteredProducts}
-            keyExtractor={(item) => item.id?.toString() ?? ""}
-            numColumns={2}
-            columnWrapperStyle={styles.productGrid}
+            keyExtractor={(item) => String(item.id)}
             showsVerticalScrollIndicator={false}
-            style={styles.expandedProductList}
+            style={styles.searchResultList}
             renderItem={({ item }) => (
-              <View style={styles.productGridItem}>
-                <TouchableOpacity
-                  style={styles.productGridCard}
-                  onPress={() => handleAddItem(item, false)}
-                >
-                  <Text style={styles.productGridName} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.productGridPrice}>
-                    Rp {item.purchase_price?.toLocaleString("id-ID")}
-                  </Text>
-                </TouchableOpacity>
-                {item.purchase_package_price ? (
+              <View style={styles.productListItem}>
+                <View style={styles.productInfo}>
+                  <Text style={styles.productName}>{item.name}</Text>
+                  {item.code && <Text style={styles.productCode}>{item.code}</Text>}
+                </View>
+                <View style={styles.productActions}>
                   <TouchableOpacity
-                    style={[styles.productGridCard, styles.packageGridCard]}
-                    onPress={() => handleAddItem(item, true)}
+                    style={styles.priceActionBtn}
+                    onPress={() => handleAddItem(item, false)}
                   >
-                    <Text style={styles.productGridName}>
-                      Paket ({item.purchase_package_qty})
-                    </Text>
-                    <Text style={styles.productGridPrice}>
-                      Rp {item.purchase_package_price?.toLocaleString("id-ID")}
+                    <Text style={styles.priceActionLabel}>Satuan</Text>
+                    <Text style={styles.priceActionValue}>
+                      Rp {item.purchase_price?.toLocaleString("id-ID")}
                     </Text>
                   </TouchableOpacity>
-                ) : null}
+                  {item.purchase_package_price ? (
+                    <TouchableOpacity
+                      style={[styles.priceActionBtn, styles.packageActionBtn]}
+                      onPress={() => handleAddItem(item, true)}
+                    >
+                      <Text style={styles.priceActionLabel}>Paket ({item.purchase_package_qty})</Text>
+                      <Text style={styles.priceActionValue}>
+                        Rp {item.purchase_package_price?.toLocaleString("id-ID")}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
               </View>
             )}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>Tidak ada produk</Text>
+              <Text style={styles.emptyText}>Produk tidak ditemukan</Text>
             }
-          />
-        ) : (
-          <FlatList
-            key="products-horizontal"
-            data={filteredProducts.slice(0, 10)}
-            keyExtractor={(item) => item.id?.toString() ?? ""}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <View style={styles.productOption}>
-                <TouchableOpacity
-                  style={styles.productPill}
-                  onPress={() => handleAddItem(item, false)}
-                >
-                  <Text style={styles.productPillText}>{item.name}</Text>
-                </TouchableOpacity>
-                {item.purchase_package_price ? (
-                  <TouchableOpacity
-                    style={[styles.productPill, styles.packagePill]}
-                    onPress={() => handleAddItem(item, true)}
-                  >
-                    <Text style={styles.productPillText}>Paket ({item.purchase_package_qty})</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            )}
           />
         )}
       </View>
@@ -354,13 +343,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
   },
-  expandedCard: {
-    maxHeight: 350,
-  },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   searchInput: {
     backgroundColor: "#F9FAFB",
@@ -371,50 +357,66 @@ const styles = StyleSheet.create({
   },
   searchInputFlex: {
     flex: 1,
-    marginRight: 8,
+    marginBottom: 0,
   },
-  expandBtn: {
-    backgroundColor: "#3B82F6",
-    paddingVertical: 10,
+  clearSearchBtn: {
     paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 8,
   },
-  expandBtnText: {
-    color: "#FFF",
+  clearSearchBtnText: {
+    color: "#EF4444",
     fontWeight: "600",
-    fontSize: 12,
   },
-  expandedProductList: {
-    flexGrow: 0,
+  searchResultList: {
+    maxHeight: 250,
   },
-  productGrid: {
+  productListItem: {
+    flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
-  productGridItem: {
-    flex: 0.48,
-    marginBottom: 8,
+  productInfo: {
+    flex: 1,
+    marginRight: 10,
   },
-  productGridCard: {
+  productName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1F2937",
+  },
+  productCode: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+  productActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  priceActionBtn: {
     backgroundColor: "#EFF6FF",
-    padding: 10,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#BFDBFE",
-    marginBottom: 4,
+    alignItems: "center",
   },
-  packageGridCard: {
+  packageActionBtn: {
     backgroundColor: "#FEF3C7",
     borderColor: "#FDE68A",
   },
-  productGridName: {
-    fontWeight: "600",
-    fontSize: 13,
-    color: "#111827",
+  priceActionLabel: {
+    fontSize: 9,
+    color: "#6B7280",
+    fontWeight: "500",
   },
-  productGridPrice: {
+  priceActionValue: {
     fontSize: 11,
-    color: "#3B82F6",
-    fontWeight: "600",
+    color: "#1D4ED8",
+    fontWeight: "bold",
   },
   cardTitle: {
     fontSize: 17,
