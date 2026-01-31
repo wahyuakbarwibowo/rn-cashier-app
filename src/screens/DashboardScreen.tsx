@@ -172,14 +172,20 @@ export default function DashboardScreen() {
           />
         </View>
 
-        {/* PELANGGAN & HUTANG Section */}
-        <Text style={styles.sectionTitle}>PELANGGAN & HUTANG</Text>
+        {/* PELANGGAN & SUPPLIER Section */}
+        <Text style={styles.sectionTitle}>PELANGGAN & SUPPLIER</Text>
         <View style={styles.menuGrid}>
           <MenuCard
             title="Pelanggan"
             icon="👥"
             color="#6366F1"
             onPress={() => navigation.navigate("Customers")}
+          />
+          <MenuCard
+            title="Supplier"
+            icon="🏭"
+            color="#8B5CF6"
+            onPress={() => navigation.navigate("Suppliers")}
           />
           <MenuCard
             title="Piutang"

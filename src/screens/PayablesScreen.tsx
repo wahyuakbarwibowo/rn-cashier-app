@@ -22,9 +22,10 @@ export default function PayablesScreen() {
       setLoading(true);
       const db = await getDB();
       const res = await db.getAllAsync(
-        `SELECT p.*, pur.created_at as purchase_date 
+        `SELECT p.*, pur.created_at as purchase_date, s.phone as supplier_phone 
          FROM payables p
          JOIN purchases pur ON p.purchase_id = pur.id
+         LEFT JOIN suppliers s ON p.supplier_id = s.id
          ORDER BY p.id DESC`
       );
       setData(res);
@@ -61,6 +62,7 @@ export default function PayablesScreen() {
               <View style={styles.row}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{item.supplier || 'Supplier Umum'}</Text>
+                  {item.supplier_phone ? <Text style={styles.phone}>{item.supplier_phone}</Text> : null}
                   <Text style={styles.date}>Purchase #{item.purchase_id} | {new Date(item.purchase_date).toLocaleDateString()}</Text>
                 </View>
                 <Text style={styles.amount}>Rp {item.amount.toLocaleString("id-ID")}</Text>
@@ -91,6 +93,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: "#FFF", padding: 16, borderRadius: 12, marginBottom: 12, elevation: 2 },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   name: { fontSize: 16, fontWeight: "bold" },
+  phone: { fontSize: 13, color: "#4B5563" },
   date: { fontSize: 12, color: "#6B7280", marginTop: 4 },
   amount: { fontSize: 16, fontWeight: "bold", color: "#EF4444" },
   footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#F3F4F6" },

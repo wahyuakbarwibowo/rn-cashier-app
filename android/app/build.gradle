@@ -81,20 +81,20 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+/**
+ * Set this to true to create two separate APKs instead of one:
+ *   - An APK that only works on ARM devices
+ *   - An APK that only works on x86 devices
+ * The advantage is the size of the APK is reduced by about 4MB.
+ * Remember to call "assembleRelease" to generate the APKs.
+ */
+def enableSeparateBuildPerCPUArchitecture = true
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
-
-    splits {
-        abi {
-            enable true
-            reset()
-            include "armeabi-v7a", "arm64-v8a"
-            universalApk false
-        }
-    }
 
     namespace 'com.anonymous.CashierApp'
     defaultConfig {
@@ -106,7 +106,16 @@ android {
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
-    signingConfigs {
+    
+    splits {
+        abi {
+            reset()
+            enable enableSeparateBuildPerCPUArchitecture
+            universalApk false  // If true, also generate a universal APK
+            include "armeabi-v7a", "arm64-v8a"
+        }
+    }
+ signingConfigs {
         debug {
             storeFile file('debug.keystore')
             storePassword 'android'
@@ -138,6 +147,21 @@ android {
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+
+    // applicationVariants are e.g. debug, release
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            // For each separate APK per architecture, set a unique version code as described here:
+            // https://developer.android.com/studio/build/configure-apk-splits.html
+            // Example ABI values: armeabi-v7a, arm64-v8a, x86, x86_64
+            def versionCodes = ["armeabi-v7a": 1, "arm64-v8a": 2]
+            def abi = output.getFilter(com.android.build.OutputFile.ABI)
+            if (abi != null) {  // null for the universal-debug, universal-release variants
+                output.versionCodeOverride =
+                        defaultConfig.versionCode * 1000 + versionCodes.get(abi)
+            }
+        }
     }
 }
 

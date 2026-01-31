@@ -99,11 +99,29 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       `);
 
       await database.execAsync(`
+        CREATE TABLE IF NOT EXISTS suppliers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT,
+          address TEXT,
+          created_at TEXT,
+          updated_at TEXT
+        );
+      `);
+
+      // Migration for purchases
+      try {
+        await database.execAsync("ALTER TABLE purchases ADD COLUMN supplier_id INTEGER;");
+      } catch (e) {}
+
+      await database.execAsync(`
         CREATE TABLE IF NOT EXISTS purchases (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          supplier_id INTEGER,
           supplier TEXT,
           total REAL,
-          created_at TEXT
+          created_at TEXT,
+          FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
         );
       `);
 
@@ -137,13 +155,20 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
         CREATE TABLE IF NOT EXISTS payables (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           purchase_id INTEGER,
+          supplier_id INTEGER,
           supplier TEXT,
           amount REAL,
           due_date TEXT,
           status TEXT DEFAULT 'pending',
-          FOREIGN KEY (purchase_id) REFERENCES purchases(id)
+          FOREIGN KEY (purchase_id) REFERENCES purchases(id),
+          FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
         );
       `);
+
+      // Migration for payables
+      try {
+        await database.execAsync("ALTER TABLE payables ADD COLUMN supplier_id INTEGER;");
+      } catch (e) {}
 
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS phone_history (

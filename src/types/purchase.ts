@@ -1,7 +1,8 @@
 export interface Purchase {
   id?: number;
-  date: string;        // tanggal pembelian
-  supplier?: string;   // opsional
+  date: string;
+  supplier_id?: number;
+  supplier?: string;
   total: number;
 }
 

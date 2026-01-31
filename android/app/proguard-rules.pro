@@ -11,9 +11,4 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
-# expo-camera
--keep class expo.modules.camera.** { *; }
--keep class com.google.mlkit.** { *; }
--keep class com.google.android.gms.vision.** { *; }
-
 # Add any project specific keep options here:

@@ -22,6 +22,7 @@ import ReceivablesScreen from "../screens/ReceivablesScreen";
 import PayablesScreen from "../screens/PayablesScreen";
 import BackupScreen from "../screens/BackupScreen";
 import DashboardScreen from "../screens/DashboardScreen";
+import SuppliersScreen from "../screens/SuppliersScreen";
 import { getShopProfile } from "../database/settings";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
@@ -96,8 +97,9 @@ function CustomDrawerContent(props: any) {
       <MenuItem name="Reports" label="Laporan & Grafik" icon="📊" />
       <MenuItem name="Pulsa" label="Transaksi Pulsa" icon="📱" />
 
-      <SectionHeader title="PELANGGAN & HUTANG" />
+      <SectionHeader title="PELANGGAN & SUPPLIER" />
       <MenuItem name="Customers" label="Daftar Pelanggan" icon="👥" />
+      <MenuItem name="Suppliers" label="Master Supplier" icon="🏭" />
       <MenuItem name="Receivables" label="Piutang Pelanggan" icon="💰" />
       <MenuItem name="Payables" label="Hutang Supplier" icon="💸" />
 
@@ -135,8 +137,9 @@ export default function DrawerNavigator() {
       <Drawer.Screen name="Reports" component={ReportsScreen} options={{ title: '📊 Laporan & Grafik' }} />
       <Drawer.Screen name="Pulsa" component={PulsaTransactionScreen} options={{ title: '📱 Transaksi Pulsa' }} />
 
-      {/* 3. Pelanggan & Hutang Piutang */}
+      {/* 3. Pelanggan & Supplier */}
       <Drawer.Screen name="Customers" component={CustomersScreen} options={{ title: '👥 Daftar Pelanggan' }} />
+      <Drawer.Screen name="Suppliers" component={SuppliersScreen} options={{ title: '🏭 Master Supplier' }} />
       <Drawer.Screen name="Receivables" component={ReceivablesScreen} options={{ title: '💰 Piutang Pelanggan' }} />
       <Drawer.Screen name="Payables" component={PayablesScreen} options={{ title: '💸 Hutang Supplier' }} />
 

@@ -12,6 +12,9 @@ import { useNavigation } from "@react-navigation/native";
 import { getProducts } from "../database/products";
 import { addPurchase } from "../database/purchases";
 import { Product } from "../types/database";
+import { getSuppliers, addSupplier } from "../database/suppliers";
+import { Supplier } from "../types/supplier";
+import { ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 
 type SelectedItem = {
   product: Product;
@@ -24,17 +27,24 @@ export default function PurchaseFormScreen() {
   const navigation = useNavigation<any>();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
-  const [supplier, setSupplier] = useState("");
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
+  const [supplierName, setSupplierName] = useState("");
+  const [isDebt, setIsDebt] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const loadProducts = async () => {
-    const data = await getProducts();
-    setProducts(data);
+  const loadData = async () => {
+    const [pData, sData] = await Promise.all([
+      getProducts(),
+      getSuppliers()
+    ]);
+    setProducts(pData);
+    setSuppliers(sData);
   };
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadProducts();
+      loadData();
     });
     return unsubscribe;
   }, [navigation]);
@@ -84,13 +94,15 @@ export default function PurchaseFormScreen() {
 
   const resetForm = () => {
     setSelectedItems([]);
-    setSupplier("");
+    setSelectedSupplierId(null);
+    setSupplierName("");
+    setIsDebt(false);
     setSearchQuery("");
   };
 
   const handleSave = async () => {
-    if (!supplier.trim()) {
-      Alert.alert("Validasi", "Supplier wajib diisi");
+    if (!selectedSupplierId && !supplierName.trim()) {
+      Alert.alert("Validasi", "Supplier wajib dipilih atau diisi");
       return;
     }
     if (selectedItems.length === 0) {
@@ -99,11 +111,29 @@ export default function PurchaseFormScreen() {
     }
 
     try {
+      let finalSupplierId = selectedSupplierId;
+      let finalSupplierName = supplierName;
+
+      // If manual name is entered, create supplier
+      if (!finalSupplierId && supplierName.trim()) {
+        const newSupplierId = await addSupplier({
+          name: supplierName.trim(),
+          phone: "",
+          address: ""
+        });
+        finalSupplierId = newSupplierId;
+      } else if (selectedSupplierId) {
+        const s = suppliers.find(s => s.id === selectedSupplierId);
+        finalSupplierName = s?.name || "";
+      }
+
       await addPurchase(
         {
           date: new Date().toISOString(),
-          supplier,
+          supplier: finalSupplierName,
+          supplier_id: finalSupplierId || undefined,
           total,
+          isDebt: isDebt,
         },
         selectedItems.map((i) => ({
           productId: i.product.id!,
@@ -133,30 +163,77 @@ export default function PurchaseFormScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <Text style={styles.header}>🧾 Pembelian</Text>
-        <TouchableOpacity 
-          style={styles.addNewBtn} 
-          onPress={() => navigation.navigate("Product")}
-        >
-          <Text style={styles.addNewBtnText}>+ Barang Baru</Text>
-        </TouchableOpacity>
-      </View>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <Text style={styles.header}>🧾 Pembelian</Text>
+          <TouchableOpacity 
+            style={styles.addNewBtn} 
+            onPress={() => navigation.navigate("Product")}
+          >
+            <Text style={styles.addNewBtnText}>+ Barang Baru</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Supplier */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Supplier</Text>
-        <TextInput
-          placeholder="Nama supplier"
-          value={supplier}
-          onChangeText={setSupplier}
-          style={styles.input}
-        />
-      </View>
+        {/* Supplier Selector */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Pilih Supplier</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
+            <TouchableOpacity 
+              style={[styles.selectorPill, !selectedSupplierId && !supplierName && styles.activeSelectorPill]}
+              onPress={() => {
+                setSelectedSupplierId(null);
+                setSupplierName("");
+              }}
+            >
+              <Text style={[styles.selectorPillText, !selectedSupplierId && !supplierName && styles.activeSelectorPillText]}>Umum</Text>
+            </TouchableOpacity>
+            {suppliers.map(s => (
+              <TouchableOpacity 
+                key={s.id} 
+                style={[styles.selectorPill, selectedSupplierId === s.id && styles.activeSelectorPill]}
+                onPress={() => {
+                  setSelectedSupplierId(s.id!);
+                  setSupplierName("");
+                }}
+              >
+                <Text style={[styles.selectorPillText, selectedSupplierId === s.id && styles.activeSelectorPillText]}>{s.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-      {/* Product Picker */}
+          <TextInput
+            placeholder="Atau input supplier baru..."
+            value={supplierName}
+            onChangeText={(t) => {
+              setSupplierName(t);
+              if (t) setSelectedSupplierId(null);
+            }}
+            style={styles.input}
+          />
+
+          <Text style={[styles.cardTitle, { marginTop: 16, marginBottom: 8 }]}>Metode Bayar</Text>
+          <View style={styles.row}>
+            <TouchableOpacity 
+              style={[styles.selectorPill, !isDebt && styles.activeSelectorPill, { flex: 1 }]}
+              onPress={() => setIsDebt(false)}
+            >
+              <Text style={[styles.selectorPillText, !isDebt && styles.activeSelectorPillText, { textAlign: 'center' }]}>Tunai</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.selectorPill, isDebt && styles.activeSelectorPill, { flex: 1 }]}
+              onPress={() => setIsDebt(true)}
+            >
+              <Text style={[styles.selectorPillText, isDebt && styles.activeSelectorPillText, { textAlign: 'center' }]}>Hutang</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Product Picker */}
       <View style={styles.card}>
         <View style={styles.searchRow}>
           <TextInput
@@ -286,7 +363,8 @@ export default function PurchaseFormScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -308,6 +386,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 8,
   },
   addNewBtn: {
     backgroundColor: '#3B82F6',
@@ -513,5 +595,29 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "600",
+  },
+  selectorScroll: {
+    marginBottom: 12,
+  },
+  selectorPill: {
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  activeSelectorPill: {
+    backgroundColor: "#111827",
+    borderColor: "#111827",
+  },
+  selectorPillText: {
+    color: "#4B5563",
+    fontWeight: "600",
+    fontSize: 13,
+  },
+  activeSelectorPillText: {
+    color: "#FFF",
   },
 });

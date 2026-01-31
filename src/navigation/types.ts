@@ -10,6 +10,7 @@ export type DrawerParamList = {
   Reports: undefined;
   Settings: undefined;
   Customers: undefined;
+  Suppliers: undefined;
   PaymentMethods: undefined;
   Pulsa: undefined;
   Receivables: undefined;
