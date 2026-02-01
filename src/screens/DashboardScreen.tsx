@@ -182,6 +182,18 @@ export default function DashboardScreen() {
             color="#F59E0B"
             onPress={() => navigation.navigate("Pulsa")}
           />
+          <MenuCard
+            title="Riwayat Digital"
+            icon="📜"
+            color="#10B981"
+            onPress={() => navigation.navigate("DigitalHistory")}
+          />
+          <MenuCard
+            title="Laba Digital"
+            icon="📈"
+            color="#EC4899"
+            onPress={() => navigation.navigate("DigitalReports")}
+          />
         </View>
 
         {/* PELANGGAN & SUPPLIER Section */}

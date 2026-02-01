@@ -141,9 +141,14 @@ export default function PulsaTransactionScreen() {
   return (
     <KeyboardAvoidingView 
       style={{ flex: 1 }} 
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.headerRow}>
           <Text style={styles.header}>✨ Transaksi Digital</Text>
           <TouchableOpacity 
@@ -288,7 +293,6 @@ export default function PulsaTransactionScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* History Modal */}

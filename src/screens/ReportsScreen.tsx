@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
+  TextInput,
 } from "react-native";
 import { getDB } from "../database/initDB";
 
 type ReportType = 'SALES' | 'STOCK' | 'PROFIT' | 'PURCHASES';
-type FilterType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+type FilterType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'CUSTOM';
 
 export default function ReportsScreen() {
   const [reportType, setReportType] = useState<ReportType>('SALES');
@@ -19,6 +20,9 @@ export default function ReportsScreen() {
   const [data, setData] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(false);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     loadReport();
@@ -37,8 +41,10 @@ export default function ReportsScreen() {
       dateFilter = "date(created_at) >= date('now', '-7 days')";
     } else if (filterType === 'MONTHLY') {
       dateFilter = "strftime('%m-%Y', created_at) = strftime('%m-%Y', 'now')";
-    } else {
+    } else if (filterType === 'YEARLY') {
       dateFilter = "strftime('%Y', created_at) = strftime('%Y', 'now')";
+    } else if (filterType === 'CUSTOM') {
+      dateFilter = `date(created_at) BETWEEN date('${startDate}') AND date('${endDate}')`;
     }
 
     try {
@@ -136,18 +142,44 @@ export default function ReportsScreen() {
 
       {/* Date Filters */}
       <View style={styles.filters}>
-        {['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].map((f) => (
+        {['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY', 'CUSTOM'].map((f) => (
           <TouchableOpacity 
             key={f}
             style={[styles.filterBtn, filterType === f && styles.activeFilterBtn]}
             onPress={() => setFilterType(f as FilterType)}
           >
             <Text style={[styles.filterText, filterType === f && styles.activeFilterText]}>
-              {f === 'DAILY' ? 'Hari' : f === 'WEEKLY' ? 'Mggu' : f === 'MONTHLY' ? 'Bln' : 'Thn'}
+              {f === 'DAILY' ? 'Hari' : f === 'WEEKLY' ? 'Mggu' : f === 'MONTHLY' ? 'Bln' : f === 'YEARLY' ? 'Thn' : 'Pilih'}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
+
+      {filterType === 'CUSTOM' && (
+        <View style={styles.customDateContainer}>
+          <View style={styles.dateInputGroup}>
+            <Text style={styles.dateLabel}>Dari:</Text>
+            <TextInput 
+              style={styles.dateInput} 
+              value={startDate} 
+              onChangeText={setStartDate} 
+              placeholder="YYYY-MM-DD"
+            />
+          </View>
+          <View style={styles.dateInputGroup}>
+            <Text style={styles.dateLabel}>Sampai:</Text>
+            <TextInput 
+              style={styles.dateInput} 
+              value={endDate} 
+              onChangeText={setEndDate} 
+              placeholder="YYYY-MM-DD"
+            />
+          </View>
+          <TouchableOpacity style={styles.applyBtn} onPress={loadReport}>
+            <Text style={styles.applyBtnText}>Terapkan</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Summary Card */}
       <View style={styles.summaryCard}>
@@ -285,5 +317,44 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: "#374151",
+  },
+  customDateContainer: {
+    backgroundColor: "#FFF",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateInputGroup: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  dateLabel: {
+    fontSize: 10,
+    color: "#6B7280",
+    marginBottom: 2,
+  },
+  dateInput: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 12,
+    color: "#111827",
+  },
+  applyBtn: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 4,
+  },
+  applyBtnText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

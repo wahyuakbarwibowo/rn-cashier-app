@@ -7,6 +7,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from "react-native";
 import { getShopProfile, updateShopProfile } from "../database/settings";
 
@@ -59,45 +62,55 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>⚙️ Pengaturan Toko</Text>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.header}>⚙️ Pengaturan Toko</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Nama Toko</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Contoh: Toko Berkah"
-        />
+        <View style={styles.card}>
+          <Text style={styles.label}>Nama Toko</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Contoh: Toko Berkah"
+          />
 
-        <Text style={styles.label}>Nama Kasir</Text>
-        <TextInput
-          style={styles.input}
-          value={cashierName}
-          onChangeText={setCashierName}
-          placeholder="Contoh: Budi Santoso"
-        />
+          <Text style={styles.label}>Nama Kasir</Text>
+          <TextInput
+            style={styles.input}
+            value={cashierName}
+            onChangeText={setCashierName}
+            placeholder="Contoh: Budi Santoso"
+          />
 
-        <Text style={styles.label}>Catatan Kaki Struk (Footnote)</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={footerNote}
-          onChangeText={setFooterNote}
-          placeholder="Contoh: Terima kasih sudah belanja!"
-          multiline
-          numberOfLines={3}
-        />
+          <Text style={styles.label}>Catatan Kaki Struk (Footnote)</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={footerNote}
+            onChangeText={setFooterNote}
+            placeholder="Contoh: Terima kasih sudah belanja!"
+            multiline
+            numberOfLines={3}
+          />
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Simpan Perubahan</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <Text style={styles.saveButtonText}>Simpan Perubahan</Text>
+          </TouchableOpacity>
+        </View>
 
-      <Text style={styles.info}>
-        * Pengaturan ini akan muncul pada struk penjualan.
-      </Text>
-    </View>
+        <Text style={styles.info}>
+          * Pengaturan ini akan muncul pada struk penjualan.
+        </Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

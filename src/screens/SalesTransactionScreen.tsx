@@ -249,59 +249,65 @@ export default function SalesTransactionScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <View style={styles.container}>
         <Text style={styles.header}>🛒 Penjualan Baru</Text>
 
         {/* Customer & Payment Method */}
         <View style={styles.topSelectors}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
-            <TouchableOpacity 
-              style={[styles.selectorPill, !selectedCustomerId && !customerName && styles.activeSelectorPill]}
-              onPress={() => {
-                setSelectedCustomerId(null);
-                setCustomerName("");
-              }}
-            >
-              <Text style={[styles.selectorPillText, !selectedCustomerId && !customerName && styles.activeSelectorPillText]}>Umum</Text>
-            </TouchableOpacity>
-            {customers.map(c => (
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
               <TouchableOpacity 
-                key={c.id} 
-                style={[styles.selectorPill, selectedCustomerId === c.id && styles.activeSelectorPill]}
+                style={[styles.selectorPill, !selectedCustomerId && !customerName && styles.activeSelectorPill]}
                 onPress={() => {
-                  setSelectedCustomerId(c.id!);
+                  setSelectedCustomerId(null);
                   setCustomerName("");
                 }}
               >
-                <Text style={[styles.selectorPillText, selectedCustomerId === c.id && styles.activeSelectorPillText]}>{c.name}</Text>
+                <Text style={[styles.selectorPillText, !selectedCustomerId && !customerName && styles.activeSelectorPillText]}>Umum</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+              {customers.map(c => (
+                <TouchableOpacity 
+                  key={c.id} 
+                  style={[styles.selectorPill, selectedCustomerId === c.id && styles.activeSelectorPill]}
+                  onPress={() => {
+                    setSelectedCustomerId(c.id!);
+                    setCustomerName("");
+                  }}
+                >
+                  <Text style={[styles.selectorPillText, selectedCustomerId === c.id && styles.activeSelectorPillText]}>{c.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-          <View style={styles.customerInputRow}>
-            <TextInput
-              placeholder="Atau input nama pelanggan baru..."
-              value={customerName}
-              onChangeText={(t) => {
-                setCustomerName(t);
-                if (t) setSelectedCustomerId(null);
-              }}
-              style={styles.customerInput}
-            />
-          </View>
+            <View style={styles.customerInputRow}>
+              <TextInput
+                placeholder="Atau input nama pelanggan baru..."
+                value={customerName}
+                onChangeText={(t) => {
+                  setCustomerName(t);
+                  if (t) setSelectedCustomerId(null);
+                }}
+                style={styles.customerInput}
+              />
+            </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
-            {paymentMethods.map(m => (
-              <TouchableOpacity 
-                key={m.id} 
-                style={[styles.selectorPill, selectedPaymentMethodId === m.id && styles.activeSelectorPill]}
-                onPress={() => setSelectedPaymentMethodId(m.id!)}
-              >
-                <Text style={[styles.selectorPillText, selectedPaymentMethodId === m.id && styles.activeSelectorPillText]}>{m.name}</Text>
-              </TouchableOpacity>
-            ))}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
+              {paymentMethods.map(m => (
+                <TouchableOpacity 
+                  key={m.id} 
+                  style={[styles.selectorPill, selectedPaymentMethodId === m.id && styles.activeSelectorPill]}
+                  onPress={() => setSelectedPaymentMethodId(m.id!)}
+                >
+                  <Text style={[styles.selectorPillText, selectedPaymentMethodId === m.id && styles.activeSelectorPillText]}>{m.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </ScrollView>
         </View>
 

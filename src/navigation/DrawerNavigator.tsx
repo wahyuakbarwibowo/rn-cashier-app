@@ -103,6 +103,7 @@ function CustomDrawerContent(props: any) {
       <MenuItem name="SalesHistory" label="Riwayat Transaksi" icon="🕒" />
       <MenuItem name="Reports" label="Laporan & Grafik" icon="📊" />
       <MenuItem name="Pulsa" label="Transaksi Digital" icon="✨" />
+      <MenuItem name="DigitalHistory" label="Riwayat Digital" icon="📜" />
       <MenuItem name="DigitalReports" label="Laporan Laba Digital" icon="📈" />
 
       <SectionHeader title="PELANGGAN & SUPPLIER" />
@@ -146,6 +147,7 @@ export default function DrawerNavigator() {
       <Drawer.Screen name="SalesHistory" component={SalesHistoryScreen} options={{ title: '🕒 Riwayat Transaksi' }} />
       <Drawer.Screen name="Reports" component={ReportsScreen} options={{ title: '📊 Laporan & Grafik' }} />
       <Drawer.Screen name="Pulsa" component={PulsaTransactionScreen} options={{ title: '✨ Transaksi Digital' }} />
+      <Drawer.Screen name="DigitalHistory" component={DigitalTransactionHistoryScreen} options={{ title: '📜 Riwayat Transaksi Digital' }} />
       <Drawer.Screen name="DigitalReports" component={DigitalReportsScreen} options={{ title: '📈 Laporan Laba Digital' }} />
 
       {/* 3. Pelanggan & Supplier */}
@@ -178,14 +180,7 @@ export default function DrawerNavigator() {
           drawerItemStyle: { display: 'none' } 
         }} 
       />
-      <Drawer.Screen 
-        name="DigitalHistory" 
-        component={DigitalTransactionHistoryScreen} 
-        options={{ 
-          title: "Riwayat Transaksi Digital",
-          drawerItemStyle: { display: 'none' } 
-        }} 
-      />
+
       <Drawer.Screen 
         name="DigitalDetail" 
         component={DigitalTransactionDetailScreen} 

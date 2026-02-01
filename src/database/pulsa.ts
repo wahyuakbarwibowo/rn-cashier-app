@@ -14,8 +14,14 @@ export interface DigitalTransaction {
   created_at?: string;
 }
 
-export const getDigitalTransactions = async (): Promise<DigitalTransaction[]> => {
+export const getDigitalTransactions = async (startDate?: string, endDate?: string): Promise<DigitalTransaction[]> => {
   const db = await getDB();
+  if (startDate && endDate) {
+    return await db.getAllAsync<DigitalTransaction>(
+      "SELECT * FROM phone_history WHERE date(created_at) BETWEEN ? AND ? ORDER BY id DESC",
+      [startDate, endDate]
+    );
+  }
   return await db.getAllAsync<DigitalTransaction>("SELECT * FROM phone_history ORDER BY id DESC");
 };
 

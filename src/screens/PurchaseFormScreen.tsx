@@ -165,9 +165,14 @@ export default function PurchaseFormScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <View style={styles.container}>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={{ paddingBottom: 150 }}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Header */}
         <View style={styles.headerRow}>
           <Text style={styles.header}>🧾 Pembelian</Text>
@@ -253,45 +258,42 @@ export default function PurchaseFormScreen() {
         </View>
 
         {searchQuery.length > 0 && (
-          <FlatList
-            data={filteredProducts}
-            keyExtractor={(item) => String(item.id)}
-            showsVerticalScrollIndicator={false}
-            style={styles.searchResultList}
-            renderItem={({ item }) => (
-              <View style={styles.productListItem}>
-                <View style={styles.productInfo}>
-                  <Text style={styles.productName}>{item.name}</Text>
-                  {item.code && <Text style={styles.productCode}>{item.code}</Text>}
-                </View>
-                <View style={styles.productActions}>
-                  <TouchableOpacity
-                    style={styles.priceActionBtn}
-                    onPress={() => handleAddItem(item, false)}
-                  >
-                    <Text style={styles.priceActionLabel}>Satuan</Text>
-                    <Text style={styles.priceActionValue}>
-                      Rp {item.purchase_price?.toLocaleString("id-ID")}
-                    </Text>
-                  </TouchableOpacity>
-                  {item.purchase_package_price ? (
+          <View style={styles.searchResultList}>
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((item) => (
+                <View key={String(item.id)} style={styles.productListItem}>
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName}>{item.name}</Text>
+                    {item.code && <Text style={styles.productCode}>{item.code}</Text>}
+                  </View>
+                  <View style={styles.productActions}>
                     <TouchableOpacity
-                      style={[styles.priceActionBtn, styles.packageActionBtn]}
-                      onPress={() => handleAddItem(item, true)}
+                      style={styles.priceActionBtn}
+                      onPress={() => handleAddItem(item, false)}
                     >
-                      <Text style={styles.priceActionLabel}>Paket ({item.purchase_package_qty})</Text>
+                      <Text style={styles.priceActionLabel}>Satuan</Text>
                       <Text style={styles.priceActionValue}>
-                        Rp {item.purchase_package_price?.toLocaleString("id-ID")}
+                        Rp {item.purchase_price?.toLocaleString("id-ID")}
                       </Text>
                     </TouchableOpacity>
-                  ) : null}
+                    {item.purchase_package_price ? (
+                      <TouchableOpacity
+                        style={[styles.priceActionBtn, styles.packageActionBtn]}
+                        onPress={() => handleAddItem(item, true)}
+                      >
+                        <Text style={styles.priceActionLabel}>Paket ({item.purchase_package_qty})</Text>
+                        <Text style={styles.priceActionValue}>
+                          Rp {item.purchase_package_price?.toLocaleString("id-ID")}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            )}
-            ListEmptyComponent={
+              ))
+            ) : (
               <Text style={styles.emptyText}>Produk tidak ditemukan</Text>
-            }
-          />
+            )}
+          </View>
         )}
       </View>
 
@@ -299,50 +301,49 @@ export default function PurchaseFormScreen() {
       <View style={[styles.card, { flex: 1 }]}>
         <Text style={styles.cardTitle}>Item Dipilih</Text>
 
-        <FlatList
-          data={selectedItems}
-          keyExtractor={(item, index) => `${item.product.id}-${item.isPackage}-${index}`}
-          renderItem={({ item }) => (
-            <View style={styles.itemRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>
-                  {item.product.name} {item.isPackage ? '(Paket)' : ''}
-                </Text>
-                <Text style={styles.itemSubtotal}>
-                  Subtotal: Rp {(item.qty * item.price).toLocaleString("id-ID")}
-                </Text>
-              </View>
+        <View>
+          {selectedItems.length > 0 ? (
+            selectedItems.map((item, index) => (
+              <View key={`${item.product.id}-${item.isPackage}-${index}`} style={styles.itemRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName}>
+                    {item.product.name} {item.isPackage ? '(Paket)' : ''}
+                  </Text>
+                  <Text style={styles.itemSubtotal}>
+                    Subtotal: Rp {(item.qty * item.price).toLocaleString("id-ID")}
+                  </Text>
+                </View>
 
-              <View style={styles.counter}>
-                <TextInput
-                  value={item.qty.toString()}
-                  onChangeText={(t) =>
-                    updateItem(item.product.id!, item.isPackage, { qty: Number(t) || 0 })
-                  }
-                  keyboardType="numeric"
-                  style={styles.counterInput}
-                />
-                <TextInput
-                  value={item.price.toString()}
-                  onChangeText={(t) =>
-                    updateItem(item.product.id!, item.isPackage, { price: Number(t) || 0 })
-                  }
-                  keyboardType="numeric"
-                  style={styles.counterInput}
-                />
-              </View>
+                <View style={styles.counter}>
+                  <TextInput
+                    value={item.qty.toString()}
+                    onChangeText={(t) =>
+                      updateItem(item.product.id!, item.isPackage, { qty: Number(t) || 0 })
+                    }
+                    keyboardType="numeric"
+                    style={styles.counterInput}
+                  />
+                  <TextInput
+                    value={item.price.toString()}
+                    onChangeText={(t) =>
+                      updateItem(item.product.id!, item.isPackage, { price: Number(t) || 0 })
+                    }
+                    keyboardType="numeric"
+                    style={styles.counterInput}
+                  />
+                </View>
 
-              <TouchableOpacity
-                onPress={() => handleRemoveItem(item.product.id!, item.isPackage)}
-              >
-                <Text style={styles.remove}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          ListEmptyComponent={
+                <TouchableOpacity
+                  onPress={() => handleRemoveItem(item.product.id!, item.isPackage)}
+                >
+                  <Text style={styles.remove}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          ) : (
             <Text style={styles.emptyText}>Belum ada barang dipilih</Text>
-          }
-        />
+          )}
+        </View>
       </View>
 
       {/* Footer */}
@@ -363,18 +364,16 @@ export default function PurchaseFormScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F3F4F6",
     padding: 16,
-    paddingBottom: 32,
   },
   header: {
     fontSize: 26,

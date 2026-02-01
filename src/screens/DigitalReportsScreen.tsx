@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { getDigitalReports } from "../database/pulsa";
 import { getDigitalCategories, DigitalCategory } from "../database/digital_products";
@@ -13,8 +14,10 @@ import { getDigitalCategories, DigitalCategory } from "../database/digital_produ
 export default function DigitalReportsScreen() {
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<any>(null);
-  const [filter, setFilter] = useState<"today" | "month" | "year">("today");
+  const [filter, setFilter] = useState<"today" | "month" | "year" | "custom">("today");
   const [categories, setCategories] = useState<DigitalCategory[]>([]);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     loadData();
@@ -36,8 +39,11 @@ export default function DigitalReportsScreen() {
       start = end;
     } else if (filter === "month") {
       start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-    } else {
+    } else if (filter === "year") {
       start = new Date(now.getFullYear(), 0, 1).toISOString().split("T")[0];
+    } else if (filter === "custom") {
+      start = startDate;
+      end = endDate;
     }
 
     const data = await getDigitalReports(start, end);
@@ -64,18 +70,44 @@ export default function DigitalReportsScreen() {
 
       {/* Filter Tabs */}
       <View style={styles.filterRow}>
-        {(["today", "month", "year"] as const).map((f) => (
+        {(["today", "month", "year", "custom"] as const).map((f) => (
           <TouchableOpacity 
             key={f} 
             style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
             onPress={() => setFilter(f)}
           >
             <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f === "today" ? "Hari Ini" : f === "month" ? "Bulan Ini" : "Tahun Ini"}
+              {f === "today" ? "Hari Ini" : f === "month" ? "Bulan Ini" : f === "year" ? "Tahun Ini" : "Pilih"}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
+
+      {filter === "custom" && (
+        <View style={styles.customDateContainer}>
+          <View style={styles.dateInputGroup}>
+            <Text style={styles.dateLabel}>Dari:</Text>
+            <TextInput 
+              style={styles.dateInput} 
+              value={startDate} 
+              onChangeText={setStartDate} 
+              placeholder="YYYY-MM-DD"
+            />
+          </View>
+          <View style={styles.dateInputGroup}>
+            <Text style={styles.dateLabel}>Sampai:</Text>
+            <TextInput 
+              style={styles.dateInput} 
+              value={endDate} 
+              onChangeText={setEndDate} 
+              placeholder="YYYY-MM-DD"
+            />
+          </View>
+          <TouchableOpacity style={styles.applyBtn} onPress={loadData}>
+            <Text style={styles.applyBtnText}>Cek</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Summary Cards */}
       <View style={styles.summaryGrid}>
@@ -157,5 +189,46 @@ const styles = StyleSheet.create({
   progressBg: { height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: '#16A34A' },
   emptyContainer: { alignItems: 'center', marginTop: 50 },
-  emptyText: { color: '#9CA3AF' }
+  emptyText: { color: '#9CA3AF' },
+  customDateContainer: {
+    backgroundColor: "#FFF",
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    elevation: 2,
+  },
+  dateInputGroup: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  dateLabel: {
+    fontSize: 10,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+  dateInput: {
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: "#111827",
+    backgroundColor: "#F9FAFB",
+  },
+  applyBtn: {
+    backgroundColor: "#111827",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginLeft: 4,
+  },
+  applyBtnText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
 });

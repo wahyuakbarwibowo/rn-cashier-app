@@ -9,16 +9,22 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { getDigitalTransactions, DigitalTransaction } from "../database/pulsa";
+import { TextInput } from "react-native";
 
 export default function DigitalTransactionHistoryScreen() {
   const navigation = useNavigation<any>();
   const [transactions, setTransactions] = useState<DigitalTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilter, setShowFilter] = useState(false);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await getDigitalTransactions();
+      const data = showFilter 
+        ? await getDigitalTransactions(startDate, endDate)
+        : await getDigitalTransactions();
       setTransactions(data);
     } catch (error) {
       console.error(error);
@@ -29,7 +35,7 @@ export default function DigitalTransactionHistoryScreen() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [showFilter]);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
@@ -63,9 +69,45 @@ export default function DigitalTransactionHistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.headerRow}>
         <Text style={styles.title}>📜 Riwayat Digital</Text>
+        <TouchableOpacity 
+          style={[styles.filterToggle, showFilter && styles.filterToggleActive]} 
+          onPress={() => setShowFilter(!showFilter)}
+        >
+          <Text style={[styles.filterToggleText, showFilter && styles.filterToggleTextActive]}>
+            {showFilter ? "Tutup Filter" : "Filter"}
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {showFilter && (
+        <View style={styles.filterContainer}>
+          <View style={styles.dateGroup}>
+            <View style={styles.dateInputWrapper}>
+              <Text style={styles.dateLabel}>Dari</Text>
+              <TextInput 
+                style={styles.dateInput} 
+                value={startDate} 
+                onChangeText={setStartDate} 
+                placeholder="YYYY-MM-DD"
+              />
+            </View>
+            <View style={styles.dateInputWrapper}>
+              <Text style={styles.dateLabel}>Sampai</Text>
+              <TextInput 
+                style={styles.dateInput} 
+                value={endDate} 
+                onChangeText={setEndDate} 
+                placeholder="YYYY-MM-DD"
+              />
+            </View>
+          </View>
+          <TouchableOpacity style={styles.applyBtn} onPress={loadData}>
+            <Text style={styles.applyBtnText}>Terapkan</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <FlatList
         data={transactions}
@@ -111,8 +153,71 @@ export default function DigitalTransactionHistoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F3F4F6", padding: 16 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: { marginBottom: 20 },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
   title: { fontSize: 24, fontWeight: "bold", color: "#111827" },
+  filterToggle: {
+    backgroundColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  filterToggleActive: {
+    backgroundColor: "#111827",
+  },
+  filterToggleText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  filterToggleTextActive: {
+    color: "#FFF",
+  },
+  filterContainer: {
+    backgroundColor: "#FFF",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    elevation: 2,
+  },
+  dateGroup: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  dateInputWrapper: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 10,
+    color: "#6B7280",
+    marginBottom: 4,
+    fontWeight: "bold",
+  },
+  dateInput: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 12,
+    color: "#111827",
+  },
+  applyBtn: {
+    backgroundColor: "#3B82F6",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  applyBtnText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
   listContainer: { paddingBottom: 20 },
   card: { backgroundColor: "#FFF", borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },

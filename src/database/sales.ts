@@ -47,8 +47,14 @@ export async function addSale(
   return saleId;
 }
 
-export async function getAllSales() {
+export async function getAllSales(startDate?: string, endDate?: string) {
   const db = await getDB();
+  if (startDate && endDate) {
+    return await db.getAllAsync<Sale>(
+      "SELECT * FROM sales WHERE date(created_at) BETWEEN ? AND ? ORDER BY id DESC",
+      [startDate, endDate]
+    );
+  }
   return await db.getAllAsync<Sale>(
     "SELECT * FROM sales ORDER BY id DESC"
   );
