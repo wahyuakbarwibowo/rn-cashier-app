@@ -306,7 +306,7 @@ export default function SalesTransactionScreen() {
         </View>
 
         {/* Search & Product Selection */}
-        <View style={styles.card}>
+        <View style={[styles.card, { zIndex: 50 }]}>
           <View style={styles.searchRow}>
             <TextInput
               placeholder="Cari produk atau barcode..."
@@ -325,54 +325,57 @@ export default function SalesTransactionScreen() {
           </View>
 
           {searchQuery.length > 0 && (
-            <FlatList
-              data={filteredProducts}
-              keyExtractor={(item) => item.id?.toString() ?? ""}
-              showsVerticalScrollIndicator={false}
-              style={styles.searchResultList}
-              renderItem={({ item }) => (
-                <View style={styles.productListItem}>
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{item.name}</Text>
-                    {item.code && <Text style={styles.productCode}>{item.code}</Text>}
-                  </View>
-                  <View style={styles.productActions}>
-                    <TouchableOpacity
-                      style={styles.priceActionBtn}
-                      onPress={() => handleAddToCart(item, false)}
-                    >
-                      <Text style={styles.priceActionLabel}>Satuan</Text>
-                      <Text style={styles.priceActionValue}>
-                        Rp {item.selling_price?.toLocaleString("id-ID")}
-                      </Text>
-                    </TouchableOpacity>
-                    {item.package_price ? (
+            <View style={styles.searchResultOverlay}>
+              <FlatList
+                data={filteredProducts}
+                keyExtractor={(item) => item.id?.toString() ?? ""}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                  <View style={styles.productListItem}>
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName}>{item.name}</Text>
+                      {item.code && <Text style={styles.productCode}>{item.code}</Text>}
+                    </View>
+                    <View style={styles.productActions}>
                       <TouchableOpacity
-                        style={[styles.priceActionBtn, styles.packageActionBtn]}
-                        onPress={() => handleAddToCart(item, true)}
+                        style={styles.priceActionBtn}
+                        onPress={() => handleAddToCart(item, false)}
                       >
-                        <Text style={styles.priceActionLabel}>Paket ({item.package_qty})</Text>
+                        <Text style={styles.priceActionLabel}>Satuan</Text>
                         <Text style={styles.priceActionValue}>
-                          Rp {item.package_price?.toLocaleString("id-ID")}
+                          Rp {item.selling_price?.toLocaleString("id-ID")}
                         </Text>
                       </TouchableOpacity>
-                    ) : null}
+                      {item.package_price ? (
+                        <TouchableOpacity
+                          style={[styles.priceActionBtn, styles.packageActionBtn]}
+                          onPress={() => handleAddToCart(item, true)}
+                        >
+                          <Text style={styles.priceActionLabel}>Paket ({item.package_qty})</Text>
+                          <Text style={styles.priceActionValue}>
+                            Rp {item.package_price?.toLocaleString("id-ID")}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>Produk tidak ditemukan</Text>
-              }
-            />
+                )}
+                ListEmptyComponent={
+                  <Text style={styles.emptyText}>Produk tidak ditemukan</Text>
+                }
+              />
+            </View>
           )}
         </View>
 
         {/* Cart Items */}
-        <View style={[styles.card, { flex: 1 }]}>
+        <View style={[styles.card, { flex: 1, zIndex: 1 }]}>
           <Text style={styles.cardTitle}>Keranjang</Text>
           <FlatList
             data={cart}
             keyExtractor={(item) => `${item.product.id}`}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => {
               const info = getPriceBreakdown(item);
               return (
@@ -420,7 +423,7 @@ export default function SalesTransactionScreen() {
 
 
         {/* Payment & Total */}
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 24) }]}>
           <View style={styles.paymentInfo}>
             <View style={styles.paymentRow}>
               <Text style={styles.totalLabel}>Total</Text>
@@ -571,9 +574,23 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     fontWeight: "600",
   },
-  searchResultList: {
+  searchResultOverlay: {
+    position: 'absolute',
+    top: 65,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFF',
     maxHeight: 300,
-    marginTop: 4,
+    borderRadius: 12,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    zIndex: 1000,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
   },
   productListItem: {
     flexDirection: "row",

@@ -11,10 +11,12 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import { getSaleItems } from "../database/sales";
 import { getDB } from "../database/initDB";
 import { Sale, SaleItem, Product } from "../types/database";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SaleDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { saleId } = route.params;
 
   const [sale, setSale] = useState<Sale | null>(null);
@@ -82,35 +84,40 @@ export default function SaleDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Detail Transaksi</Text>
-        <Text style={styles.trxId}>TRX-{sale.id?.toString().padStart(5, '0')}</Text>
-      </View>
-
-      <View style={styles.infoCard}>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Tanggal</Text>
-          <Text style={styles.value}>{formatDate(sale.created_at)}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Total</Text>
-          <Text style={[styles.value, styles.totalText]}>Rp {sale.total.toLocaleString("id-ID")}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Dibayar</Text>
-          <Text style={styles.value}>Rp {sale.paid.toLocaleString("id-ID")}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Kembali</Text>
-          <Text style={styles.value}>Rp {sale.change.toLocaleString("id-ID")}</Text>
-        </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>Daftar Barang</Text>
       <FlatList
         data={items}
         keyExtractor={(item) => item.id?.toString() ?? ""}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+        ListHeaderComponent={
+          <>
+            <View style={styles.header}>
+              <Text style={styles.title}>Detail Transaksi</Text>
+              <Text style={styles.trxId}>TRX-{sale.id?.toString().padStart(5, '0')}</Text>
+            </View>
+
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Tanggal</Text>
+                <Text style={styles.value}>{formatDate(sale.created_at)}</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Total</Text>
+                <Text style={[styles.value, styles.totalText]}>Rp {sale.total.toLocaleString("id-ID")}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Dibayar</Text>
+                <Text style={styles.value}>Rp {sale.paid.toLocaleString("id-ID")}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Kembali</Text>
+                <Text style={styles.value}>Rp {sale.change.toLocaleString("id-ID")}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.sectionTitle}>Daftar Barang</Text>
+          </>
+        }
         renderItem={({ item }) => (
           <View style={styles.itemRow}>
             <View style={{ flex: 1 }}>
@@ -120,14 +127,22 @@ export default function SaleDetailScreen() {
             <Text style={styles.itemSubtotal}>Rp {item.subtotal.toLocaleString("id-ID")}</Text>
           </View>
         )}
+        ListFooterComponent={
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => {
+              const params = route.params as any;
+              if (params?.from === "SalesHistory") {
+                navigation.navigate("SalesHistory" as never);
+              } else {
+                navigation.goBack();
+              }
+            }}
+          >
+            <Text style={styles.backButtonText}>Kembali</Text>
+          </TouchableOpacity>
+        }
       />
-
-      <TouchableOpacity 
-        style={styles.backButton} 
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={styles.backButtonText}>Kembali</Text>
-      </TouchableOpacity>
     </View>
   );
 }

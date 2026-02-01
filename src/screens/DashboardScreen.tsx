@@ -141,6 +141,12 @@ export default function DashboardScreen() {
             color="#EC4899"
             onPress={() => navigation.navigate("PurchaseForm")}
           />
+          <MenuCard
+            title="Produk Digital"
+            icon="✨"
+            color="#3B82F6"
+            onPress={() => navigation.navigate("DigitalProductsMaster")}
+          />
         </View>
 
         {/* TRANSAKSI Section */}
@@ -165,8 +171,8 @@ export default function DashboardScreen() {
             onPress={() => navigation.navigate("Reports")}
           />
           <MenuCard
-            title="Pulsa"
-            icon="📱"
+            title="Digital"
+            icon="✨"
             color="#F59E0B"
             onPress={() => navigation.navigate("Pulsa")}
           />

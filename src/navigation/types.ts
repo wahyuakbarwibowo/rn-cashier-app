@@ -16,5 +16,9 @@ export type DrawerParamList = {
   Receivables: undefined;
   Payables: undefined;
   Backup: undefined;
-  ProductDetail: { product: Product }
+  ProductDetail: { product: Product };
+  DigitalHistory: undefined;
+  DigitalDetail: { trxId: number };
+  DigitalProductsMaster: undefined;
+  DigitalReports: undefined;
 }

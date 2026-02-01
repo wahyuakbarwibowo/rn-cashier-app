@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "CashierApp",
-    "slug": "CashierApp",
+    "name": "Aminmart Kasir",
+    "slug": "aminmart-kasir",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/cashier-icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.CashierApp"
+      "bundleIdentifier": "com.wahyuakbarwibowo.aminmartkasir"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +22,7 @@
         "backgroundColor": "#FFC0CB"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.CashierApp"
+      "package": "com.wahyuakbarwibowo.aminmartkasir"
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -173,15 +173,40 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS phone_history (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          category TEXT DEFAULT 'PULSA',
           phone_number TEXT,
+          customer_name TEXT,
           provider TEXT,
           amount REAL,
           cost_price REAL,
           selling_price REAL,
           profit REAL,
+          notes TEXT,
+          created_at TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS digital_products (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          category TEXT NOT NULL,
+          provider TEXT NOT NULL,
+          name TEXT NOT NULL,
+          nominal REAL,
+          cost_price REAL,
+          selling_price REAL,
           created_at TEXT
         );
       `);
+
+      // Migrations for digital transactions
+      try {
+        await database.execAsync("ALTER TABLE phone_history ADD COLUMN customer_name TEXT;");
+      } catch (e) {}
+      try {
+        await database.execAsync("ALTER TABLE phone_history ADD COLUMN category TEXT DEFAULT 'PULSA';");
+      } catch (e) {}
+      try {
+        await database.execAsync("ALTER TABLE phone_history ADD COLUMN notes TEXT;");
+      } catch (e) {}
 
       db = database;
       console.log("✅ Database initialized successfully");

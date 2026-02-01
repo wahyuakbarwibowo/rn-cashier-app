@@ -23,6 +23,10 @@ import PayablesScreen from "../screens/PayablesScreen";
 import BackupScreen from "../screens/BackupScreen";
 import DashboardScreen from "../screens/DashboardScreen";
 import SuppliersScreen from "../screens/SuppliersScreen";
+import DigitalTransactionHistoryScreen from "../screens/DigitalTransactionHistoryScreen";
+import DigitalTransactionDetailScreen from "../screens/DigitalTransactionDetailScreen";
+import DigitalProductsMasterScreen from "../screens/DigitalProductsMasterScreen";
+import DigitalReportsScreen from "../screens/DigitalReportsScreen";
 import { getShopProfile } from "../database/settings";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
@@ -31,7 +35,7 @@ function CustomDrawerContent(props: any) {
   const { state, navigation } = props;
   const drawerStatus = useDrawerStatus();
   const [shopProfile, setShopProfile] = useState<{ name: string; cashier_name: string }>({
-    name: "KASIR KU",
+    name: "AMINMART",
     cashier_name: "Sistem Kasir"
   });
 
@@ -90,12 +94,14 @@ function CustomDrawerContent(props: any) {
       <SectionHeader title="PRODUK" />
       <MenuItem name="Product" label="Stok Barang" icon="📦" />
       <MenuItem name="PurchaseForm" label="Tambah Stok (Beli)" icon="📥" />
+      <MenuItem name="DigitalProductsMaster" label="Produk Digital" icon="✨" />
 
       <SectionHeader title="TRANSAKSI" />
       <MenuItem name="SalesTransaction" label="Transaksi Kasir" icon="🛒" />
       <MenuItem name="SalesHistory" label="Riwayat Transaksi" icon="🕒" />
       <MenuItem name="Reports" label="Laporan & Grafik" icon="📊" />
-      <MenuItem name="Pulsa" label="Transaksi Pulsa" icon="📱" />
+      <MenuItem name="Pulsa" label="Transaksi Digital" icon="✨" />
+      <MenuItem name="DigitalReports" label="Laporan Laba Digital" icon="📈" />
 
       <SectionHeader title="PELANGGAN & SUPPLIER" />
       <MenuItem name="Customers" label="Daftar Pelanggan" icon="👥" />
@@ -130,12 +136,14 @@ export default function DrawerNavigator() {
       {/* 1. Produk */}
       <Drawer.Screen name="Product" component={ProductsScreen} options={{ title: '📦 Stok Barang' }} />
       <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: '📥 Tambah Stok (Beli)' }} />
+      <Drawer.Screen name="DigitalProductsMaster" component={DigitalProductsMasterScreen} options={{ title: '✨ Produk Digital' }} />
 
       {/* 2. Transaksi */}
       <Drawer.Screen name="SalesTransaction" component={SalesTransactionScreen} options={{ title: '🛒 Transaksi Kasir' }} />
       <Drawer.Screen name="SalesHistory" component={SalesHistoryScreen} options={{ title: '🕒 Riwayat Transaksi' }} />
       <Drawer.Screen name="Reports" component={ReportsScreen} options={{ title: '📊 Laporan & Grafik' }} />
-      <Drawer.Screen name="Pulsa" component={PulsaTransactionScreen} options={{ title: '📱 Transaksi Pulsa' }} />
+      <Drawer.Screen name="Pulsa" component={PulsaTransactionScreen} options={{ title: '✨ Transaksi Digital' }} />
+      <Drawer.Screen name="DigitalReports" component={DigitalReportsScreen} options={{ title: '📈 Laporan Laba Digital' }} />
 
       {/* 3. Pelanggan & Supplier */}
       <Drawer.Screen name="Customers" component={CustomersScreen} options={{ title: '👥 Daftar Pelanggan' }} />
@@ -164,6 +172,22 @@ export default function DrawerNavigator() {
         component={ProductDetailScreen} 
         options={{ 
           title: "Detail Product",
+          drawerItemStyle: { display: 'none' } 
+        }} 
+      />
+      <Drawer.Screen 
+        name="DigitalHistory" 
+        component={DigitalTransactionHistoryScreen} 
+        options={{ 
+          title: "Riwayat Transaksi Digital",
+          drawerItemStyle: { display: 'none' } 
+        }} 
+      />
+      <Drawer.Screen 
+        name="DigitalDetail" 
+        component={DigitalTransactionDetailScreen} 
+        options={{ 
+          title: "Detail Transaksi Digital",
           drawerItemStyle: { display: 'none' } 
         }} 
       />

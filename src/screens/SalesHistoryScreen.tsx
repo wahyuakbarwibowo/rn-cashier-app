@@ -65,7 +65,7 @@ export default function SalesHistoryScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity 
             style={styles.saleCard}
-            onPress={() => navigation.navigate("SaleDetail", { saleId: item.id })}
+            onPress={() => navigation.navigate("SaleDetail", { saleId: item.id, from: "SalesHistory" })}
           >
             <View style={styles.saleHeader}>
               <Text style={styles.saleId}>TRX-{item.id?.toString().padStart(5, '0')}</Text>

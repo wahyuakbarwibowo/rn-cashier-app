@@ -1,0 +1,118 @@
+import * as Print from 'expo-print';
+import { DigitalTransaction } from '../database/pulsa';
+import { getShopProfile } from '../database/settings';
+
+export const printDigitalReceipt = async (trx: DigitalTransaction) => {
+  const profile = await getShopProfile();
+  const shopName = profile?.name || "KASIR KU";
+  const footerNote = profile?.footer_note || "Terima Kasih Atas Kepercayaan Anda";
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const htmlContent = `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+        <style>
+          @page { margin: 0; }
+          body { 
+            font-family: 'monospace'; 
+            padding: 5px; 
+            width: 300px; /* Standard 58mm width in pixels approx */
+            margin: 0 auto;
+            color: #000; 
+          }
+          .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 8px; }
+          .shop-name { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+          .trx-meta { font-size: 11px; margin-top: 2px; }
+          
+          .info-table { width: 100%; font-size: 12px; border-collapse: collapse; margin: 10px 0; }
+          .info-table td { padding: 2px 0; vertical-align: top; }
+          .label { width: 40%; color: #333; }
+          
+          .divider { border-top: 1px dashed #000; margin: 8px 0; }
+          
+          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; padding: 5px 0; }
+          
+          .notes-box { 
+            margin-top: 10px; 
+            padding: 8px; 
+            border: 1px solid #000; 
+            text-align: center;
+          }
+          .notes-title { font-size: 10px; font-weight: bold; margin-bottom: 3px; }
+          .notes-content { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+          
+          .footer { text-align: center; margin-top: 20px; font-size: 10px; line-height: 1.4; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="shop-name">${shopName}</div>
+          <div class="trx-meta">TRX #${trx.id} | ${formatDate(trx.created_at)}</div>
+        </div>
+
+        <table class="info-table">
+          <tr>
+            <td class="label">Pelanggan:</td>
+            <td>${trx.customer_name || "-"}</td>
+          </tr>
+          <tr>
+            <td class="label">No/ID:</td>
+            <td style="font-weight: bold;">${trx.phone_number}</td>
+          </tr>
+          <tr>
+            <td class="label">Layanan:</td>
+            <td>${trx.category}</td>
+          </tr>
+          <tr>
+            <td class="label">Produk:</td>
+            <td>${trx.provider}</td>
+          </tr>
+        </table>
+
+        <div class="divider"></div>
+
+        <div class="total-row">
+          <span>TOTAL</span>
+          <span>Rp ${trx.selling_price.toLocaleString("id-ID")}</span>
+        </div>
+
+        ${trx.notes ? `
+          <div class="notes-box">
+            <div class="notes-title">TOKEN / KETERANGAN:</div>
+            <div class="notes-content">${trx.notes}</div>
+          </div>
+        ` : ''}
+
+        <div class="divider"></div>
+
+        <div class="footer">
+          ${footerNote.replace(/\n/g, '<br>')}
+          <br><br>
+          * Simpan sebagai bukti sah *<br>
+          Terima Kasih
+        </div>
+      </body>
+    </html>
+  `;
+
+  try {
+    await Print.printAsync({
+      html: htmlContent,
+      width: 302, // 58mm thermal width
+    });
+  } catch (error) {
+    console.error("Gagal mencetak struk:", error);
+    throw error;
+  }
+};
