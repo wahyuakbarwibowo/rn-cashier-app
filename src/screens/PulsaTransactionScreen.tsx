@@ -13,25 +13,23 @@ import {
   Platform,
 } from "react-native";
 import { addDigitalTransaction, getRecentNumbers, DigitalTransaction } from "../database/pulsa";
-import { getDigitalProducts, DigitalProductMaster } from "../database/digital_products";
+import { 
+  getDigitalProducts, 
+  DigitalProductMaster, 
+  getDigitalCategories, 
+  DigitalCategory,
+  getDistinctProvidersByCategory
+} from "../database/digital_products";
 import { useNavigation } from "@react-navigation/native";
-
-const CATEGORIES = [
-  { id: "PULSA", label: "PULSA", icon: "📱" },
-  { id: "PLN", label: "PLN", icon: "⚡" },
-  { id: "PDAM", label: "PDAM", icon: "💧" },
-  { id: "TRANSFER", label: "TRANSFER", icon: "🏦" },
-  { id: "BPJS", label: "BPJS", icon: "🩺" },
-  { id: "E-WALLET", label: "E-WALLET", icon: "💳" },
-  { id: "GAME", label: "GAME", icon: "🎮" },
-] as const;
 
 export default function PulsaTransactionScreen() {
   const navigation = useNavigation<any>();
-  const [category, setCategory] = useState<DigitalTransaction["category"]>("PULSA");
+  const [categories, setCategories] = useState<DigitalCategory[]>([]);
+  const [category, setCategory] = useState<string>("PULSA");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [provider, setProvider] = useState("");
+  const [providers, setProviders] = useState<string[]>([]);
   const [amount, setAmount] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
@@ -42,8 +40,28 @@ export default function PulsaTransactionScreen() {
   const [templates, setTemplates] = useState<DigitalProductMaster[]>([]);
 
   useEffect(() => {
+    loadCategories();
     loadHistory();
   }, []);
+
+  useEffect(() => {
+    if (category) {
+      loadProviders();
+    }
+  }, [category]);
+
+  const loadCategories = async () => {
+    const data = await getDigitalCategories();
+    setCategories(data);
+    if (data.length > 0 && !category) {
+      setCategory(data[0].name);
+    }
+  };
+
+  const loadProviders = async () => {
+    const data = await getDistinctProvidersByCategory(category);
+    setProviders(data.map(d => d.provider));
+  };
 
   useEffect(() => {
     if (category && provider) {
@@ -68,16 +86,6 @@ export default function PulsaTransactionScreen() {
     setCostPrice(item.cost_price.toString());
     setSellingPrice(item.selling_price.toString());
   };
-
-  const providers = category === "PULSA" 
-    ? ["Telkomsel", "Indosat", "XL", "Axis", "Tri", "Smartfren"]
-    : category === "TRANSFER"
-    ? ["BCA", "BNI", "BRI", "Mandiri", "CIMB", "Lainnya"]
-    : category === "E-WALLET"
-    ? ["Dana", "Gopay", "OVO", "ShopeePay", "LinkAja"]
-    : category === "GAME"
-    ? ["Mobile Legends", "Free Fire", "PUBG", "Genshin", "Valorant"]
-    : ["PLN", "PDAM", "BPJS"];
 
   const handleTransaction = async () => {
     if (!phoneNumber || (providers.length > 0 && !provider) || !amount || !sellingPrice) {
@@ -148,19 +156,19 @@ export default function PulsaTransactionScreen() {
 
         {/* Categories Tab */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <TouchableOpacity 
               key={cat.id} 
-              style={[styles.categoryCard, category === cat.id && styles.activeCategoryCard]}
+              style={[styles.categoryCard, category === cat.name && styles.activeCategoryCard]}
               onPress={() => {
-                setCategory(cat.id);
+                setCategory(cat.name);
                 setProvider("");
                 setTemplates([]);
               }}
             >
               <Text style={styles.categoryIcon}>{cat.icon}</Text>
-              <Text style={[styles.categoryLabel, category === cat.id && styles.activeCategoryLabel]}>
-                {cat.label}
+              <Text style={[styles.categoryLabel, category === cat.name && styles.activeCategoryLabel]}>
+                {cat.name}
               </Text>
             </TouchableOpacity>
           ))}

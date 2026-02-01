@@ -15,15 +15,21 @@ import {
   addDigitalProduct, 
   updateDigitalProduct, 
   deleteDigitalProduct,
-  DigitalProductMaster 
+  DigitalProductMaster,
+  getDigitalCategories,
+  addDigitalCategory,
+  updateDigitalCategory,
+  deleteDigitalCategory,
+  DigitalCategory
 } from "../database/digital_products";
-
-const CATEGORIES = ["PULSA", "PLN", "PDAM", "TRANSFER", "BPJS", "E-WALLET", "GAME"];
 
 export default function DigitalProductsMasterScreen() {
   const [products, setProducts] = useState<DigitalProductMaster[]>([]);
+  const [categories, setCategories] = useState<DigitalCategory[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [catModalVisible, setCatModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<DigitalProductMaster | null>(null);
+  const [editingCat, setEditingCat] = useState<DigitalCategory | null>(null);
 
   // Form State
   const [category, setCategory] = useState("PULSA");
@@ -33,13 +39,59 @@ export default function DigitalProductsMasterScreen() {
   const [costPrice, setCostPrice] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
 
+  // New Category State
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatIcon, setNewCatIcon] = useState("✨");
+
   useEffect(() => {
     loadProducts();
+    loadCategories();
   }, []);
 
   const loadProducts = async () => {
     const data = await getDigitalProducts();
     setProducts(data);
+  };
+
+  const loadCategories = async () => {
+    const data = await getDigitalCategories();
+    setCategories(data);
+    if (data.length > 0 && !category) {
+      setCategory(data[0].name);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCatName) return;
+    try {
+      if (editingCat) {
+        await updateDigitalCategory(editingCat.id, newCatName, newCatIcon);
+      } else {
+        await addDigitalCategory(newCatName, newCatIcon);
+      }
+      setNewCatName("");
+      setNewCatIcon("✨");
+      setEditingCat(null);
+      loadCategories();
+    } catch (e) {
+      Alert.alert("Error", "Gagal menyimpan kategori");
+    }
+  };
+
+  const openEditCategory = (cat: DigitalCategory) => {
+    setEditingCat(cat);
+    setNewCatName(cat.name);
+    setNewCatIcon(cat.icon);
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    Alert.alert("Hapus", "Hapus kategori ini?", [
+      { text: "Batal", style: "cancel" },
+      { text: "Hapus", style: "destructive", onPress: async () => {
+        await deleteDigitalCategory(id);
+        loadCategories();
+      }}
+    ]);
   };
 
   const handleSave = async () => {
@@ -107,10 +159,23 @@ export default function DigitalProductsMasterScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>📦 Master Produk Digital</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => { resetForm(); setModalVisible(true); }}>
-          <Text style={styles.addBtnText}>+ Tambah</Text>
-        </TouchableOpacity>
+        <Text style={[styles.title, { marginRight: 10 }]}>📦 Produk Digital</Text>
+        <View style={styles.headerBtns}>
+          <TouchableOpacity 
+            style={[styles.addBtn, { backgroundColor: '#3B82F6', marginRight: 8 }]} 
+            onPress={() => {
+              setEditingCat(null);
+              setNewCatName("");
+              setNewCatIcon("✨");
+              setCatModalVisible(true);
+            }}
+          >
+            <Text style={styles.addBtnText}>📁 Kategori</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addBtn} onPress={() => { resetForm(); setModalVisible(true); }}>
+            <Text style={styles.addBtnText}>+ Produk</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -152,17 +217,17 @@ export default function DigitalProductsMasterScreen() {
             <Text style={styles.modalTitle}>{editingProduct ? "Edit Produk" : "Tambah Produk"}</Text>
             <ScrollView>
               <Text style={styles.inputLabel}>Kategori</Text>
-              <View style={styles.pickerRow}>
-                {CATEGORIES.map(cat => (
-                  <TouchableOpacity 
-                    key={cat} 
-                    onPress={() => setCategory(cat)}
-                    style={[styles.pickerPill, category === cat && styles.pickerPillActive]}
-                  >
-                    <Text style={[styles.pickerText, category === cat && styles.pickerTextActive]}>{cat}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                <View style={styles.pickerRow}>
+                  {categories.map(cat => (
+                    <TouchableOpacity 
+                      key={cat.id} 
+                      onPress={() => setCategory(cat.name)}
+                      style={[styles.pickerPill, category === cat.name && styles.pickerPillActive]}
+                    >
+                      <Text style={[styles.pickerText, category === cat.name && styles.pickerTextActive]}>{cat.icon} {cat.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
               <Text style={styles.inputLabel}>Provider (Misal: Telkomsel, Token PLN)</Text>
               <TextInput style={styles.input} value={provider} onChangeText={setProvider} placeholder="Masukkan provider" />
@@ -186,13 +251,79 @@ export default function DigitalProductsMasterScreen() {
 
               <View style={styles.modalActions}>
                 <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={() => setModalVisible(false)}>
-                  <Text style={{ fontWeight: 'bold' }}>Batal</Text>
+                  <Text style={{ color: '#111827', fontWeight: 'bold' }}>Batal</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
                   <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Simpan</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Category Management Modal */}
+      <Modal visible={catModalVisible} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Manajemen Kategori</Text>
+            
+            <View style={styles.addCatForm}>
+              <View style={{ flex: 1 }}>
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="Nama Kategori" 
+                  value={newCatName} 
+                  onChangeText={setNewCatName} 
+                />
+              </View>
+              <TextInput 
+                style={[styles.input, { width: 45, marginLeft: 5 }]} 
+                placeholder="Icon" 
+                value={newCatIcon} 
+                onChangeText={setNewCatIcon} 
+              />
+              <TouchableOpacity style={styles.miniAddBtn} onPress={handleAddCategory}>
+                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>
+                  {editingCat ? "Update" : "Tambah"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={categories}
+              keyExtractor={(item) => item.id.toString()}
+              style={{ maxHeight: 300, marginTop: 10 }}
+              renderItem={({ item }) => (
+                <View style={styles.catItem}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <Text style={{ fontSize: 18, marginRight: 10 }}>{item.icon}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: 'bold' }}>{item.name}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity onPress={() => openEditCategory(item)} style={{ padding: 8 }}>
+                      <Text>✏️</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteCategory(item.id)} style={{ padding: 8 }}>
+                      <Text>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            />
+
+            <TouchableOpacity 
+              style={{ 
+                backgroundColor: '#111827', 
+                padding: 16, 
+                borderRadius: 12, 
+                alignItems: 'center', 
+                marginTop: 20 
+              }} 
+              onPress={() => setCatModalVisible(false)}
+            >
+              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>Tutup</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -205,7 +336,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
   addBtn: { backgroundColor: '#111827', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
-  addBtnText: { color: '#FFF', fontWeight: 'bold' },
+  addBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+  headerBtns: { flexDirection: 'row' },
   card: { backgroundColor: '#FFF', padding: 16, borderRadius: 12, marginBottom: 12, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   badge: { backgroundColor: '#E5E7EB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
@@ -233,4 +365,8 @@ const styles = StyleSheet.create({
   btn: { flex: 1, padding: 16, borderRadius: 12, alignItems: 'center' },
   cancelBtn: { backgroundColor: '#F3F4F6' },
   saveBtn: { backgroundColor: '#111827' },
+  
+  addCatForm: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 16 },
+  miniAddBtn: { backgroundColor: '#10B981', height: 45, borderRadius: 10, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 15 },
+  catItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
 });

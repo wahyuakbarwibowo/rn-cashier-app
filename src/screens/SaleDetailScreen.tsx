@@ -12,6 +12,7 @@ import { getSaleItems } from "../database/sales";
 import { getDB } from "../database/initDB";
 import { Sale, SaleItem, Product } from "../types/database";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { printSaleReceipt } from "../services/PrintService";
 
 export default function SaleDetailScreen() {
   const route = useRoute<any>();
@@ -128,19 +129,28 @@ export default function SaleDetailScreen() {
           </View>
         )}
         ListFooterComponent={
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={() => {
-              const params = route.params as any;
-              if (params?.from === "SalesHistory") {
-                navigation.navigate("SalesHistory" as never);
-              } else {
-                navigation.goBack();
-              }
-            }}
-          >
-            <Text style={styles.backButtonText}>Kembali</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity 
+              style={styles.printButton} 
+              onPress={() => sale && printSaleReceipt(sale, items)}
+            >
+              <Text style={styles.printButtonText}>🖨️ Cetak Struk</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={() => {
+                const params = route.params as any;
+                if (params?.from === "SalesHistory") {
+                  navigation.navigate("SalesHistory" as never);
+                } else {
+                  navigation.goBack();
+                }
+              }}
+            >
+              <Text style={styles.backButtonText}>Kembali</Text>
+            </TouchableOpacity>
+          </>
         }
       />
     </View>
@@ -239,6 +249,18 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   backButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  printButton: {
+    backgroundColor: "#16A34A",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  printButtonText: {
     color: "#FFF",
     fontSize: 16,
     fontWeight: "bold",

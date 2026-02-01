@@ -116,3 +116,108 @@ export const printDigitalReceipt = async (trx: DigitalTransaction) => {
     throw error;
   }
 };
+
+export const printSaleReceipt = async (sale: any, items: any[]) => {
+  const profile = await getShopProfile();
+  const shopName = profile?.name || "AMINMART";
+  const footerNote = profile?.footer_note || "Terima Kasih Atas Kepercayaan Anda";
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const itemsHtml = items.map(item => `
+    <tr>
+      <td colspan="2" style="font-weight: bold;">${item.product_name || 'Produk'}</td>
+    </tr>
+    <tr>
+      <td style="padding-bottom: 5px;">${item.qty} x Rp ${item.price.toLocaleString("id-ID")}</td>
+      <td style="text-align: right; vertical-align: bottom; padding-bottom: 5px;">Rp ${item.subtotal.toLocaleString("id-ID")}</td>
+    </tr>
+  `).join('');
+
+  const htmlContent = `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+        <style>
+          @page { margin: 0; }
+          body { 
+            font-family: 'monospace'; 
+            padding: 5px; 
+            width: 300px;
+            margin: 0 auto;
+            color: #000; 
+          }
+          .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 8px; }
+          .shop-name { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+          .trx-meta { font-size: 11px; margin-top: 2px; }
+          
+          .items-table { width: 100%; font-size: 12px; border-collapse: collapse; margin: 10px 0; }
+          
+          .divider { border-top: 1px dashed #000; margin: 8px 0; }
+          
+          .row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; margin-top: 5px; }
+          
+          .footer { text-align: center; margin-top: 20px; font-size: 10px; line-height: 1.4; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="shop-name">${shopName}</div>
+          <div class="trx-meta">TRX #${sale.id} | ${formatDate(sale.created_at)}</div>
+        </div>
+
+        <table class="items-table">
+          ${itemsHtml}
+        </table>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <span>SUBTOTAL</span>
+          <span>Rp ${sale.total.toLocaleString("id-ID")}</span>
+        </div>
+        <div class="total-row">
+          <span>TOTAL</span>
+          <span>Rp ${sale.total.toLocaleString("id-ID")}</span>
+        </div>
+        
+        <div class="row" style="margin-top: 8px;">
+          <span>BAYAR</span>
+          <span>Rp ${sale.paid.toLocaleString("id-ID")}</span>
+        </div>
+        <div class="row">
+          <span>KEMBALI</span>
+          <span>Rp ${sale.change.toLocaleString("id-ID")}</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="footer">
+          ${footerNote.replace(/\n/g, '<br>')}
+          <br><br>
+          * Terima Kasih *
+        </div>
+      </body>
+    </html>
+  `;
+
+  try {
+    await Print.printAsync({
+      html: htmlContent,
+      width: 302,
+    });
+  } catch (error) {
+    console.error("Gagal mencetak struk:", error);
+    throw error;
+  }
+};

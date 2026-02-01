@@ -8,15 +8,23 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { getDigitalReports } from "../database/pulsa";
+import { getDigitalCategories, DigitalCategory } from "../database/digital_products";
 
 export default function DigitalReportsScreen() {
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<any>(null);
   const [filter, setFilter] = useState<"today" | "month" | "year">("today");
+  const [categories, setCategories] = useState<DigitalCategory[]>([]);
 
   useEffect(() => {
     loadData();
+    loadCategories();
   }, [filter]);
+
+  const loadCategories = async () => {
+    const data = await getDigitalCategories();
+    setCategories(data);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -38,14 +46,8 @@ export default function DigitalReportsScreen() {
   };
 
   const getCategoryIcon = (cat: string) => {
-    switch (cat) {
-      case "PULSA": return "📱";
-      case "PLN": return "⚡";
-      case "TRANSFER": return "🏦";
-      case "GAME": return "🎮";
-      case "E-WALLET": return "💳";
-      default: return "✨";
-    }
+    const found = categories.find(c => c.name === cat);
+    return found ? found.icon : "✨";
   };
 
   if (loading) {

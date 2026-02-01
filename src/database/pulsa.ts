@@ -2,7 +2,7 @@ import { getDB } from "./initDB";
 
 export interface DigitalTransaction {
   id?: number;
-  category: "PULSA" | "PLN" | "PDAM" | "TRANSFER" | "BPJS" | "E-WALLET" | "GAME";
+  category: string;
   phone_number: string;
   customer_name?: string;
   provider: string; // Could be Bank Name, Game Name, etc.

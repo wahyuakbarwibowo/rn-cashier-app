@@ -20,5 +20,6 @@ export type DrawerParamList = {
   DigitalHistory: undefined;
   DigitalDetail: { trxId: number };
   DigitalProductsMaster: undefined;
+  DigitalCategoriesMaster: undefined;
   DigitalReports: undefined;
 }

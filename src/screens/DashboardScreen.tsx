@@ -147,6 +147,12 @@ export default function DashboardScreen() {
             color="#3B82F6"
             onPress={() => navigation.navigate("DigitalProductsMaster")}
           />
+          <MenuCard
+            title="Kategori Digital"
+            icon="📁"
+            color="#8B5CF6"
+            onPress={() => navigation.navigate("DigitalCategoriesMaster")}
+          />
         </View>
 
         {/* TRANSAKSI Section */}

@@ -66,6 +66,33 @@ export const deleteDigitalProduct = async (id: number): Promise<void> => {
   await db.runAsync("DELETE FROM digital_products WHERE id = ?", [id]);
 };
 
+export interface DigitalCategory {
+  id: number;
+  name: string;
+  icon: string;
+}
+
+export const getDigitalCategories = async (): Promise<DigitalCategory[]> => {
+  const db = await getDB();
+  return await db.getAllAsync<DigitalCategory>("SELECT * FROM digital_categories ORDER BY name ASC");
+};
+
+export const addDigitalCategory = async (name: string, icon: string): Promise<number> => {
+  const db = await getDB();
+  const result = await db.runAsync("INSERT INTO digital_categories (name, icon) VALUES (?, ?)", [name, icon]);
+  return result.lastInsertRowId;
+};
+
+export const updateDigitalCategory = async (id: number, name: string, icon: string): Promise<void> => {
+  const db = await getDB();
+  await db.runAsync("UPDATE digital_categories SET name = ?, icon = ? WHERE id = ?", [name, icon, id]);
+};
+
+export const deleteDigitalCategory = async (id: number): Promise<void> => {
+  const db = await getDB();
+  await db.runAsync("DELETE FROM digital_categories WHERE id = ?", [id]);
+};
+
 export const getDistinctProvidersByCategory = async (category: string): Promise<{provider: string}[]> => {
   const db = await getDB();
   return await db.getAllAsync<{provider: string}>(

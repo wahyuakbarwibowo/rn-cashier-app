@@ -195,7 +195,30 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
           selling_price REAL,
           created_at TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS digital_categories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          icon TEXT
+        );
       `);
+
+      // Seed default digital categories if none exist
+      const catCount = await database.getFirstAsync<{ count: number }>("SELECT COUNT(*) as count FROM digital_categories");
+      if (catCount && catCount.count === 0) {
+        const defaults = [
+          ['PULSA', '📱'],
+          ['PLN', '⚡'],
+          ['PDAM', '💧'],
+          ['TRANSFER', '🏦'],
+          ['BPJS', '🩺'],
+          ['E-WALLET', '💳'],
+          ['GAME', '🎮']
+        ];
+        for (const [name, icon] of defaults) {
+          await database.runAsync("INSERT INTO digital_categories (name, icon) VALUES (?, ?)", [name, icon]);
+        }
+      }
 
       // Migrations for digital transactions
       try {
