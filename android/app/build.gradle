@@ -96,9 +96,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.CashierApp'
+    namespace 'com.wahyuakbarwibowo.aminmartkasir'
     defaultConfig {
-        applicationId 'com.anonymous.CashierApp'
+        applicationId 'com.wahyuakbarwibowo.aminmartkasir'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -1,4 +1,4 @@
-package com.anonymous.CashierApp
+package com.wahyuakbarwibowo.aminmartkasir
 
 import android.os.Build
 import android.os.Bundle

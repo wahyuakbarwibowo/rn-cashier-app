@@ -1,4 +1,4 @@
-package com.anonymous.CashierApp
+package com.wahyuakbarwibowo.aminmartkasir
 
 import android.app.Application
 import android.content.res.Configuration
