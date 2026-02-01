@@ -38,6 +38,7 @@ export default function PulsaTransactionScreen() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   
   const [templates, setTemplates] = useState<DigitalProductMaster[]>([]);
+  const [showProviderModal, setShowProviderModal] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -205,17 +206,16 @@ export default function PulsaTransactionScreen() {
           />
 
           <Text style={styles.label}>Provider / Bank / Game</Text>
-          <ScrollView horizontal style={styles.providerScroll} showsHorizontalScrollIndicator={false}>
-            {providers.map((p) => (
-              <TouchableOpacity 
-                key={p} 
-                style={[styles.providerPill, provider === p && styles.activePill]}
-                onPress={() => setProvider(p)}
-              >
-                <Text style={[styles.pillText, provider === p && styles.activePillText]}>{p}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <TouchableOpacity 
+            style={styles.dropdownTrigger} 
+            onPress={() => setShowProviderModal(true)}
+          >
+            <Text style={[styles.dropdownValue, !provider && styles.dropdownPlaceholder]}>
+              {provider || "Pilih Provider / Operator"}
+            </Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
+
           {provider === "Lainnya" && (
             <TextInput
               style={styles.input}
@@ -295,6 +295,39 @@ export default function PulsaTransactionScreen() {
 
       </ScrollView>
 
+      {/* Provider Modal */}
+      <Modal visible={showProviderModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: "70%" }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pilih Provider {category}</Text>
+              <TouchableOpacity onPress={() => setShowProviderModal(false)}>
+                <Text style={styles.closeText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={providers}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={[styles.selectListItem, provider === item && styles.activeListItem]} 
+                  onPress={() => {
+                    setProvider(item);
+                    setShowProviderModal(false);
+                  }}
+                >
+                  <Text style={[styles.selectListItemText, provider === item && styles.activeListItemText]}>{item}</Text>
+                  {provider === item && <Text style={styles.checkIcon}>✓</Text>}
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>Tidak ada daftar provider untuk kategori ini</Text>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
+
       {/* History Modal */}
       <Modal visible={showHistoryModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -359,10 +392,42 @@ const styles = StyleSheet.create({
   templateTextActive: { color: '#FFF' },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 },
-  modalContent: { backgroundColor: "#FFF", borderRadius: 20, padding: 20, maxHeight: "80%" },
-  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 16 },
+  modalContent: { backgroundColor: "#FFF", borderRadius: 24, padding: 20, maxHeight: "80%", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 20, elevation: 10 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: '#111827' },
+  closeText: { fontSize: 20, color: '#9CA3AF', padding: 4 },
+  
+  dropdownTrigger: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    backgroundColor: "#F9FAFB", 
+    borderWidth: 1, 
+    borderColor: "#E5E7EB", 
+    borderRadius: 12, 
+    padding: 14, 
+    marginBottom: 16 
+  },
+  dropdownValue: { fontSize: 15, fontWeight: '600', color: '#111827' },
+  dropdownPlaceholder: { color: '#9CA3AF', fontWeight: '400' },
+  dropdownArrow: { fontSize: 12, color: '#6B7280' },
+
+  selectListItem: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: 16, 
+    borderRadius: 12, 
+    marginBottom: 4 
+  },
+  activeListItem: { backgroundColor: '#EFF6FF' },
+  selectListItemText: { fontSize: 16, color: '#374151', fontWeight: '500' },
+  activeListItemText: { color: '#1D4ED8', fontWeight: '700' },
+  checkIcon: { color: '#1D4ED8', fontWeight: 'bold', fontSize: 18 },
+
   historyItem: { padding: 16, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
   historyItemText: { fontSize: 16, color: "#111827", fontWeight: 'bold' },
   historyItemSub: { fontSize: 13, color: "#6B7280" },
+  emptyText: { textAlign: "center", color: "#9CA3AF", marginTop: 20, fontStyle: 'italic' },
   closeBtn: { backgroundColor: "#EF4444", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 16 }
 });

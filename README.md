@@ -9,9 +9,12 @@
 *   **PPOB & Layanan Digital**: Transaksi Pulsa, PLN, E-Wallet, BPJS, Transfer Bank, dan Game.
 *   **Manajemen Kategori Dinamis**: Tambah, edit, dan hapus kategori produk digital sesuka hati (PULSA, PDAM, VOUCHER, dll).
 *   **Optimasi Struk Thermal**: Cetak struk 58mm yang rapi untuk semua jenis transaksi (Retail & Digital).
-*   **Laporan Laba/Rugi**: Pantau keuntungan harian, bulanan, dan tahunan secara otomatis.
-*   **Offline First**: Data disimpan lokal menggunakan SQLite, aman dan kencang tanpa internet.
-*   **Manajemen Pelanggan & Supplier**: Kelola database kontak bisnis Anda dengan mudah.
+*   **📜 Riwayat Transaksi Digital**: Navigasi khusus untuk melihat detail transaksi digital masa lalu.
+*   **📅 Filter Rentang Tanggal**: Filter laporan dan riwayat berdasarkan tanggal mulai dan selesai (Custom Range).
+*   **📑 Laporan Laba & Grafik**: Laporan otomatis untuk stok, penjualan profit, dan performa kategori digital.
+*   **📦 Manajemen Stok & Supplier**: Pencatatan pembelian stok dari supplier dan peringatan stok rendah.
+*   **⌨️ Optimasi UX Keyboard**: Input form yang nyaman tanpa terhalang keyboard HP.
+*   **💾 Backup & Restore**: Amankan data lokal Anda dengan fitur ekspor/impor database.
 
 ---
 
