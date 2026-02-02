@@ -88,7 +88,7 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
  * The advantage is the size of the APK is reduced by about 4MB.
  * Remember to call "assembleRelease" to generate the APKs.
  */
-def enableSeparateBuildPerCPUArchitecture = true
+def enableSeparateBuildPerCPUArchitecture = false
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -115,7 +115,25 @@ android {
             include "armeabi-v7a", "arm64-v8a"
         }
     }
- signingConfigs {
+    // Load signing properties from local file
+    def signingPropsFile = rootProject.file("signing.properties")
+    if (signingPropsFile.exists()) {
+        def props = new Properties()
+        signingPropsFile.withInputStream { props.load(it) }
+        props.each { key, val ->
+            project.ext.set(key, val)
+        }
+    }
+
+    signingConfigs {
+        release {
+            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+            }
+        }
         debug {
             storeFile file('debug.keystore')
             storePassword 'android'
@@ -130,7 +148,7 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

@@ -7,11 +7,14 @@ const TABLES = [
   "shop_profile",
   "sales",
   "sales_items",
+  "suppliers",
   "purchases",
   "purchase_items",
   "receivables",
   "payables",
-  "phone_history"
+  "phone_history",
+  "digital_products",
+  "digital_categories"
 ];
 
 export const exportFullData = async () => {
