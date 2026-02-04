@@ -152,6 +152,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  themeRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  themeOption: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderRadius: 10,
+    borderWidth: 2,
+    position: "relative",
+  },
+  themeText: {
+    fontWeight: "600",
+    fontSize: 13,
+  },
+  checkMark: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#FFF",
+  },
   textArea: {
     height: 100,
     textAlignVertical: "top",

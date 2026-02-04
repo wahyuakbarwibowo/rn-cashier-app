@@ -29,6 +29,7 @@ import DigitalProductsMasterScreen from "../screens/DigitalProductsMasterScreen"
 import DigitalCategoriesMasterScreen from "../screens/DigitalCategoriesMasterScreen";
 import DigitalReportsScreen from "../screens/DigitalReportsScreen";
 import ExpensesScreen from "../screens/ExpensesScreen";
+import LowStockScreen from "../screens/LowStockScreen";
 import { getShopProfile } from "../database/settings";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
@@ -70,10 +71,10 @@ function CustomDrawerContent(props: any) {
       label={`${icon}  ${label}`}
       focused={isActive(name)}
       onPress={() => navigation.navigate(name)}
-      activeTintColor="#3B82F6"
-      inactiveTintColor="#4B5563"
-      activeBackgroundColor="#EFF6FF"
-      labelStyle={styles.drawerLabel}
+      activeTintColor="#E11D48" // Rose 600
+      inactiveTintColor="#64748b" // Slate 500
+      activeBackgroundColor="#FFF1F2" // Rose 50
+      labelStyle={[styles.drawerLabel, { fontWeight: isActive(name) ? '700' : '500' }]}
       style={styles.drawerItem}
     />
   );
@@ -95,6 +96,7 @@ function CustomDrawerContent(props: any) {
       
       <SectionHeader title="PRODUK" />
       <MenuItem name="Product" label="Stok Barang" icon="📦" />
+      <MenuItem name="LowStock" label="Stok Tipis (Alert)" icon="⚠️" />
       <MenuItem name="PurchaseForm" label="Tambah Stok (Beli)" icon="📥" />
       <MenuItem name="DigitalProductsMaster" label="Produk Digital" icon="✨" />
       <MenuItem name="DigitalCategoriesMaster" label="Kategori Digital" icon="📁" />
@@ -140,6 +142,7 @@ export default function DrawerNavigator() {
       
       {/* 1. Produk */}
       <Drawer.Screen name="Product" component={ProductsScreen} options={{ title: '📦 Stok Barang' }} />
+      <Drawer.Screen name="LowStock" component={LowStockScreen} options={{ title: '⚠️ Stok Tipis' }} />
       <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: '📥 Tambah Stok (Beli)' }} />
       <Drawer.Screen name="DigitalProductsMaster" component={DigitalProductsMasterScreen} options={{ title: '✨ Produk Digital' }} />
       <Drawer.Screen name="DigitalCategoriesMaster" component={DigitalCategoriesMasterScreen} options={{ title: '📁 Kategori Digital' }} />
@@ -201,21 +204,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   drawerHeader: {
-    padding: 20,
-    backgroundColor: '#3B82F6',
+    padding: 24,
+    backgroundColor: "#FB7185", // Rose 400 (Match Dashboard)
     marginBottom: 10,
     marginTop: -5,
   },
   drawerBrand: {
-    color: '#FFF',
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 1,
+    color: "#FFF",
+    fontSize: 24,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   drawerTagline: {
-    color: '#E0E7FF',
-    fontSize: 12,
-    marginTop: 2,
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 13,
+    marginTop: 4,
+    fontWeight: "500",
   },
   sectionHeader: {
     paddingHorizontal: 20,
@@ -224,18 +228,18 @@ const styles = StyleSheet.create({
   },
   sectionHeaderText: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#9CA3AF',
-    letterSpacing: 1,
+    fontWeight: "800",
+    color: "#FDA4AF", // Rose 300
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
   },
   drawerItem: {
-    marginVertical: 0,
-    marginHorizontal: 10,
-    borderRadius: 8,
+    marginVertical: 2,
+    marginHorizontal: 12,
+    borderRadius: 12,
   },
   drawerLabel: {
     fontSize: 14,
     marginLeft: -10,
-    fontWeight: '500',
   },
 });

@@ -99,41 +99,56 @@ export default function DashboardScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      {/* Header Summary */}
+      {/* Header Summary - Premium Pink & White */}
       <View style={styles.headerDashboard}>
-        <View style={styles.summaryRow}>
-          <View style={[styles.summaryCard, { flex: 1, marginRight: 12 }]}>
-            <Text style={styles.summaryLabel}>Penjualan Hari Ini</Text>
-            <Text style={styles.summaryValue}>
-              Rp {stats.todaySales.toLocaleString("id-ID")}
-            </Text>
-          </View>
-          <View style={[styles.summaryCard, { flex: 1, backgroundColor: "rgba(239, 68, 68, 0.2)" }]}>
-            <Text style={styles.summaryLabel}>Pengeluaran Hari Ini</Text>
-            <Text style={[styles.summaryValue, { color: "#FCA5A5" }]}>
-              Rp {stats.todayExpenses.toLocaleString("id-ID")}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={[styles.summaryCard, { marginTop: 16, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)" }]}>
-          <Text style={styles.summaryLabel}>Total Pendapatan Bersih</Text>
-          <Text style={[styles.summaryValue, { color: "#34D399" }]}>
+        <View style={styles.mainNetCard}>
+          <Text style={styles.netLabel}>Total Pendapatan Bersih</Text>
+          <Text style={styles.netValue}>
             Rp {(stats.todaySales - stats.todayExpenses).toLocaleString("id-ID")}
           </Text>
+          <View style={styles.netDecoration} />
+        </View>
+
+        <View style={styles.summaryRow}>
+          <View style={[styles.miniCard, { backgroundColor: "#FFF1F2" }]}>
+            <View style={styles.iconCircle}>
+              <Text style={{ fontSize: 16 }}>📈</Text>
+            </View>
+            <View>
+              <Text style={styles.miniLabel}>Penjualan</Text>
+              <Text style={styles.miniValue}>
+                Rp {stats.todaySales.toLocaleString("id-ID")}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.miniCard, { backgroundColor: "#FFF" }]}>
+            <View style={[styles.iconCircle, { backgroundColor: "#FEF2F2" }]}>
+              <Text style={{ fontSize: 16 }}>📉</Text>
+            </View>
+            <View>
+              <Text style={styles.miniLabel}>Pengeluaran</Text>
+              <Text style={[styles.miniValue, { color: "#E11D48" }]}>
+                Rp {stats.todayExpenses.toLocaleString("id-ID")}
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 
       <View style={styles.content}>
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
+          <TouchableOpacity 
+            style={styles.statBox}
+            onPress={() => navigation.navigate("LowStock")}
+          >
             <Text style={styles.statIcon}>⚠️</Text>
             <View>
               <Text style={styles.statValue}>{stats.lowStockCount}</Text>
               <Text style={styles.statLabel}>Stok Rendah</Text>
             </View>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statBox}>
             <Text style={styles.statIcon}>👥</Text>
             <View>
@@ -154,22 +169,10 @@ export default function DashboardScreen() {
             badge={stats.lowStockCount}
           />
           <MenuCard
-            title="Tambah Stok"
-            icon="📥"
-            color="#EC4899"
-            onPress={() => navigation.navigate("PurchaseForm")}
-          />
-          <MenuCard
-            title="Produk Digital"
-            icon="✨"
-            color="#3B82F6"
-            onPress={() => navigation.navigate("DigitalProductsMaster")}
-          />
-          <MenuCard
-            title="Kategori Digital"
-            icon="📁"
-            color="#8B5CF6"
-            onPress={() => navigation.navigate("DigitalCategoriesMaster")}
+            title="Stok Tipis"
+            icon="⚠️"
+            color="#F59E0B"
+            onPress={() => navigation.navigate("LowStock")}
           />
         </View>
 
@@ -282,16 +285,89 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9FAFB",
   },
   headerDashboard: {
-    backgroundColor: "#111827",
-    paddingTop: 20,
+    backgroundColor: "#FFF",
+    paddingTop: 24,
     paddingBottom: 40,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 4,
+    shadowColor: "#F43F5E",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+  },
+  mainNetCard: {
+    backgroundColor: "#FB7185", // Rose 400
+    padding: 24,
+    borderRadius: 20,
+    marginBottom: 20,
+    position: "relative",
+    overflow: "hidden",
+    elevation: 8,
+    shadowColor: "#E11D48",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  netLabel: {
+    color: "#FFF",
+    opacity: 0.9,
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  netValue: {
+    color: "#FFF",
+    fontSize: 32,
+    fontWeight: "900",
+  },
+  netDecoration: {
+    position: "absolute",
+    right: -20,
+    bottom: -20,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   summaryRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: 12,
+  },
+  miniCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#FFF1F2",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  miniLabel: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#9CA3AF",
+    textTransform: "uppercase",
+  },
+  miniValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#374151",
   },
   summaryCard: {
     backgroundColor: "rgba(255,255,255,0.1)",
@@ -362,7 +438,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 16,
     borderLeftWidth: 4,
-    elevation: 1,
+    elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
