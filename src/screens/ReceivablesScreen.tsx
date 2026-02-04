@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,29 +6,40 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Linking,
+  Alert,
 } from "react-native";
 import { getDB } from "../database/initDB";
+import { getShopProfile } from "../database/settings";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function ReceivablesScreen() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shopName, setShopName] = useState("");
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const loadData = async () => {
     try {
       setLoading(true);
       const db = await getDB();
-      const res = await db.getAllAsync(
-        `SELECT r.*, c.name as customer_name, s.created_at as sale_date 
-         FROM receivables r
-         JOIN customers c ON r.customer_id = c.id
-         JOIN sales s ON r.sale_id = s.id
-         ORDER BY r.id DESC`
-      );
+      const [res, shop] = await Promise.all([
+        db.getAllAsync(
+          `SELECT r.*, c.name as customer_name, c.phone as customer_phone, s.created_at as sale_date 
+           FROM receivables r
+           JOIN customers c ON r.customer_id = c.id
+           JOIN sales s ON r.sale_id = s.id
+           ORDER BY r.id DESC`
+        ),
+        getShopProfile()
+      ]);
       setData(res);
+      if (shop) setShopName(shop.name ?? "");
     } catch (e) {
       console.error(e);
     } finally {
@@ -45,6 +56,41 @@ export default function ReceivablesScreen() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleTagihWA = (item: any) => {
+    if (!item.customer_phone || item.customer_phone.trim() === "") {
+      Alert.alert("Error", "Nomor WhatsApp pelanggan tidak tersedia.");
+      return;
+    }
+
+    let phone = item.customer_phone.replace(/[^0-9]/g, "");
+    if (phone.startsWith("0")) {
+      phone = "62" + phone.slice(1);
+    } else if (!phone.startsWith("62")) {
+      phone = "62" + phone;
+    }
+
+    const date = new Date(item.sale_date).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+    const amount = item.amount.toLocaleString("id-ID");
+    const message = `Halo Kak ${item.customer_name},\n\nKami dari *${shopName || "Toko Kasir"}* menginformasikan perihal piutang sebesar *Rp ${amount}* dari transaksi tanggal ${date}.\n\nMohon untuk segera melakukan pembayaran. Terima kasih 🙏`;
+
+    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`;
+    
+    Linking.canOpenURL(url).then(supported => {
+      if (supported) {
+        Linking.openURL(url);
+      } else {
+        const webUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        Linking.openURL(webUrl);
+      }
+    }).catch(() => {
+      Alert.alert("Error", "Gagal membuka WhatsApp");
+    });
   };
 
   return (
@@ -70,12 +116,22 @@ export default function ReceivablesScreen() {
                 <Text style={[styles.status, item.status === 'paid' ? styles.paid : styles.pending]}>
                   {item.status === 'paid' ? 'Lunas' : 'Belum Lunas'}
                 </Text>
-                <TouchableOpacity 
-                   onPress={() => handleUpdateStatus(item.id, item.status)}
-                   style={styles.actionBtn}
-                >
-                   <Text style={styles.actionText}>{item.status === 'paid' ? 'Batalkan Lunas' : 'Tandai Lunas'}</Text>
-                </TouchableOpacity>
+                <View style={styles.actionRow}>
+                  {item.status === 'pending' && (
+                    <TouchableOpacity 
+                      onPress={() => handleTagihWA(item)}
+                      style={[styles.actionBtn, styles.waBtn]}
+                    >
+                      <Text style={styles.actionText}>💬 Tagih WA</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity 
+                    onPress={() => handleUpdateStatus(item.id, item.status)}
+                    style={styles.actionBtn}
+                  >
+                    <Text style={styles.actionText}>{item.status === 'paid' ? 'Batalkan Lunas' : 'Selesaikan'}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           )}
@@ -98,7 +154,9 @@ const styles = StyleSheet.create({
   status: { fontWeight: "bold", fontSize: 12 },
   paid: { color: "#16A34A" },
   pending: { color: "#D97706" },
-  actionBtn: { backgroundColor: "#111827", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
+  actionBtn: { backgroundColor: "#111827", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, marginLeft: 8 },
+  waBtn: { backgroundColor: "#16A34A" },
+  actionRow: { flexDirection: "row" },
   actionText: { color: "#FFF", fontSize: 12, fontWeight: "bold" },
   empty: { textAlign: "center", marginTop: 40, color: "#9CA3AF" }
 });
