@@ -2,7 +2,7 @@ import { Product } from '../types/database';
 
 export type DrawerParamList = {
   Dashboard: undefined;
-  Product: undefined;
+  Product: { initialCode?: string };
   PurchaseForm: undefined;
   SalesTransaction: { addProductId?: number };
   SalesHistory: undefined;

@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import BarcodeScannerModal from "../components/BarcodeScannerModal";
 import { Product } from "../types/database";
 import {
   addProduct,
@@ -18,6 +19,7 @@ import {
   deleteProduct,
   updateProduct,
 } from "../database/products";
+import { useRoute } from "@react-navigation/native";
 import { DrawerScreenProps } from "@react-navigation/drawer";
 import { DrawerParamList } from "../navigation/types";
 
@@ -173,36 +175,10 @@ function ProductCard({ item, onEdit, onDelete, onPress }: ProductCardProps) {
   );
 }
 
-interface BarcodeScannerModalProps {
-  visible: boolean;
-  onScanned: (event: { data: string }) => void;
-  onClose: () => void;
-}
 
-function BarcodeScannerModal({
-  visible,
-  onScanned,
-  onClose,
-}: BarcodeScannerModalProps) {
-  return (
-    <Modal visible={visible} animationType="slide">
-      <View style={styles.scannerContainer}>
-        <CameraView
-          onBarcodeScanned={visible ? onScanned : undefined}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <View style={styles.overlay}>
-          <Text style={styles.scanText}>Scan Barcode Barang</Text>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeBtnText}>Batal</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 export default function ProductsScreen({ navigation }: Props) {
+  const route = useRoute<any>();
   const [products, setProducts] = useState<Product[]>([]);
 
   const loadProducts = useCallback(async () => {
@@ -218,7 +194,14 @@ export default function ProductsScreen({ navigation }: Props) {
 
   useEffect(() => {
     loadProducts();
-  }, [loadProducts]);
+
+    const params = route.params as { initialCode?: string };
+    if (params?.initialCode) {
+      updateField("code", params.initialCode);
+      // Clear params so it doesn't keep updating on re-renders
+      navigation.setParams({ initialCode: undefined });
+    }
+  }, [loadProducts, route.params, updateField, navigation]);
 
   const handleDelete = useCallback(
     (id: number) => {

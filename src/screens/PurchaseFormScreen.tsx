@@ -8,7 +8,9 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import BarcodeScannerModal from "../components/BarcodeScannerModal";
 import { getProducts } from "../database/products";
 import { addPurchase } from "../database/purchases";
 import { Product } from "../types/database";
@@ -32,6 +34,10 @@ export default function PurchaseFormScreen() {
   const [supplierName, setSupplierName] = useState("");
   const [isDebt, setIsDebt] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Barcode Scanner State
+  const [permission, requestPermission] = useCameraPermissions();
+  const [isScanning, setIsScanning] = useState(false);
 
   const loadData = async () => {
     const [pData, sData] = await Promise.all([
@@ -156,6 +162,41 @@ export default function PurchaseFormScreen() {
       Alert.alert("Error", "Gagal menyimpan pembelian");
     }
   };
+
+  const handleBarcodeScanned = ({ data }: { data: string }) => {
+    setIsScanning(false);
+    
+    // Find product with this code
+    const product = products.find(p => p.code === data);
+    if (product) {
+      handleAddItem(product);
+      setSearchQuery(""); // Clear search if any
+      Alert.alert("Sukses", `Berhasil menambah ${product.name}`);
+    } else {
+      Alert.alert(
+        "Produk Tidak Ditemukan", 
+        `Barang dengan kode ${data} belum terdaftar.`,
+        [
+          { text: "Tutup", style: "cancel" },
+          { 
+            text: "Tambah Produk", 
+            onPress: () => navigation.navigate("Product", { initialCode: data }) 
+          }
+        ]
+      );
+    }
+  };
+
+  const startScan = async () => {
+    if (!permission?.granted) {
+      const res = await requestPermission();
+      if (!res.granted) {
+        Alert.alert("Izin Kamera", "Akses kamera dibutuhkan untuk scan barcode");
+        return;
+      }
+    }
+    setIsScanning(true);
+  };
   
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -247,6 +288,12 @@ export default function PurchaseFormScreen() {
             onChangeText={setSearchQuery}
             style={[styles.searchInput, styles.searchInputFlex]}
           />
+          <TouchableOpacity
+            style={styles.scanActionBtn}
+            onPress={startScan}
+          >
+            <Text style={styles.scanActionIcon}>📷</Text>
+          </TouchableOpacity>
           {searchQuery.length > 0 && (
             <TouchableOpacity
               style={styles.clearSearchBtn}
@@ -364,6 +411,11 @@ export default function PurchaseFormScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      <BarcodeScannerModal
+        visible={isScanning}
+        onScanned={handleBarcodeScanned}
+        onClose={() => setIsScanning(false)}
+      />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -435,10 +487,27 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    height: 48,
   },
   searchInputFlex: {
     flex: 1,
     marginBottom: 0,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  scanActionBtn: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 15,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+    borderWidth: 1,
+    borderColor: "#3B82F6",
+  },
+  scanActionIcon: {
+    fontSize: 20,
   },
   clearSearchBtn: {
     paddingHorizontal: 12,

@@ -14,6 +14,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useFocusEffect } from "@react-navigation/native";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import BarcodeScannerModal from "../components/BarcodeScannerModal";
 import { getProducts } from "../database/products";
 import { addSale } from "../database/sales";
 import { getCustomers, addCustomer } from "../database/customers";
@@ -80,6 +82,10 @@ export default function SalesTransactionScreen() {
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState("");
 
+  // Barcode Scanner State
+  const [permission, requestPermission] = useCameraPermissions();
+  const [isScanning, setIsScanning] = useState(false);
+
   useFocusEffect(
     React.useCallback(() => {
       loadInitialData();
@@ -128,6 +134,41 @@ export default function SalesTransactionScreen() {
         return [...prevCart, { product, qty: unitsToAdd }];
       }
     });
+  };
+
+  const handleBarcodeScanned = ({ data }: { data: string }) => {
+    setIsScanning(false);
+    
+    // Find product with this code
+    const product = products.find(p => p.code === data);
+    if (product) {
+      handleAddToCart(product);
+      setSearchQuery(""); // Clear search if any
+      Alert.alert("Sukses", `Berhasil menambah ${product.name}`);
+    } else {
+      Alert.alert(
+        "Produk Tidak Ditemukan", 
+        `Barang dengan kode ${data} belum terdaftar.`,
+        [
+          { text: "Tutup", style: "cancel" },
+          { 
+            text: "Tambah Produk", 
+            onPress: () => navigation.navigate("Product", { initialCode: data }) 
+          }
+        ]
+      );
+    }
+  };
+
+  const startScan = async () => {
+    if (!permission?.granted) {
+      const res = await requestPermission();
+      if (!res.granted) {
+        Alert.alert("Izin Kamera", "Akses kamera dibutuhkan untuk scan barcode");
+        return;
+      }
+    }
+    setIsScanning(true);
   };
 
   const updateCartItemQty = (id: number, qty: number) => {
@@ -320,6 +361,12 @@ export default function SalesTransactionScreen() {
               onChangeText={setSearchQuery}
               style={[styles.searchInput, styles.searchInputFlex]}
             />
+            <TouchableOpacity
+              style={styles.scanActionBtn}
+              onPress={startScan}
+            >
+              <Text style={styles.scanActionIcon}>📷</Text>
+            </TouchableOpacity>
             {searchQuery.length > 0 && (
               <TouchableOpacity
                 style={styles.clearSearchBtn}
@@ -485,6 +532,12 @@ export default function SalesTransactionScreen() {
             <Text style={styles.checkoutBtnText}>Selesaikan Transaksi</Text>
           </TouchableOpacity>
         </View>
+
+        <BarcodeScannerModal
+          visible={isScanning}
+          onScanned={handleBarcodeScanned}
+          onClose={() => setIsScanning(false)}
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -567,10 +620,27 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    height: 48,
   },
   searchInputFlex: {
     flex: 1,
     marginBottom: 0,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  scanActionBtn: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 15,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+    borderWidth: 1,
+    borderColor: "#3B82F6",
+  },
+  scanActionIcon: {
+    fontSize: 20,
   },
   clearSearchBtn: {
     paddingHorizontal: 12,
