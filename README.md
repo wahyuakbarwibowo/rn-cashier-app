@@ -7,13 +7,14 @@
 ### ✨ Fitur Utama
 *   **Retail POS**: Manajemen stok barang, barcode scanner (via kamera), transaksi kasir kilat.
 *   **PPOB & Layanan Digital**: Transaksi Pulsa, PLN, E-Wallet, BPJS, Transfer Bank, dan Game.
+*   **📈 Laporan Laba Rugi (Profit & Loss)**: Analisis keuntungan bersih yang sudah terintegrasi dengan omset penjualan, HPP, dan beban operasional.
+*   **💸 Manajemen Pengeluaran**: Pencatatan biaya operasional harian (listrik, sewa, gaji) untuk perhitungan laba bersih yang akurat.
+*   **⚠️ Sistem Alert Stok Rendah**: Notifikasi visual dan daftar khusus untuk produk yang stoknya di bawah ambang batas (Critical Stock).
+*   **🌸 Premium Pink-White UI**: Desain antarmuka modern, bersih, dan estetik dengan nuansa Pink-White yang premium.
 *   **Manajemen Kategori Dinamis**: Tambah, edit, dan hapus kategori produk digital sesuka hati (PULSA, PDAM, VOUCHER, dll).
 *   **Optimasi Struk Thermal**: Cetak struk 58mm yang rapi untuk semua jenis transaksi (Retail & Digital).
 *   **📜 Riwayat Transaksi Digital**: Navigasi khusus untuk melihat detail transaksi digital masa lalu.
-*   **📅 Filter Rentang Tanggal**: Filter laporan dan riwayat berdasarkan tanggal mulai dan selesai (Custom Range).
-*   **📑 Laporan Laba & Grafik**: Laporan otomatis untuk stok, penjualan profit, dan performa kategori digital.
-*   **📦 Manajemen Stok & Supplier**: Pencatatan pembelian stok dari supplier dan peringatan stok rendah.
-*   **⌨️ Optimasi UX Keyboard**: Input form yang nyaman tanpa terhalang keyboard HP.
+*   **📅 Filter Rentang Tanggal**: Filter laporan dan riwayat berdasarkan periode waktu tertentu (Hari, Minggu, Bulan, Tahun).
 *   **💾 Backup & Restore**: Amankan data lokal Anda dengan fitur ekspor/impor database.
 
 ---
