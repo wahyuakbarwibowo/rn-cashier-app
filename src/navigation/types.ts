@@ -15,6 +15,7 @@ export type DrawerParamList = {
   Pulsa: undefined;
   Receivables: undefined;
   Payables: undefined;
+  Expenses: undefined;
   Backup: undefined;
   ProductDetail: { product: Product };
   DigitalHistory: undefined;

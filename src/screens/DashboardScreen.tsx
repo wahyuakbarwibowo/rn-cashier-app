@@ -18,6 +18,7 @@ export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const [stats, setStats] = useState({
     todaySales: 0,
+    todayExpenses: 0,
     lowStockCount: 0,
     totalCustomers: 0,
     pendingReceivables: 0,
@@ -30,8 +31,9 @@ export default function DashboardScreen() {
       const today = new Date().toISOString().split("T")[0];
 
       // Jalankan query secara paralel untuk efisiensi
-      const [salesRes, stockRes, customerRes, receivableRes] = await Promise.all([
+      const [salesRes, expenseRes, stockRes, customerRes, receivableRes] = await Promise.all([
         db.getFirstAsync<{ total: number }>("SELECT SUM(total) as total FROM sales WHERE created_at LIKE ?", [`${today}%`]),
+        db.getFirstAsync<{ total: number }>("SELECT SUM(amount) as total FROM expenses WHERE created_at LIKE ?", [`${today}%`]),
         db.getFirstAsync<{ count: number }>("SELECT COUNT(*) as count FROM products WHERE stock < 10"),
         db.getFirstAsync<{ count: number }>("SELECT COUNT(*) as count FROM customers"),
         db.getFirstAsync<{ total: number }>("SELECT SUM(amount) as total FROM receivables WHERE status = 'pending'")
@@ -39,6 +41,7 @@ export default function DashboardScreen() {
 
       setStats({
         todaySales: salesRes?.total || 0,
+        todayExpenses: expenseRes?.total || 0,
         lowStockCount: stockRes?.count || 0,
         totalCustomers: customerRes?.count || 0,
         pendingReceivables: receivableRes?.total || 0,
@@ -98,10 +101,25 @@ export default function DashboardScreen() {
     >
       {/* Header Summary */}
       <View style={styles.headerDashboard}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Penjualan Hari Ini</Text>
-          <Text style={styles.summaryValue}>
-            Rp {stats.todaySales.toLocaleString("id-ID")}
+        <View style={styles.summaryRow}>
+          <View style={[styles.summaryCard, { flex: 1, marginRight: 12 }]}>
+            <Text style={styles.summaryLabel}>Penjualan Hari Ini</Text>
+            <Text style={styles.summaryValue}>
+              Rp {stats.todaySales.toLocaleString("id-ID")}
+            </Text>
+          </View>
+          <View style={[styles.summaryCard, { flex: 1, backgroundColor: "rgba(239, 68, 68, 0.2)" }]}>
+            <Text style={styles.summaryLabel}>Pengeluaran Hari Ini</Text>
+            <Text style={[styles.summaryValue, { color: "#FCA5A5" }]}>
+              Rp {stats.todayExpenses.toLocaleString("id-ID")}
+            </Text>
+          </View>
+        </View>
+        
+        <View style={[styles.summaryCard, { marginTop: 16, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)" }]}>
+          <Text style={styles.summaryLabel}>Total Pendapatan Bersih</Text>
+          <Text style={[styles.summaryValue, { color: "#34D399" }]}>
+            Rp {(stats.todaySales - stats.todayExpenses).toLocaleString("id-ID")}
           </Text>
         </View>
       </View>
@@ -194,6 +212,12 @@ export default function DashboardScreen() {
             color="#EC4899"
             onPress={() => navigation.navigate("DigitalReports")}
           />
+          <MenuCard
+            title="Pengeluaran"
+            icon="💸"
+            color="#EF4444"
+            onPress={() => navigation.navigate("Expenses")}
+          />
         </View>
 
         {/* PELANGGAN & SUPPLIER Section */}
@@ -264,6 +288,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   summaryCard: {
     backgroundColor: "rgba(255,255,255,0.1)",

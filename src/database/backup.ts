@@ -14,7 +14,8 @@ const TABLES = [
   "payables",
   "phone_history",
   "digital_products",
-  "digital_categories"
+  "digital_categories",
+  "expenses"
 ];
 
 export const exportFullData = async () => {

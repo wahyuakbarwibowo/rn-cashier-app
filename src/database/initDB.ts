@@ -201,6 +201,14 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
           name TEXT NOT NULL UNIQUE,
           icon TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS expenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          category TEXT NOT NULL,
+          amount REAL NOT NULL,
+          notes TEXT,
+          created_at TEXT
+        );
       `);
 
       // Seed default digital categories if none exist
