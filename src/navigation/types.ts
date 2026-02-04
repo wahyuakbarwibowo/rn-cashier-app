@@ -24,4 +24,5 @@ export type DrawerParamList = {
   DigitalProductsMaster: undefined;
   DigitalCategoriesMaster: undefined;
   DigitalReports: undefined;
+  ProfitLoss: undefined;
 }

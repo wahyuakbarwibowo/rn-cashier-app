@@ -101,13 +101,16 @@ export default function DashboardScreen() {
     >
       {/* Header Summary - Premium Pink & White */}
       <View style={styles.headerDashboard}>
-        <View style={styles.mainNetCard}>
-          <Text style={styles.netLabel}>Total Pendapatan Bersih</Text>
+        <TouchableOpacity 
+          style={styles.mainNetCard}
+          onPress={() => navigation.navigate("ProfitLoss")}
+        >
+          <Text style={styles.netLabel}>Total Pendapatan Bersih (Hari Ini)</Text>
           <Text style={styles.netValue}>
             Rp {(stats.todaySales - stats.todayExpenses).toLocaleString("id-ID")}
           </Text>
           <View style={styles.netDecoration} />
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.summaryRow}>
           <View style={[styles.miniCard, { backgroundColor: "#FFF1F2" }]}>
@@ -190,6 +193,12 @@ export default function DashboardScreen() {
             icon="🕒"
             color="#6B7280"
             onPress={() => navigation.navigate("SalesHistory")}
+          />
+          <MenuCard
+            title="Laba Rugi"
+            icon="📈"
+            color="#FB7185"
+            onPress={() => navigation.navigate("ProfitLoss")}
           />
           <MenuCard
             title="Laporan"

@@ -30,6 +30,7 @@ import DigitalCategoriesMasterScreen from "../screens/DigitalCategoriesMasterScr
 import DigitalReportsScreen from "../screens/DigitalReportsScreen";
 import ExpensesScreen from "../screens/ExpensesScreen";
 import LowStockScreen from "../screens/LowStockScreen";
+import ProfitLossScreen from "../screens/ProfitLossScreen";
 import { getShopProfile } from "../database/settings";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
@@ -105,6 +106,7 @@ function CustomDrawerContent(props: any) {
       <MenuItem name="SalesTransaction" label="Transaksi Kasir" icon="🛒" />
       <MenuItem name="SalesHistory" label="Riwayat Transaksi" icon="🕒" />
       <MenuItem name="Reports" label="Laporan & Grafik" icon="📊" />
+      <MenuItem name="ProfitLoss" label="Laba Rugi (Profit)" icon="📈" />
       <MenuItem name="Pulsa" label="Transaksi Digital" icon="✨" />
       <MenuItem name="DigitalHistory" label="Riwayat Digital" icon="📜" />
       <MenuItem name="DigitalReports" label="Laporan Laba Digital" icon="📈" />
@@ -151,6 +153,7 @@ export default function DrawerNavigator() {
       <Drawer.Screen name="SalesTransaction" component={SalesTransactionScreen} options={{ title: '🛒 Transaksi Kasir' }} />
       <Drawer.Screen name="SalesHistory" component={SalesHistoryScreen} options={{ title: '🕒 Riwayat Transaksi' }} />
       <Drawer.Screen name="Reports" component={ReportsScreen} options={{ title: '📊 Laporan & Grafik' }} />
+      <Drawer.Screen name="ProfitLoss" component={ProfitLossScreen} options={{ title: '📈 Laba Rugi' }} />
       <Drawer.Screen name="Pulsa" component={PulsaTransactionScreen} options={{ title: '✨ Transaksi Digital' }} />
       <Drawer.Screen name="DigitalHistory" component={DigitalTransactionHistoryScreen} options={{ title: '📜 Riwayat Transaksi Digital' }} />
       <Drawer.Screen name="DigitalReports" component={DigitalReportsScreen} options={{ title: '📈 Laporan Laba Digital' }} />
