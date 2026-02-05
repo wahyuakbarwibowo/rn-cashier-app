@@ -172,6 +172,12 @@ export default function DashboardScreen() {
             badge={stats.lowStockCount}
           />
           <MenuCard
+            title="Produk Terlaris"
+            icon="🏆"
+            color="#FB7185"
+            onPress={() => navigation.navigate("TopProducts")}
+          />
+          <MenuCard
             title="Stok Tipis"
             icon="⚠️"
             color="#F59E0B"

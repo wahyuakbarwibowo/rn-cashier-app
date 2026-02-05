@@ -31,6 +31,7 @@ import DigitalReportsScreen from "../screens/DigitalReportsScreen";
 import ExpensesScreen from "../screens/ExpensesScreen";
 import LowStockScreen from "../screens/LowStockScreen";
 import ProfitLossScreen from "../screens/ProfitLossScreen";
+import TopProductsScreen from "../screens/TopProductsScreen";
 import { getShopProfile } from "../database/settings";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
@@ -97,6 +98,7 @@ function CustomDrawerContent(props: any) {
       
       <SectionHeader title="PRODUK" />
       <MenuItem name="Product" label="Stok Barang" icon="📦" />
+      <MenuItem name="TopProducts" label="Produk Terlaris" icon="🏆" />
       <MenuItem name="LowStock" label="Stok Tipis (Alert)" icon="⚠️" />
       <MenuItem name="PurchaseForm" label="Tambah Stok (Beli)" icon="📥" />
       <MenuItem name="DigitalProductsMaster" label="Produk Digital" icon="✨" />
@@ -144,6 +146,7 @@ export default function DrawerNavigator() {
       
       {/* 1. Produk */}
       <Drawer.Screen name="Product" component={ProductsScreen} options={{ title: '📦 Stok Barang' }} />
+      <Drawer.Screen name="TopProducts" component={TopProductsScreen} options={{ title: '🏆 Produk Terlaris' }} />
       <Drawer.Screen name="LowStock" component={LowStockScreen} options={{ title: '⚠️ Stok Tipis' }} />
       <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: '📥 Tambah Stok (Beli)' }} />
       <Drawer.Screen name="DigitalProductsMaster" component={DigitalProductsMasterScreen} options={{ title: '✨ Produk Digital' }} />
