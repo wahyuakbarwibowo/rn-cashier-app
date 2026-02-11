@@ -23,7 +23,7 @@ export default function SalesHistoryScreen() {
   const loadSales = async () => {
     try {
       setLoading(true);
-      const data = showFilter 
+      const data = showFilter
         ? await getAllSales(startDate, endDate)
         : await getAllSales();
       setSales(data);
@@ -62,8 +62,8 @@ export default function SalesHistoryScreen() {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.header}>📜 Riwayat Transaksi</Text>
-        <TouchableOpacity 
-          style={[styles.filterToggle, showFilter && styles.filterToggleActive]} 
+        <TouchableOpacity
+          style={[styles.filterToggle, showFilter && styles.filterToggleActive]}
           onPress={() => setShowFilter(!showFilter)}
         >
           <Text style={[styles.filterToggleText, showFilter && styles.filterToggleTextActive]}>
@@ -77,19 +77,19 @@ export default function SalesHistoryScreen() {
           <View style={styles.dateGroup}>
             <View style={styles.dateInputWrapper}>
               <Text style={styles.dateLabel}>Dari</Text>
-              <TextInput 
-                style={styles.dateInput} 
-                value={startDate} 
-                onChangeText={setStartDate} 
+              <TextInput
+                style={styles.dateInput}
+                value={startDate}
+                onChangeText={setStartDate}
                 placeholder="YYYY-MM-DD"
               />
             </View>
             <View style={styles.dateInputWrapper}>
               <Text style={styles.dateLabel}>Sampai</Text>
-              <TextInput 
-                style={styles.dateInput} 
-                value={endDate} 
-                onChangeText={setEndDate} 
+              <TextInput
+                style={styles.dateInput}
+                value={endDate}
+                onChangeText={setEndDate}
                 placeholder="YYYY-MM-DD"
               />
             </View>
@@ -107,7 +107,7 @@ export default function SalesHistoryScreen() {
         refreshing={loading}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.saleCard}
             onPress={() => navigation.navigate("SaleDetail", { saleId: item.id, from: "SalesHistory" })}
           >
@@ -115,9 +115,9 @@ export default function SalesHistoryScreen() {
               <Text style={styles.saleId}>TRX-{item.id?.toString().padStart(5, '0')}</Text>
               <Text style={styles.saleDate}>{formatDate(item.created_at)}</Text>
             </View>
-            
+
             <View style={styles.divider} />
-            
+
             <View style={styles.saleBody}>
               <View>
                 <Text style={styles.label}>Total Belanja</Text>
@@ -125,10 +125,22 @@ export default function SalesHistoryScreen() {
                   Rp {item.total.toLocaleString("id-ID")}
                 </Text>
               </View>
-              
+
               <View style={styles.paymentInfo}>
                 <Text style={styles.paymentText}>Dibayar: Rp {item.paid.toLocaleString("id-ID")}</Text>
                 <Text style={styles.paymentText}>Kembali: Rp {item.change.toLocaleString("id-ID")}</Text>
+                <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+                  {(item.points_earned || 0) > 0 && (
+                    <View style={styles.historyPointBadge}>
+                      <Text style={styles.historyPointText}>+{item.points_earned} Pts</Text>
+                    </View>
+                  )}
+                  {(item.points_redeemed || 0) > 0 && (
+                    <View style={[styles.historyPointBadge, { backgroundColor: '#FEF2F2', borderColor: '#FECDD3' }]}>
+                      <Text style={[styles.historyPointText, { color: '#E11D48' }]}>-{item.points_redeemed} Pts</Text>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
           </TouchableOpacity>
@@ -289,5 +301,18 @@ const styles = StyleSheet.create({
   emptyText: {
     color: "#9CA3AF",
     fontSize: 16,
+  },
+  historyPointBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  historyPointText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#059669',
   },
 });

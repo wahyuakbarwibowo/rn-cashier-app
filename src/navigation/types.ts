@@ -26,4 +26,5 @@ export type DrawerParamList = {
   DigitalReports: undefined;
   ProfitLoss: undefined;
   TopProducts: undefined;
+  CustomerPointsHistory: { customerId: number; customerName: string };
 }

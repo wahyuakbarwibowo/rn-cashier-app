@@ -32,7 +32,7 @@ export default function SaleDetailScreen() {
     try {
       setLoading(true);
       const db = await getDB();
-      
+
       // Get Sale
       const saleData = await db.getFirstAsync<Sale>(
         "SELECT * FROM sales WHERE id = ?",
@@ -114,6 +114,18 @@ export default function SaleDetailScreen() {
                 <Text style={styles.label}>Kembali</Text>
                 <Text style={styles.value}>Rp {sale.change.toLocaleString("id-ID")}</Text>
               </View>
+              {(sale.points_earned || 0) > 0 && (
+                <View style={styles.infoRow}>
+                  <Text style={[styles.label, { color: '#FB7185' }]}>Poin Didapat</Text>
+                  <Text style={[styles.value, { color: '#FB7185' }]}>+{sale.points_earned} Pts</Text>
+                </View>
+              )}
+              {(sale.points_redeemed || 0) > 0 && (
+                <View style={styles.infoRow}>
+                  <Text style={[styles.label, { color: '#E11D48' }]}>Poin Ditukar</Text>
+                  <Text style={[styles.value, { color: '#E11D48' }]}>-{sale.points_redeemed} Pts</Text>
+                </View>
+              )}
             </View>
 
             <Text style={styles.sectionTitle}>Daftar Barang</Text>
@@ -130,15 +142,15 @@ export default function SaleDetailScreen() {
         )}
         ListFooterComponent={
           <>
-            <TouchableOpacity 
-              style={styles.printButton} 
+            <TouchableOpacity
+              style={styles.printButton}
               onPress={() => sale && printSaleReceipt(sale, items)}
             >
               <Text style={styles.printButtonText}>🖨️ Cetak Struk</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.backButton} 
+            <TouchableOpacity
+              style={styles.backButton}
               onPress={() => {
                 const params = route.params as any;
                 if (params?.from === "SalesHistory") {

@@ -7,20 +7,46 @@ export async function addSale(
 ): Promise<number> {
   const db = await getDB();
   const createdAt = new Date().toISOString();
-  
+
   const result = await db.runAsync(
-    "INSERT INTO sales (customer_id, payment_method_id, total, paid, change, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO sales (customer_id, payment_method_id, total, paid, change, points_earned, points_redeemed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     [
       sale.customer_id || null,
       sale.payment_method_id || null,
       sale.total,
       sale.paid,
       sale.change,
+      sale.points_earned || 0,
+      sale.points_redeemed || 0,
       createdAt,
     ]
   );
 
   const saleId = result.lastInsertRowId as number;
+
+  // Adjust customer points if applicable
+  if (sale.customer_id) {
+    if (sale.points_earned && sale.points_earned > 0) {
+      await db.runAsync(
+        "UPDATE customers SET points = points + ?, updated_at = datetime('now') WHERE id = ?",
+        [sale.points_earned, sale.customer_id]
+      );
+      await db.runAsync(
+        "INSERT INTO customer_points_history (customer_id, sale_id, points, type, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [sale.customer_id, saleId, sale.points_earned, 'EARNED', 'Poin dari belanja', createdAt]
+      );
+    }
+    if (sale.points_redeemed && sale.points_redeemed > 0) {
+      await db.runAsync(
+        "UPDATE customers SET points = points - ?, updated_at = datetime('now') WHERE id = ?",
+        [sale.points_redeemed, sale.customer_id]
+      );
+      await db.runAsync(
+        "INSERT INTO customer_points_history (customer_id, sale_id, points, type, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [sale.customer_id, saleId, -sale.points_redeemed, 'REDEEMED', 'Penukaran poin', createdAt]
+      );
+    }
+  }
 
   for (const item of items) {
     // Insert sale item

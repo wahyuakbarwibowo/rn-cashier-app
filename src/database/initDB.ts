@@ -34,10 +34,10 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       // Migrasi kolom produk yang baru
       try {
         await database.execAsync("ALTER TABLE products ADD COLUMN purchase_package_price REAL;");
-      } catch (e) {}
+      } catch (e) { }
       try {
         await database.execAsync("ALTER TABLE products ADD COLUMN purchase_package_qty INTEGER;");
-      } catch (e) {}
+      } catch (e) { }
 
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS customers (
@@ -45,10 +45,16 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
           name TEXT NOT NULL,
           phone TEXT,
           address TEXT,
+          points INTEGER DEFAULT 0,
           created_at TEXT,
           updated_at TEXT
         );
       `);
+
+      // Migrasi kolom customers
+      try {
+        await database.execAsync("ALTER TABLE customers ADD COLUMN points INTEGER DEFAULT 0;");
+      } catch (e) { }
 
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS payment_methods (
@@ -69,7 +75,7 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       // Migrasi kolom shop_profile
       try {
         await database.execAsync("ALTER TABLE shop_profile ADD COLUMN cashier_name TEXT;");
-      } catch (e) {}
+      } catch (e) { }
 
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS sales (
@@ -79,11 +85,21 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
           total REAL,
           paid REAL,
           change REAL,
+          points_earned INTEGER DEFAULT 0,
+          points_redeemed INTEGER DEFAULT 0,
           created_at TEXT,
           FOREIGN KEY (customer_id) REFERENCES customers(id),
           FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id)
         );
       `);
+
+      // Migrasi kolom sales
+      try {
+        await database.execAsync("ALTER TABLE sales ADD COLUMN points_earned INTEGER DEFAULT 0;");
+      } catch (e) { }
+      try {
+        await database.execAsync("ALTER TABLE sales ADD COLUMN points_redeemed INTEGER DEFAULT 0;");
+      } catch (e) { }
 
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS sales_items (
@@ -112,7 +128,7 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       // Migration for purchases
       try {
         await database.execAsync("ALTER TABLE purchases ADD COLUMN supplier_id INTEGER;");
-      } catch (e) {}
+      } catch (e) { }
 
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS purchases (
@@ -168,7 +184,7 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       // Migration for payables
       try {
         await database.execAsync("ALTER TABLE payables ADD COLUMN supplier_id INTEGER;");
-      } catch (e) {}
+      } catch (e) { }
 
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS phone_history (
@@ -209,6 +225,18 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
           notes TEXT,
           created_at TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS customer_points_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          sale_id INTEGER,
+          points INTEGER NOT NULL,
+          type TEXT NOT NULL,
+          notes TEXT,
+          created_at TEXT,
+          FOREIGN KEY (customer_id) REFERENCES customers(id),
+          FOREIGN KEY (sale_id) REFERENCES sales(id)
+        );
       `);
 
       // Seed default digital categories if none exist
@@ -231,13 +259,13 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       // Migrations for digital transactions
       try {
         await database.execAsync("ALTER TABLE phone_history ADD COLUMN customer_name TEXT;");
-      } catch (e) {}
+      } catch (e) { }
       try {
         await database.execAsync("ALTER TABLE phone_history ADD COLUMN category TEXT DEFAULT 'PULSA';");
-      } catch (e) {}
+      } catch (e) { }
       try {
         await database.execAsync("ALTER TABLE phone_history ADD COLUMN notes TEXT;");
-      } catch (e) {}
+      } catch (e) { }
 
       db = database;
       console.log("✅ Database initialized successfully");

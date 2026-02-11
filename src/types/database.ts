@@ -21,6 +21,7 @@ export interface Customer {
   name: string;
   phone?: string;
   address?: string;
+  points?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -47,6 +48,18 @@ export interface Sale {
   total: number;
   paid: number;
   change: number;
+  points_earned?: number;
+  points_redeemed?: number;
+  created_at?: string;
+}
+
+export interface CustomerPointsHistory {
+  id?: number;
+  customer_id: number;
+  sale_id?: number | null;
+  points: number;
+  type: 'EARNED' | 'REDEEMED' | 'ADJUSTMENT';
+  notes?: string;
   created_at?: string;
 }
 

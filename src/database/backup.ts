@@ -15,7 +15,8 @@ const TABLES = [
   "phone_history",
   "digital_products",
   "digital_categories",
-  "expenses"
+  "expenses",
+  "customer_points_history"
 ];
 
 export const exportFullData = async () => {
@@ -36,7 +37,7 @@ export const exportFullData = async () => {
 
 export const importFullData = async (backupJson: any) => {
   const db = await getDB();
-  
+
   if (!backupJson.data || typeof backupJson.data !== 'object') {
     throw new Error("Invalid backup format");
   }

@@ -45,12 +45,12 @@ const optimizeCartItems = (items: CartItem[]): CartItem[] => {
 const getPriceBreakdown = (item: CartItem) => {
   const p = item.product;
   const qty = item.qty;
-  
+
   if (p.package_price && p.package_qty && p.package_qty > 0) {
     const numPacks = Math.floor(qty / p.package_qty);
     const remainder = qty % p.package_qty;
     const totalPrice = (numPacks * p.package_price) + (remainder * (p.selling_price || 0));
-    
+
     let label = "";
     if (numPacks > 0 && remainder > 0) {
       label = `${numPacks} Pkt + ${remainder} Sat`;
@@ -59,10 +59,10 @@ const getPriceBreakdown = (item: CartItem) => {
     } else {
       label = `${remainder} Satuan`;
     }
-    
+
     return { totalPrice, label, unitPrice: totalPrice / qty };
   }
-  
+
   const totalPrice = qty * (p.selling_price || 0);
   return { totalPrice, label: `${qty} Satuan`, unitPrice: p.selling_price || 0 };
 };
@@ -81,6 +81,7 @@ export default function SalesTransactionScreen() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState("");
+  const [redeemPoints, setRedeemPoints] = useState(false);
 
   // Barcode Scanner State
   const [permission, requestPermission] = useCameraPermissions();
@@ -138,7 +139,7 @@ export default function SalesTransactionScreen() {
 
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     setIsScanning(false);
-    
+
     // Find product with this code
     const product = products.find(p => p.code === data);
     if (product) {
@@ -147,13 +148,13 @@ export default function SalesTransactionScreen() {
       Alert.alert("Sukses", `Berhasil menambah ${product.name}`);
     } else {
       Alert.alert(
-        "Produk Tidak Ditemukan", 
+        "Produk Tidak Ditemukan",
         `Barang dengan kode ${data} belum terdaftar.`,
         [
           { text: "Tutup", style: "cancel" },
-          { 
-            text: "Tambah Produk", 
-            onPress: () => navigation.navigate("Product", { initialCode: data }) 
+          {
+            text: "Tambah Produk",
+            onPress: () => navigation.navigate("Product", { initialCode: data })
           }
         ]
       );
@@ -184,7 +185,15 @@ export default function SalesTransactionScreen() {
   };
 
   const total = cart.reduce((sum, item) => sum + getPriceBreakdown(item).totalPrice, 0);
-  const change = Number(paidAmount) - total;
+
+  // Loyalty Points Logic
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+  const availablePoints = selectedCustomer?.points || 0;
+  const pointsToRedeem = redeemPoints ? Math.min(availablePoints, total) : 0;
+  const finalTotal = total - pointsToRedeem;
+  const earnedPoints = Math.floor(finalTotal / 1000); // 1 point per 1000 IDR
+
+  const change = Number(paidAmount) - finalTotal;
 
   const resetForm = () => {
     setCart([]);
@@ -192,6 +201,7 @@ export default function SalesTransactionScreen() {
     setSearchQuery("");
     setSelectedCustomerId(null);
     setCustomerName("");
+    setRedeemPoints(false);
     if (paymentMethods.length > 0) {
       setSelectedPaymentMethodId(paymentMethods[0].id!);
     }
@@ -205,7 +215,7 @@ export default function SalesTransactionScreen() {
     const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethodId);
     const isDebt = selectedMethod?.name.toLowerCase().includes("hutang");
 
-    if (Number(paidAmount) < total && !isDebt) {
+    if (Number(paidAmount) < finalTotal && !isDebt) {
       Alert.alert("Error", "Pembayaran kurang");
       return;
     }
@@ -234,7 +244,7 @@ export default function SalesTransactionScreen() {
         if (p.package_qty && p.package_price) {
           const numPacks = Math.floor(item.qty / p.package_qty);
           const remainder = item.qty % p.package_qty;
-          
+
           if (numPacks > 0) {
             finalSalesItems.push({
               product_id: p.id!,
@@ -265,20 +275,22 @@ export default function SalesTransactionScreen() {
         {
           customer_id: finalCustomerId,
           payment_method_id: selectedPaymentMethodId,
-          total,
+          total: finalTotal,
           paid: Number(paidAmount),
           change: isDebt ? 0 : change,
+          points_earned: earnedPoints,
+          points_redeemed: pointsToRedeem,
         },
         finalSalesItems
       );
 
       Alert.alert("Sukses", "Transaksi berhasil disimpan", [
-        { 
-          text: "OK", 
+        {
+          text: "OK",
           onPress: () => {
             resetForm();
             navigation.navigate("SaleDetail", { saleId });
-          } 
+          }
         },
       ]);
     } catch (error) {
@@ -298,12 +310,12 @@ export default function SalesTransactionScreen() {
 
         {/* Customer & Payment Method */}
         <View style={styles.topSelectors}>
-          <ScrollView 
+          <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.selectorPill, !selectedCustomerId && !customerName && styles.activeSelectorPill]}
                 onPress={() => {
                   setSelectedCustomerId(null);
@@ -313,8 +325,8 @@ export default function SalesTransactionScreen() {
                 <Text style={[styles.selectorPillText, !selectedCustomerId && !customerName && styles.activeSelectorPillText]}>Umum</Text>
               </TouchableOpacity>
               {customers.map(c => (
-                <TouchableOpacity 
-                  key={c.id} 
+                <TouchableOpacity
+                  key={c.id}
                   style={[styles.selectorPill, selectedCustomerId === c.id && styles.activeSelectorPill]}
                   onPress={() => {
                     setSelectedCustomerId(c.id!);
@@ -340,8 +352,8 @@ export default function SalesTransactionScreen() {
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
               {paymentMethods.map(m => (
-                <TouchableOpacity 
-                  key={m.id} 
+                <TouchableOpacity
+                  key={m.id}
                   style={[styles.selectorPill, selectedPaymentMethodId === m.id && styles.activeSelectorPill]}
                   onPress={() => setSelectedPaymentMethodId(m.id!)}
                 >
@@ -349,6 +361,30 @@ export default function SalesTransactionScreen() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
+
+            {/* Loyalty Points Section */}
+            {selectedCustomerId && availablePoints > 0 && (
+              <View style={styles.loyaltyContainer}>
+                <View style={styles.loyaltyInfo}>
+                  <Text style={styles.loyaltyLabel}>Poin Tersedia: <Text style={styles.loyaltyValue}>{availablePoints} Pts</Text></Text>
+                  <Text style={styles.loyaltySublabel}>1 Poin = Rp 1</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.redeemBtn, redeemPoints && styles.redeemBtnActive]}
+                  onPress={() => setRedeemPoints(!redeemPoints)}
+                >
+                  <Text style={[styles.redeemBtnText, redeemPoints && styles.redeemBtnTextActive]}>
+                    {redeemPoints ? "Batal Tukar" : "Tukar Poin"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {selectedCustomerId && (
+              <View style={styles.pointsEarnedInfo}>
+                <Text style={styles.pointsEarnedText}>Estimasi poin yang didapat: <Text style={{ fontWeight: 'bold', color: '#FB7185' }}>+{earnedPoints} Pts</Text></Text>
+              </View>
+            )}
           </ScrollView>
         </View>
 
@@ -478,10 +514,18 @@ export default function SalesTransactionScreen() {
         {/* Payment & Total */}
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 24) }]}>
           <View style={styles.paymentInfo}>
+            {pointsToRedeem > 0 && (
+              <View style={[styles.paymentRow, { marginBottom: 4 }]}>
+                <Text style={[styles.label, { color: '#FB7185' }]}>Potongan Poin</Text>
+                <Text style={[styles.value, { color: '#FB7185', fontWeight: 'bold' }]}>
+                  - Rp {pointsToRedeem.toLocaleString("id-ID")}
+                </Text>
+              </View>
+            )}
             <View style={styles.paymentRow}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalLabel}>Total Akhir</Text>
               <Text style={styles.totalValue}>
-                Rp {total.toLocaleString("id-ID")}
+                Rp {finalTotal.toLocaleString("id-ID")}
               </Text>
             </View>
             <View style={styles.paymentRow}>
@@ -496,22 +540,22 @@ export default function SalesTransactionScreen() {
             </View>
             <View style={styles.paymentRow}>
               <Text style={styles.label}>
-                {paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang") 
-                  ? "Jumlah Hutang" 
+                {paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang")
+                  ? "Jumlah Hutang"
                   : "Kembalian"}
               </Text>
               <Text
                 style={[
                   styles.changeValue,
-                  { 
+                  {
                     color: paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang")
                       ? "#DC2626"
-                      : (change >= 0 ? "#16A34A" : "#DC2626") 
+                      : (change >= 0 ? "#16A34A" : "#DC2626")
                   },
                 ]}
               >
                 Rp {paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang")
-                  ? (total - Number(paidAmount)).toLocaleString("id-ID")
+                  ? (finalTotal - Number(paidAmount)).toLocaleString("id-ID")
                   : Math.max(0, change).toLocaleString("id-ID")}
               </Text>
             </View>
@@ -520,10 +564,10 @@ export default function SalesTransactionScreen() {
           <TouchableOpacity
             style={[
               styles.checkoutBtn,
-              { 
-                backgroundColor: (cart.length > 0 && (change >= 0 || paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang"))) 
-                  ? "#111827" 
-                  : "#9CA3AF" 
+              {
+                backgroundColor: (cart.length > 0 && (change >= 0 || paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang")))
+                  ? "#111827"
+                  : "#9CA3AF"
               },
             ]}
             onPress={handleFinishTransaction}
@@ -592,9 +636,65 @@ const styles = StyleSheet.create({
   selectorPillText: {
     color: "#6B7280",
     fontWeight: "600",
+    fontSize: 13,
   },
   activeSelectorPillText: {
     color: "#FFF",
+  },
+  loyaltyContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF5F7',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 4,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#FCE7F3',
+  },
+  loyaltyInfo: {
+    flex: 1,
+  },
+  loyaltyLabel: {
+    fontSize: 13,
+    color: '#4B5563',
+  },
+  loyaltyValue: {
+    fontWeight: 'bold',
+    color: '#FB7185',
+  },
+  loyaltySublabel: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  redeemBtn: {
+    backgroundColor: '#FFF',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FB7185',
+  },
+  redeemBtnActive: {
+    backgroundColor: '#FB7185',
+  },
+  redeemBtnText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FB7185',
+  },
+  redeemBtnTextActive: {
+    color: '#FFF',
+  },
+  pointsEarnedInfo: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  pointsEarnedText: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontStyle: 'italic',
   },
   card: {
     backgroundColor: "#FFF",
@@ -849,6 +949,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     color: "#6B7280",
+  },
+  value: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
   },
   paymentInput: {
     backgroundColor: "#F9FAFB",

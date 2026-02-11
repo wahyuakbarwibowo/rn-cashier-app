@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { 
-  createDrawerNavigator, 
-  DrawerContentScrollView, 
+import {
+  createDrawerNavigator,
+  DrawerContentScrollView,
   DrawerItem,
   useDrawerStatus
 } from "@react-navigation/drawer";
@@ -32,6 +32,7 @@ import ExpensesScreen from "../screens/ExpensesScreen";
 import LowStockScreen from "../screens/LowStockScreen";
 import ProfitLossScreen from "../screens/ProfitLossScreen";
 import TopProductsScreen from "../screens/TopProductsScreen";
+import CustomerPointsHistoryScreen from "../screens/CustomerPointsHistoryScreen";
 import { getShopProfile } from "../database/settings";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
@@ -95,7 +96,7 @@ function CustomDrawerContent(props: any) {
       </View>
 
       <MenuItem name="Dashboard" label="Dashboard" icon="🏠" />
-      
+
       <SectionHeader title="PRODUK" />
       <MenuItem name="Product" label="Stok Barang" icon="📦" />
       <MenuItem name="TopProducts" label="Produk Terlaris" icon="🏆" />
@@ -132,7 +133,7 @@ function CustomDrawerContent(props: any) {
 
 export default function DrawerNavigator() {
   return (
-    <Drawer.Navigator 
+    <Drawer.Navigator
       initialRouteName="Dashboard"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
@@ -143,7 +144,7 @@ export default function DrawerNavigator() {
       }}
     >
       <Drawer.Screen name="Dashboard" component={DashboardScreen} options={{ title: '🏠 Dashboard' }} />
-      
+
       {/* 1. Produk */}
       <Drawer.Screen name="Product" component={ProductsScreen} options={{ title: '📦 Stok Barang' }} />
       <Drawer.Screen name="TopProducts" component={TopProductsScreen} options={{ title: '🏆 Produk Terlaris' }} />
@@ -176,30 +177,38 @@ export default function DrawerNavigator() {
       <Drawer.Screen name="Backup" component={BackupScreen} options={{ title: '💾 Backup & Restore' }} />
 
       {/* Hidden Screens */}
-      <Drawer.Screen 
-        name="SaleDetail" 
-        component={SaleDetailScreen} 
-        options={{ 
+      <Drawer.Screen
+        name="SaleDetail"
+        component={SaleDetailScreen}
+        options={{
           title: 'Detail Transaksi',
-          drawerItemStyle: { display: 'none' } 
-        }} 
+          drawerItemStyle: { display: 'none' }
+        }}
       />
-      <Drawer.Screen 
-        name="ProductDetail" 
-        component={ProductDetailScreen} 
-        options={{ 
+      <Drawer.Screen
+        name="ProductDetail"
+        component={ProductDetailScreen}
+        options={{
           title: "Detail Product",
-          drawerItemStyle: { display: 'none' } 
-        }} 
+          drawerItemStyle: { display: 'none' }
+        }}
       />
 
-      <Drawer.Screen 
-        name="DigitalDetail" 
-        component={DigitalTransactionDetailScreen} 
-        options={{ 
+      <Drawer.Screen
+        name="DigitalDetail"
+        component={DigitalTransactionDetailScreen}
+        options={{
           title: "Detail Transaksi Digital",
-          drawerItemStyle: { display: 'none' } 
-        }} 
+          drawerItemStyle: { display: 'none' }
+        }}
+      />
+      <Drawer.Screen
+        name="CustomerPointsHistory"
+        component={CustomerPointsHistoryScreen}
+        options={{
+          title: "Riwayat Poin",
+          drawerItemStyle: { display: 'none' }
+        }}
       />
     </Drawer.Navigator>
   )

@@ -9,10 +9,12 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from "../database/customers";
 import { Customer } from "../types/database";
 
 export default function CustomersScreen() {
+  const navigation = useNavigation<any>();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -44,7 +46,8 @@ export default function CustomersScreen() {
 
     try {
       if (editId) {
-        await updateCustomer(editId, { name, phone, address });
+        const existing = customers.find(c => c.id === editId);
+        await updateCustomer(editId, { name, phone, address, points: existing?.points || 0 });
         Alert.alert("Sukses", "Pelanggan berhasil diperbarui");
       } else {
         await addCustomer({ name, phone, address });
@@ -134,6 +137,15 @@ export default function CustomersScreen() {
                 <Text style={styles.customerName}>{item.name}</Text>
                 <Text style={styles.customerPhone}>{item.phone || "-"}</Text>
               </View>
+              <TouchableOpacity
+                style={styles.pointsBadge}
+                onPress={() => navigation.navigate("CustomerPointsHistory", {
+                  customerId: item.id!,
+                  customerName: item.name
+                })}
+              >
+                <Text style={styles.pointsText}>{item.points || 0} Pts</Text>
+              </TouchableOpacity>
               <View style={styles.actions}>
                 <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionBtn}>
                   <Text style={{ color: "#3B82F6" }}>Edit</Text>
@@ -165,4 +177,18 @@ const styles = StyleSheet.create({
   customerPhone: { fontSize: 14, color: "#6B7280" },
   actions: { flexDirection: "row" },
   actionBtn: { padding: 8, marginLeft: 8 },
+  pointsBadge: {
+    backgroundColor: "#FEF2F2",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FECDD3",
+    marginRight: 8,
+  },
+  pointsText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#E11D48",
+  },
 });
