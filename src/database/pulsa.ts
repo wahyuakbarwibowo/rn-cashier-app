@@ -14,15 +14,28 @@ export interface DigitalTransaction {
   created_at?: string;
 }
 
-export const getDigitalTransactions = async (startDate?: string, endDate?: string): Promise<DigitalTransaction[]> => {
+export const getDigitalTransactions = async (startDate?: string, endDate?: string, category?: string): Promise<DigitalTransaction[]> => {
   const db = await getDB();
+  let query = "SELECT * FROM phone_history";
+  let params: any[] = [];
+  let conditions: string[] = [];
+
   if (startDate && endDate) {
-    return await db.getAllAsync<DigitalTransaction>(
-      "SELECT * FROM phone_history WHERE date(created_at) BETWEEN ? AND ? ORDER BY id DESC",
-      [startDate, endDate]
-    );
+    conditions.push("date(created_at) BETWEEN ? AND ?");
+    params.push(startDate, endDate);
   }
-  return await db.getAllAsync<DigitalTransaction>("SELECT * FROM phone_history ORDER BY id DESC");
+
+  if (category) {
+    conditions.push("category = ?");
+    params.push(category);
+  }
+
+  if (conditions.length > 0) {
+    query += " WHERE " + conditions.join(" AND ");
+  }
+
+  query += " ORDER BY id DESC";
+  return await db.getAllAsync<DigitalTransaction>(query, params);
 };
 
 export const addDigitalTransaction = async (trx: Omit<DigitalTransaction, "id" | "created_at">): Promise<number> => {
@@ -50,21 +63,21 @@ export type PhoneHistory = DigitalTransaction;
 export const addPhoneHistory = (history: any) => addDigitalTransaction({ ...history, category: 'PULSA' });
 export const getPhoneHistory = getDigitalTransactions;
 
-export const getRecentNumbers = async (): Promise<{phone_number: string, customer_name: string}[]> => {
+export const getRecentNumbers = async (): Promise<{ phone_number: string, customer_name: string }[]> => {
   const db = await getDB();
-  return await db.getAllAsync<{phone_number: string, customer_name: string}>(
+  return await db.getAllAsync<{ phone_number: string, customer_name: string }>(
     "SELECT DISTINCT phone_number, customer_name FROM phone_history ORDER BY created_at DESC LIMIT 50"
   );
 };
 
 export const getDigitalReports = async (startDate: string, endDate: string) => {
   const db = await getDB();
-  const summary = await db.getFirstAsync<{total_sales: number, total_profit: number}>(
+  const summary = await db.getFirstAsync<{ total_sales: number, total_profit: number }>(
     "SELECT SUM(selling_price) as total_sales, SUM(profit) as total_profit FROM phone_history WHERE date(created_at) BETWEEN ? AND ?",
     [startDate, endDate]
   );
-  
-  const byCategory = await db.getAllAsync<{category: string, total_sales: number, total_profit: number, count: number}>(
+
+  const byCategory = await db.getAllAsync<{ category: string, total_sales: number, total_profit: number, count: number }>(
     "SELECT category, SUM(selling_price) as total_sales, SUM(profit) as total_profit, COUNT(*) as count FROM phone_history WHERE date(created_at) BETWEEN ? AND ? GROUP BY category",
     [startDate, endDate]
   );

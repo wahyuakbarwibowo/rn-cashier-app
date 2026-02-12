@@ -99,196 +99,154 @@ export default function DashboardScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      {/* Header Summary - Premium Pink & White */}
+      {/* 1. Header & Daily Summary */}
       <View style={styles.headerDashboard}>
-        <TouchableOpacity 
+        <View style={styles.headerInfo}>
+          <Text style={styles.todayDate}>{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+          <Text style={styles.welcomeText}>Halo, Selamat Berjualan! 👋</Text>
+        </View>
+
+        <TouchableOpacity
           style={styles.mainNetCard}
           onPress={() => navigation.navigate("ProfitLoss")}
         >
-          <Text style={styles.netLabel}>Total Pendapatan Bersih (Hari Ini)</Text>
-          <Text style={styles.netValue}>
-            Rp {(stats.todaySales - stats.todayExpenses).toLocaleString("id-ID")}
-          </Text>
-          <View style={styles.netDecoration} />
+          <View>
+            <Text style={styles.netLabel}>Estimasi Laba Hari Ini</Text>
+            <Text style={styles.netValue}>
+              Rp {((stats.todaySales || 0) - (stats.todayExpenses || 0)).toLocaleString("id-ID")}
+            </Text>
+          </View>
+          <View style={styles.netIconBg}>
+            <Text style={styles.netIcon}>📈</Text>
+          </View>
         </TouchableOpacity>
 
         <View style={styles.summaryRow}>
-          <View style={[styles.miniCard, { backgroundColor: "#FFF1F2" }]}>
-            <View style={styles.iconCircle}>
-              <Text style={{ fontSize: 16 }}>📈</Text>
+          <View style={styles.summaryStatItem}>
+            <View style={[styles.statIconCircle, { backgroundColor: '#ECFDF5' }]}>
+              <Text style={styles.statIconSmall}>💰</Text>
             </View>
             <View>
-              <Text style={styles.miniLabel}>Penjualan</Text>
-              <Text style={styles.miniValue}>
-                Rp {stats.todaySales.toLocaleString("id-ID")}
-              </Text>
+              <Text style={styles.statLabelSmall}>Penjualan</Text>
+              <Text style={styles.statValueSmall}>Rp {(stats.todaySales || 0).toLocaleString("id-ID")}</Text>
             </View>
           </View>
-
-          <View style={[styles.miniCard, { backgroundColor: "#FFF" }]}>
-            <View style={[styles.iconCircle, { backgroundColor: "#FEF2F2" }]}>
-              <Text style={{ fontSize: 16 }}>📉</Text>
+          <View style={styles.summaryStatItem}>
+            <View style={[styles.statIconCircle, { backgroundColor: '#FEF2F2' }]}>
+              <Text style={styles.statIconSmall}>💸</Text>
             </View>
             <View>
-              <Text style={styles.miniLabel}>Pengeluaran</Text>
-              <Text style={[styles.miniValue, { color: "#E11D48" }]}>
-                Rp {stats.todayExpenses.toLocaleString("id-ID")}
-              </Text>
+              <Text style={styles.statLabelSmall}>Pengeluaran</Text>
+              <Text style={[styles.statValueSmall, { color: '#EF4444' }]}>Rp {(stats.todayExpenses || 0).toLocaleString("id-ID")}</Text>
             </View>
           </View>
         </View>
       </View>
 
       <View style={styles.content}>
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <TouchableOpacity 
-            style={styles.statBox}
+        {/* 2. Quick Actions - HIGH PRIORITY */}
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity
+            style={[styles.quickActionBtn, { backgroundColor: '#6366F1' }]}
+            onPress={() => navigation.navigate("SalesTransaction")}
+          >
+            <Text style={styles.quickActionIcon}>🛒</Text>
+            <Text style={styles.quickActionLabel}>Transaksi Kasir</Text>
+            <Text style={styles.quickActionSub}>Jualan Barang Fisik</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionBtn, { backgroundColor: '#F59E0B' }]}
+            onPress={() => navigation.navigate("Pulsa")}
+          >
+            <Text style={styles.quickActionIcon}>✨</Text>
+            <Text style={styles.quickActionLabel}>Transaksi Digital</Text>
+            <Text style={styles.quickActionSub}>Pulsa, Token, Tagihan</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 3. Operational Alerts */}
+        <View style={styles.alertsContainer}>
+          <TouchableOpacity
+            style={[styles.alertCard, { borderLeftColor: '#F59E0B' }]}
             onPress={() => navigation.navigate("LowStock")}
           >
-            <Text style={styles.statIcon}>⚠️</Text>
+            <Text style={styles.alertEmoji}>⚠️</Text>
             <View>
-              <Text style={styles.statValue}>{stats.lowStockCount}</Text>
-              <Text style={styles.statLabel}>Stok Rendah</Text>
+              <Text style={styles.alertTitle}>{stats.lowStockCount} Stok Tipis (Alert)</Text>
+              <Text style={styles.alertSub}>Segera restok barang Anda</Text>
             </View>
           </TouchableOpacity>
-          <View style={styles.statBox}>
-            <Text style={styles.statIcon}>👥</Text>
-            <View>
-              <Text style={styles.statValue}>{stats.totalCustomers}</Text>
-              <Text style={styles.statLabel}>Pelanggan</Text>
-            </View>
+        </View>
+
+        {/* 4. Categorized Menus */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Manajemen & Laporan</Text>
+
+          <View style={styles.menuGridNew}>
+            <MenuCard
+              title="Gudang Barang"
+              icon="📦"
+              color="#10B981"
+              onPress={() => navigation.navigate("Product")}
+              badge={stats.lowStockCount}
+            />
+            <MenuCard
+              title="Barang Masuk"
+              icon="📥"
+              color="#8B5CF6"
+              onPress={() => navigation.navigate("PurchaseForm")}
+            />
+            <MenuCard
+              title="Riwayat Transaksi"
+              icon="🕒"
+              color="#64748B"
+              onPress={() => navigation.navigate("SalesHistory")}
+            />
+            <MenuCard
+              title="Laporan Penjualan"
+              icon="📊"
+              color="#3B82F6"
+              onPress={() => navigation.navigate("Reports")}
+            />
+            <MenuCard
+              title="Laba Rugi"
+              icon="📈"
+              color="#EC4899"
+              onPress={() => navigation.navigate("ProfitLoss")}
+            />
+            <MenuCard
+              title="Daftar Pelanggan"
+              icon="👥"
+              color="#6366F1"
+              onPress={() => navigation.navigate("Customers")}
+            />
           </View>
         </View>
 
-        {/* PRODUK Section */}
-        <Text style={styles.sectionTitle}>PRODUK</Text>
-        <View style={styles.menuGrid}>
-          <MenuCard
-            title="Stok Barang"
-            icon="📦"
-            color="#10B981"
-            onPress={() => navigation.navigate("Product")}
-            badge={stats.lowStockCount}
-          />
-          <MenuCard
-            title="Produk Terlaris"
-            icon="🏆"
-            color="#FB7185"
-            onPress={() => navigation.navigate("TopProducts")}
-          />
-          <MenuCard
-            title="Stok Tipis"
-            icon="⚠️"
-            color="#F59E0B"
-            onPress={() => navigation.navigate("LowStock")}
-          />
+        <View style={styles.extraSection}>
+          <Text style={styles.sectionTitle}>Fitur Lainnya</Text>
+          <View style={styles.extraGrid}>
+            <TouchableOpacity style={styles.extraItem} onPress={() => navigation.navigate("Suppliers")}>
+              <Text style={styles.extraIcon}>🏭</Text>
+              <Text style={styles.extraText}>Master Supplier</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.extraItem} onPress={() => navigation.navigate("Receivables")}>
+              <Text style={styles.extraIcon}>💰</Text>
+              <Text style={styles.extraText}>Piutang Pelanggan</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.extraItem} onPress={() => navigation.navigate("Expenses")}>
+              <Text style={styles.extraIcon}>💸</Text>
+              <Text style={styles.extraText}>Pengeluaran (Operasional)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.extraItem} onPress={() => navigation.navigate("Backup")}>
+              <Text style={styles.extraIcon}>💾</Text>
+              <Text style={styles.extraText}>Backup & Restore</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* TRANSAKSI Section */}
-        <Text style={styles.sectionTitle}>TRANSAKSI</Text>
-        <View style={styles.menuGrid}>
-          <MenuCard
-            title="Transaksi Kasir"
-            icon="🛒"
-            color="#3B82F6"
-            onPress={() => navigation.navigate("SalesTransaction")}
-          />
-          <MenuCard
-            title="Riwayat"
-            icon="🕒"
-            color="#6B7280"
-            onPress={() => navigation.navigate("SalesHistory")}
-          />
-          <MenuCard
-            title="Laba Rugi"
-            icon="📈"
-            color="#FB7185"
-            onPress={() => navigation.navigate("ProfitLoss")}
-          />
-          <MenuCard
-            title="Laporan"
-            icon="📊"
-            color="#8B5CF6"
-            onPress={() => navigation.navigate("Reports")}
-          />
-          <MenuCard
-            title="Digital"
-            icon="✨"
-            color="#F59E0B"
-            onPress={() => navigation.navigate("Pulsa")}
-          />
-          <MenuCard
-            title="Riwayat Digital"
-            icon="📜"
-            color="#10B981"
-            onPress={() => navigation.navigate("DigitalHistory")}
-          />
-          <MenuCard
-            title="Laba Digital"
-            icon="📈"
-            color="#EC4899"
-            onPress={() => navigation.navigate("DigitalReports")}
-          />
-          <MenuCard
-            title="Pengeluaran"
-            icon="💸"
-            color="#EF4444"
-            onPress={() => navigation.navigate("Expenses")}
-          />
-        </View>
-
-        {/* PELANGGAN & SUPPLIER Section */}
-        <Text style={styles.sectionTitle}>PELANGGAN & SUPPLIER</Text>
-        <View style={styles.menuGrid}>
-          <MenuCard
-            title="Pelanggan"
-            icon="👥"
-            color="#6366F1"
-            onPress={() => navigation.navigate("Customers")}
-          />
-          <MenuCard
-            title="Supplier"
-            icon="🏭"
-            color="#8B5CF6"
-            onPress={() => navigation.navigate("Suppliers")}
-          />
-          <MenuCard
-            title="Piutang"
-            icon="💰"
-            color="#EF4444"
-            onPress={() => navigation.navigate("Receivables")}
-          />
-          <MenuCard
-            title="Hutang Supplier"
-            icon="💸"
-            color="#F43F5E"
-            onPress={() => navigation.navigate("Payables")}
-          />
-        </View>
-
-        {/* KONFIGURASI Section */}
-        <Text style={styles.sectionTitle}>KONFIGURASI</Text>
-        <View style={styles.menuGrid}>
-          <MenuCard
-            title="Cara Bayar"
-            icon="💳"
-            color="#14B8A6"
-            onPress={() => navigation.navigate("PaymentMethods")}
-          />
-          <MenuCard
-            title="Pengaturan"
-            icon="⚙️"
-            color="#4B5563"
-            onPress={() => navigation.navigate("Settings")}
-          />
-          <MenuCard
-            title="Backup"
-            icon="💾"
-            color="#111827"
-            onPress={() => navigation.navigate("Backup")}
-          />
-        </View>
+        <View style={{ height: 40 }} />
       </View>
     </ScrollView>
   );
@@ -300,168 +258,184 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9FAFB",
   },
   headerDashboard: {
-    backgroundColor: "#FFF5F7",
-    paddingTop: 16,
-    paddingBottom: 50, // Reduced from 70
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    elevation: 3,
-    shadowColor: "#F43F5E",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    backgroundColor: "#FB7185",
+    paddingTop: 40,
+    paddingBottom: 60,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+  },
+  headerInfo: {
+    marginBottom: 20,
+  },
+  todayDate: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  welcomeText: {
+    color: "#FFF",
+    fontSize: 22,
+    fontWeight: "900",
+    marginTop: 4,
   },
   mainNetCard: {
-    backgroundColor: "#FB7185",
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 12, // Reduced from 16
-    position: "relative",
-    overflow: "hidden",
-    elevation: 6,
-    shadowColor: "#E11D48",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: 24,
+    borderRadius: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    marginBottom: 16,
   },
   netLabel: {
     color: "#FFF",
-    opacity: 0.9,
     fontSize: 14,
+    opacity: 0.9,
     fontWeight: "600",
-    marginBottom: 4,
   },
   netValue: {
     color: "#FFF",
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "900",
+    marginTop: 4,
   },
-  netDecoration: {
-    position: "absolute",
-    right: -20,
-    bottom: -20,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(255,255,255,0.15)",
+  netIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  netIcon: {
+    fontSize: 24,
   },
   summaryRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
   },
-  miniCard: {
+  summaryStatItem: {
     flex: 1,
+    backgroundColor: "#FFF",
+    padding: 12,
+    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
-    padding: 12, // Compact
-    borderRadius: 14,
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "rgba(251, 113, 133, 0.1)",
     elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
   },
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#FFF",
+  statIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
   },
-  miniLabel: {
-    fontSize: 11,
-    fontWeight: "bold",
-    color: "#9CA3AF",
+  statIconSmall: {
+    fontSize: 16,
+  },
+  statLabelSmall: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#94A3B8",
     textTransform: "uppercase",
   },
-  miniValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#374151",
-  },
-  summaryCard: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    padding: 20,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  summaryLabel: {
-    color: "#E5E7EB",
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  summaryValue: {
-    color: "#FFF",
-    fontSize: 28,
-    fontWeight: "bold",
+  statValueSmall: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#1E293B",
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 10, // Reduced from 16
-    marginTop: -30, // Adjusted overlap for tighter look
+    paddingHorizontal: 20,
+    marginTop: -40,
   },
-  statsRow: {
+  quickActionsContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: 12,
     marginBottom: 20,
   },
-  statBox: {
+  quickActionBtn: {
+    flex: 1,
+    padding: 20,
+    borderRadius: 24,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+  },
+  quickActionIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  quickActionLabel: {
+    color: "#FFF",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  quickActionSub: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 11,
+    marginTop: 2,
+    fontWeight: "600",
+  },
+  alertsContainer: {
+    marginBottom: 24,
+  },
+  alertCard: {
     backgroundColor: "#FFF",
-    width: (width - 42) / 2, // Adjusted for better horizontal fit
-    padding: 14,
-    borderRadius: 18,
+    padding: 16,
+    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
+    borderLeftWidth: 6,
     elevation: 4,
-    shadowColor: "#E11D48",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    borderWidth: 1,
-    borderColor: "#FFF1F2",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
-  statIcon: {
+  alertEmoji: {
     fontSize: 24,
-    marginRight: 10,
+    marginRight: 12,
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#111827",
+  alertTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#1E293B",
   },
-  statLabel: {
+  alertSub: {
     fontSize: 12,
-    color: "#6B7280",
+    color: "#64748B",
+    marginTop: 2,
+  },
+  menuSection: {
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#111827",
+    fontWeight: "900",
+    color: "#1E293B",
     marginBottom: 16,
+    paddingLeft: 4,
   },
-  menuGrid: {
+  menuGridNew: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    gap: 12,
   },
   menuCard: {
     backgroundColor: "#FFF",
-    width: (width - 48) / 2,
+    width: (width - 52) / 2,
     padding: 20,
-    borderRadius: 16,
-    marginBottom: 16,
-    borderLeftWidth: 4,
+    borderRadius: 24,
     elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderBottomWidth: 4,
+    borderBottomColor: "#F1F5F9",
   },
   menuIconContainer: {
     marginBottom: 12,
@@ -470,12 +444,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   menuIcon: {
-    fontSize: 32,
+    fontSize: 28,
   },
   menuTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#374151",
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#334155",
+  },
+  extraSection: {
+    backgroundColor: "#F1F5F9",
+    padding: 20,
+    marginHorizontal: -20,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+  },
+  extraGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  extraItem: {
+    width: (width - 64) / 4,
+    alignItems: "center",
+  },
+  extraIcon: {
+    fontSize: 20,
+    marginBottom: 6,
+    backgroundColor: "#FFF",
+    padding: 10,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  extraText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748B",
+    textAlign: "center",
   },
   badge: {
     backgroundColor: "#EF4444",

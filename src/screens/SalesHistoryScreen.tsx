@@ -42,11 +42,12 @@ export default function SalesHistoryScreen() {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
     return date.toLocaleString("id-ID", {
-      day: "2-digit",
-      month: "short",
+      day: "numeric",
+      month: "long",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
   };
 
@@ -122,13 +123,13 @@ export default function SalesHistoryScreen() {
               <View>
                 <Text style={styles.label}>Total Belanja</Text>
                 <Text style={styles.totalAmount}>
-                  Rp {item.total.toLocaleString("id-ID")}
+                  Rp {(item.total || 0).toLocaleString("id-ID")}
                 </Text>
               </View>
 
               <View style={styles.paymentInfo}>
-                <Text style={styles.paymentText}>Dibayar: Rp {item.paid.toLocaleString("id-ID")}</Text>
-                <Text style={styles.paymentText}>Kembali: Rp {item.change.toLocaleString("id-ID")}</Text>
+                <Text style={styles.paymentText}>Dibayar: Rp {(item.paid || 0).toLocaleString("id-ID")}</Text>
+                <Text style={styles.paymentText}>Kembali: Rp {(item.change || 0).toLocaleString("id-ID")}</Text>
                 <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
                   {(item.points_earned || 0) > 0 && (
                     <View style={styles.historyPointBadge}>

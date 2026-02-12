@@ -53,7 +53,14 @@ export default function CustomerPointsHistoryScreen() {
                 </Text>
                 <Text style={styles.historyNotes}>{item.notes || 'Tanpa catatan'}</Text>
                 <Text style={styles.historyDate}>
-                    {new Date(item.created_at!).toLocaleString("id-ID")}
+                    {new Date(item.created_at!).toLocaleString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                    })}
                 </Text>
             </View>
             <View style={styles.historyValue}>

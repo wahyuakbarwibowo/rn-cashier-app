@@ -10,8 +10,10 @@ import {
 } from "react-native";
 import { getDigitalReports } from "../database/pulsa";
 import { getDigitalCategories, DigitalCategory } from "../database/digital_products";
+import { useNavigation } from "@react-navigation/native";
 
 export default function DigitalReportsScreen() {
+  const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<any>(null);
   const [filter, setFilter] = useState<"today" | "month" | "year" | "custom">("today");
@@ -71,8 +73,8 @@ export default function DigitalReportsScreen() {
       {/* Filter Tabs */}
       <View style={styles.filterRow}>
         {(["today", "month", "year", "custom"] as const).map((f) => (
-          <TouchableOpacity 
-            key={f} 
+          <TouchableOpacity
+            key={f}
             style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
             onPress={() => setFilter(f)}
           >
@@ -87,19 +89,19 @@ export default function DigitalReportsScreen() {
         <View style={styles.customDateContainer}>
           <View style={styles.dateInputGroup}>
             <Text style={styles.dateLabel}>Dari:</Text>
-            <TextInput 
-              style={styles.dateInput} 
-              value={startDate} 
-              onChangeText={setStartDate} 
+            <TextInput
+              style={styles.dateInput}
+              value={startDate}
+              onChangeText={setStartDate}
               placeholder="YYYY-MM-DD"
             />
           </View>
           <View style={styles.dateInputGroup}>
             <Text style={styles.dateLabel}>Sampai:</Text>
-            <TextInput 
-              style={styles.dateInput} 
-              value={endDate} 
-              onChangeText={setEndDate} 
+            <TextInput
+              style={styles.dateInput}
+              value={endDate}
+              onChangeText={setEndDate}
               placeholder="YYYY-MM-DD"
             />
           </View>
@@ -129,7 +131,11 @@ export default function DigitalReportsScreen() {
       <Text style={styles.sectionTitle}>Breakdown Per Kategori</Text>
       {reportData?.byCategory?.length > 0 ? (
         reportData.byCategory.map((item: any, index: number) => (
-          <View key={index} style={styles.breakdownItem}>
+          <TouchableOpacity
+            key={index}
+            style={styles.breakdownItem}
+            onPress={() => navigation.navigate("DigitalHistory", { category: item.category })}
+          >
             <View style={styles.breakdownHeader}>
               <View style={styles.categoryInfo}>
                 <Text style={styles.categoryIcon}>{getCategoryIcon(item.category)}</Text>
@@ -139,19 +145,19 @@ export default function DigitalReportsScreen() {
                 </View>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.breakdownProfit}>+ Rp {item.total_profit.toLocaleString("id-ID")}</Text>
-                <Text style={styles.breakdownSales}>Omzet: Rp {item.total_sales.toLocaleString("id-ID")}</Text>
+                <Text style={styles.breakdownProfit}>+ Rp {(item.total_profit || 0).toLocaleString("id-ID")}</Text>
+                <Text style={styles.breakdownSales}>Omzet: Rp {(item.total_sales || 0).toLocaleString("id-ID")}</Text>
               </View>
             </View>
             <View style={styles.progressBg}>
-              <View 
+              <View
                 style={[
-                  styles.progressFill, 
+                  styles.progressFill,
                   { width: `${(item.total_profit / (reportData.summary.total_profit || 1)) * 100}%` }
-                ]} 
+                ]}
               />
             </View>
-          </View>
+          </TouchableOpacity>
         ))
       ) : (
         <View style={styles.emptyContainer}>
