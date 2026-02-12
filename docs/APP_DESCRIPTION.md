@@ -12,11 +12,12 @@
 
 ### Fitur Unggulan:
 
-*   **🛒 POS Retail**: Scan barcode barang, kelola stok otomatis, dan cetak struk belanja fisik.
+*   **🛒 POS Retail**: Scan barcode barang, kelola stok otomatis, kalkulasi harga modal/jual otomatis, dan cetak struk belanja fisik.
 *   **📱 PPOB Master**: Manajemen lengkap untuk pulsa, paket data, token PLN, e-wallet, dan lainnya.
+*   **🤝 Manajemen Piutang & Hutang**: Pantau tagihan pelanggan dan hutang ke supplier secara rapi, lengkap dengan fitur tagih via WhatsApp.
 *   **📁 Custom Category**: Tambah/Edit kategori layanan digital sesuka Anda.
-*   **📈 Laporan Cerdas**: Pantau omzet dan keuntungan bersih secara harian, bulanan, hingga tahunan.
-*   **👥 Kontak Bisnis**: Database pelanggan dan supplier untuk melacak hutang-piutang.
+*   **📊 Laporan Cerdas & Interaktif**: Pantau omzet, laba bersih, serta saldo hutang-piutang. Klik laporan untuk melihat detail transaksi secara mendalam.
+*   **✅ Validasi Stok**: Keamanan transaksi dengan pengecekan stok otomatis agar tidak jualan barang yang kosong.
 *   **🖨️ Thermal Print**: Layout struk khusus yang hemat kertas dan rapi di printer thermal.
 
 **Aminmart Cashier** — Solusi kasir modern di genggaman Anda.

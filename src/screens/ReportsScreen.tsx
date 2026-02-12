@@ -11,10 +11,13 @@ import {
 } from "react-native";
 import { getDB } from "../database/initDB";
 
-type ReportType = 'SALES' | 'STOCK' | 'PROFIT' | 'PURCHASES';
+import { useNavigation } from "@react-navigation/native";
+
+type ReportType = 'SALES' | 'STOCK' | 'PROFIT' | 'PURCHASES' | 'PAYABLES' | 'RECEIVABLES';
 type FilterType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'CUSTOM';
 
 export default function ReportsScreen() {
+  const navigation = useNavigation<any>();
   const [reportType, setReportType] = useState<ReportType>('SALES');
   const [filterType, setFilterType] = useState<FilterType>('DAILY');
   const [data, setData] = useState<any[]>([]);
@@ -57,7 +60,7 @@ export default function ReportsScreen() {
         setSummary({ total });
       } else if (reportType === 'STOCK') {
         const stockData = await db.getAllAsync(
-          `SELECT name, stock, selling_price, (stock * selling_price) as asset_value FROM products ORDER BY stock ASC`
+          `SELECT *, (stock * selling_price) as asset_value FROM products ORDER BY stock ASC`
         );
         setData(stockData);
         const totalAsset = stockData.reduce((sum: number, item: any) => sum + item.asset_value, 0);
@@ -84,6 +87,30 @@ export default function ReportsScreen() {
         setData(purchaseData);
         const totalPurchases = purchaseData.reduce((sum: number, item: any) => sum + item.total, 0);
         setSummary({ totalPurchases });
+      } else if (reportType === 'PAYABLES') {
+        const payablesData = await db.getAllAsync(
+          `SELECT p.*, pur.created_at as created_at, s.name as supplier_name 
+           FROM payables p
+           JOIN purchases pur ON p.purchase_id = pur.id
+           LEFT JOIN suppliers s ON p.supplier_id = s.id
+           WHERE ${dateFilter.replace('created_at', 'pur.created_at')}
+           ORDER BY p.id DESC`
+        );
+        setData(payablesData);
+        const totalPayables = payablesData.reduce((sum: number, item: any) => sum + item.amount, 0);
+        setSummary({ totalPayables });
+      } else if (reportType === 'RECEIVABLES') {
+        const receivablesData = await db.getAllAsync(
+          `SELECT r.*, s.created_at as created_at, c.name as customer_name 
+           FROM receivables r
+           JOIN sales s ON r.sale_id = s.id
+           JOIN customers c ON r.customer_id = c.id
+           WHERE ${dateFilter.replace('created_at', 's.created_at')}
+           ORDER BY r.id DESC`
+        );
+        setData(receivablesData);
+        const totalReceivables = receivablesData.reduce((sum: number, item: any) => sum + item.amount, 0);
+        setSummary({ totalReceivables });
       }
     } catch (e) {
       console.error(e);
@@ -95,27 +122,75 @@ export default function ReportsScreen() {
   const renderItem = ({ item }: { item: any }) => {
     if (reportType === 'SALES') {
       return (
-        <View style={styles.dataRow}>
+        <TouchableOpacity
+          style={styles.dataRow}
+          onPress={() => navigation.navigate("SaleDetail", { saleId: item.id })}
+        >
           <Text style={styles.dataText}>TRX-{item.id}</Text>
-          <Text style={styles.dataText}>Rp {item.total.toLocaleString("id-ID")}</Text>
-        </View>
+          <Text style={styles.dataText}>Rp {(item.total || 0).toLocaleString("id-ID")}</Text>
+        </TouchableOpacity>
       );
     }
     if (reportType === 'STOCK') {
       return (
-        <View style={styles.dataRow}>
+        <TouchableOpacity
+          style={styles.dataRow}
+          onPress={() => navigation.navigate("ProductDetail", { product: item })}
+        >
           <Text style={[styles.dataText, { flex: 2 }]}>{item.name}</Text>
           <Text style={styles.dataText}>{item.stock}</Text>
-          <Text style={styles.dataText}>Rp {item.asset_value.toLocaleString("id-ID")}</Text>
-        </View>
+          <Text style={styles.dataText}>Rp {(item.asset_value || 0).toLocaleString("id-ID")}</Text>
+        </TouchableOpacity>
       );
     }
     if (reportType === 'PROFIT') {
       return (
-        <View style={styles.dataRow}>
+        <TouchableOpacity
+          style={styles.dataRow}
+          onPress={() => navigation.navigate("SaleDetail", { saleId: item.id })}
+        >
           <Text style={styles.dataText}>TRX-{item.id}</Text>
-          <Text style={[styles.dataText, { color: '#16A34A' }]}>Rp {item.estimated_profit.toLocaleString("id-ID")}</Text>
-        </View>
+          <Text style={[styles.dataText, { color: '#16A34A' }]}>Rp {(item.estimated_profit || 0).toLocaleString("id-ID")}</Text>
+        </TouchableOpacity>
+      );
+    }
+    if (reportType === 'PURCHASES') {
+      return (
+        <TouchableOpacity
+          style={styles.dataRow}
+          onPress={() => navigation.navigate("PurchaseForm", { addProductId: item.id })}
+        >
+          <Text style={styles.dataText}>TRX-{item.id}</Text>
+          <Text style={styles.dataText}>Rp {(item.total || 0).toLocaleString("id-ID")}</Text>
+        </TouchableOpacity>
+      );
+    }
+    if (reportType === 'PAYABLES') {
+      return (
+        <TouchableOpacity
+          style={styles.dataRow}
+          onPress={() => navigation.navigate("Payables")}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.dataText}>{item.supplier_name || 'Umum'}</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280' }}>TRX-{item.purchase_id}</Text>
+          </View>
+          <Text style={[styles.dataText, { color: '#EF4444' }]}>Rp {(item.amount || 0).toLocaleString("id-ID")}</Text>
+        </TouchableOpacity>
+      );
+    }
+    if (reportType === 'RECEIVABLES') {
+      return (
+        <TouchableOpacity
+          style={styles.dataRow}
+          onPress={() => navigation.navigate("Receivables")}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.dataText}>{item.customer_name || 'Umum'}</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280' }}>TRX-{item.sale_id}</Text>
+          </View>
+          <Text style={[styles.dataText, { color: '#EF4444' }]}>Rp {(item.amount || 0).toLocaleString("id-ID")}</Text>
+        </TouchableOpacity>
       );
     }
     return null;
@@ -128,13 +203,20 @@ export default function ReportsScreen() {
       {/* Report Types */}
       <View style={styles.tabScrollContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs}>
-          {['SALES', 'STOCK', 'PROFIT', 'PURCHASES'].map((t) => (
-            <TouchableOpacity 
-              key={t}
-              style={[styles.tab, reportType === t && styles.activeTab]}
-              onPress={() => setReportType(t as ReportType)}
+          {[
+            { id: 'SALES', label: 'Penjualan' },
+            { id: 'STOCK', label: 'Stok' },
+            { id: 'PROFIT', label: 'Laba' },
+            { id: 'PURCHASES', label: 'Pembelian' },
+            { id: 'PAYABLES', label: 'Hutang' },
+            { id: 'RECEIVABLES', label: 'Piutang' }
+          ].map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              style={[styles.tab, reportType === t.id && styles.activeTab]}
+              onPress={() => setReportType(t.id as ReportType)}
             >
-              <Text style={[styles.tabText, reportType === t && styles.activeTabText]}>{t}</Text>
+              <Text style={[styles.tabText, reportType === t.id && styles.activeTabText]}>{t.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -143,7 +225,7 @@ export default function ReportsScreen() {
       {/* Date Filters */}
       <View style={styles.filters}>
         {['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY', 'CUSTOM'].map((f) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={f}
             style={[styles.filterBtn, filterType === f && styles.activeFilterBtn]}
             onPress={() => setFilterType(f as FilterType)}
@@ -159,19 +241,19 @@ export default function ReportsScreen() {
         <View style={styles.customDateContainer}>
           <View style={styles.dateInputGroup}>
             <Text style={styles.dateLabel}>Dari:</Text>
-            <TextInput 
-              style={styles.dateInput} 
-              value={startDate} 
-              onChangeText={setStartDate} 
+            <TextInput
+              style={styles.dateInput}
+              value={startDate}
+              onChangeText={setStartDate}
               placeholder="YYYY-MM-DD"
             />
           </View>
           <View style={styles.dateInputGroup}>
             <Text style={styles.dateLabel}>Sampai:</Text>
-            <TextInput 
-              style={styles.dateInput} 
-              value={endDate} 
-              onChangeText={setEndDate} 
+            <TextInput
+              style={styles.dateInput}
+              value={endDate}
+              onChangeText={setEndDate}
               placeholder="YYYY-MM-DD"
             />
           </View>
@@ -185,7 +267,7 @@ export default function ReportsScreen() {
       <View style={styles.summaryCard}>
         <Text style={styles.summaryLabel}>Total {reportType}</Text>
         <Text style={styles.summaryValue}>
-          Rp {(summary.total || summary.totalAsset || summary.totalProfit || summary.totalPurchases || 0).toLocaleString("id-ID")}
+          Rp {(summary.total || summary.totalAsset || summary.totalProfit || summary.totalPurchases || summary.totalPayables || summary.totalReceivables || 0).toLocaleString("id-ID")}
         </Text>
       </View>
 
@@ -198,9 +280,9 @@ export default function ReportsScreen() {
           renderItem={renderItem}
           ListHeaderComponent={
             <View style={styles.listHeader}>
-              <Text style={styles.headerCell}>{reportType === 'STOCK' ? 'Nama' : 'ID'}</Text>
+              <Text style={styles.headerCell}>{reportType === 'STOCK' ? 'Nama' : (reportType === 'PAYABLES' || reportType === 'RECEIVABLES') ? 'Pihak' : 'ID'}</Text>
               {reportType === 'STOCK' && <Text style={styles.headerCell}>Stok</Text>}
-              <Text style={styles.headerCell}>{reportType === 'PROFIT' ? 'Laba' : 'Nilai'}</Text>
+              <Text style={styles.headerCell}>{(reportType === 'PROFIT' || reportType === 'PAYABLES' || reportType === 'RECEIVABLES') ? 'Nilai' : 'Total'}</Text>
             </View>
           }
           style={styles.list}

@@ -57,7 +57,29 @@ function useProductForm(onSave: () => void) {
 
   const updateField = useCallback(
     <K extends keyof ProductFormData>(field: K, value: ProductFormData[K]) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      setFormData((prev) => {
+        let newData = { ...prev, [field]: value };
+
+        // Auto-calculate unit purchase price
+        if (field === "purchasePackagePrice" || field === "purchasePackageQty") {
+          const pkgPrice = parseFloat(field === "purchasePackagePrice" ? (value as string) : prev.purchasePackagePrice) || 0;
+          const pkgQty = parseInt(field === "purchasePackageQty" ? (value as string) : prev.purchasePackageQty) || 0;
+          if (pkgPrice > 0 && pkgQty > 0) {
+            newData.purchasePrice = String(Math.round(pkgPrice / pkgQty));
+          }
+        }
+
+        // Auto-calculate unit selling price
+        if (field === "packagePrice" || field === "packageQty") {
+          const pkgPrice = parseFloat(field === "packagePrice" ? (value as string) : prev.packagePrice) || 0;
+          const pkgQty = parseInt(field === "packageQty" ? (value as string) : prev.packageQty) || 0;
+          if (pkgPrice > 0 && pkgQty > 0) {
+            newData.sellingPrice = String(Math.round(pkgPrice / pkgQty));
+          }
+        }
+
+        return newData;
+      });
     },
     []
   );
@@ -153,9 +175,10 @@ interface ProductCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onPress: () => void;
+  onAddStock: () => void;
 }
 
-function ProductCard({ item, onEdit, onDelete, onPress }: ProductCardProps) {
+function ProductCard({ item, onEdit, onDelete, onPress, onAddStock }: ProductCardProps) {
   return (
     <TouchableOpacity onPress={onPress} style={styles.productCard}>
       <View style={styles.productInfo}>
@@ -169,6 +192,9 @@ function ProductCard({ item, onEdit, onDelete, onPress }: ProductCardProps) {
         {item.code && <Text style={styles.productCode}>{item.code}</Text>}
       </View>
       <View style={styles.actions}>
+        <TouchableOpacity style={styles.addStockBtn} onPress={onAddStock}>
+          <Text style={[styles.actionText, { color: "#FFF" }]}>+ Stok</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.editBtn} onPress={onEdit}>
           <Text style={styles.actionText}>Edit</Text>
         </TouchableOpacity>
@@ -232,6 +258,7 @@ export default function ProductsScreen({ navigation }: Props) {
         onEdit={() => populateForm(item)}
         onDelete={() => item.id && handleDelete(item.id)}
         onPress={() => navigation.navigate("ProductDetail", { product: item })}
+        onAddStock={() => navigation.navigate("PurchaseForm", { addProductId: item.id })}
       />
     ),
     [populateForm, handleDelete, navigation]
@@ -239,7 +266,7 @@ export default function ProductsScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Produk</Text>
+      <Text style={styles.header}>Katalog Produk</Text>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>
@@ -516,7 +543,13 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
+  },
+  addStockBtn: {
+    backgroundColor: "#3B82F6",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
   },
   editBtn: {
     backgroundColor: "#EFF6FF",

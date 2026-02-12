@@ -212,6 +212,17 @@ export default function SalesTransactionScreen() {
       Alert.alert("Error", "Keranjang kosong");
       return;
     }
+
+    // Stock Validation
+    for (const item of cart) {
+      if (item.qty > (item.product.stock || 0)) {
+        Alert.alert(
+          "Stok Tidak Cukup",
+          `Produk "${item.product.name}" hanya memiliki stok ${item.product.stock || 0}, tapi di keranjang ada ${item.qty}.`
+        );
+        return;
+      }
+    }
     const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethodId);
     const isDebt = selectedMethod?.name.toLowerCase().includes("hutang");
 
@@ -468,12 +479,15 @@ export default function SalesTransactionScreen() {
             renderItem={({ item }) => {
               const info = getPriceBreakdown(item);
               return (
-                <View style={styles.cartItem}>
+                <View style={[styles.cartItem, item.qty > (item.product.stock || 0) && styles.cartItemInvalid]}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cartItemName}>{item.product.name}</Text>
                     <Text style={styles.cartItemPrice}>
                       {info.label} (@Rp {Math.round(info.unitPrice).toLocaleString("id-ID")})
                     </Text>
+                    {item.qty > (item.product.stock || 0) && (
+                      <Text style={styles.stockWarningText}>⚠️ Stok tidak cukup (Sisa: {item.product.stock || 0})</Text>
+                    )}
                   </View>
                   <View style={styles.qtyContainer}>
                     <TouchableOpacity
@@ -565,15 +579,23 @@ export default function SalesTransactionScreen() {
             style={[
               styles.checkoutBtn,
               {
-                backgroundColor: (cart.length > 0 && (change >= 0 || paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang")))
+                backgroundColor: (cart.length > 0 &&
+                  !cart.some(i => i.qty > (i.product.stock || 0)) &&
+                  (change >= 0 || paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang")))
                   ? "#111827"
                   : "#9CA3AF"
               },
             ]}
             onPress={handleFinishTransaction}
-            disabled={cart.length === 0 || (change < 0 && !paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang"))}
+            disabled={
+              cart.length === 0 ||
+              cart.some(i => i.qty > (i.product.stock || 0)) ||
+              (change < 0 && !paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang"))
+            }
           >
-            <Text style={styles.checkoutBtnText}>Selesaikan Transaksi</Text>
+            <Text style={styles.checkoutBtnText}>
+              {cart.some(i => i.qty > (i.product.stock || 0)) ? "Stok Tidak Cukup" : "Selesaikan Transaksi"}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -979,5 +1001,15 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  cartItemInvalid: {
+    backgroundColor: "#FEF2F2",
+    borderBottomColor: "#FEE2E2",
+  },
+  stockWarningText: {
+    color: "#DC2626",
+    fontSize: 11,
+    fontWeight: "bold",
+    marginTop: 2,
   },
 });

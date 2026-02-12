@@ -13,10 +13,10 @@ import {
   Platform,
 } from "react-native";
 import { addDigitalTransaction, getRecentNumbers, DigitalTransaction } from "../database/pulsa";
-import { 
-  getDigitalProducts, 
-  DigitalProductMaster, 
-  getDigitalCategories, 
+import {
+  getDigitalProducts,
+  DigitalProductMaster,
+  getDigitalCategories,
   DigitalCategory,
   getDistinctProvidersByCategory
 } from "../database/digital_products";
@@ -34,9 +34,9 @@ export default function PulsaTransactionScreen() {
   const [costPrice, setCostPrice] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
   const [notes, setNotes] = useState("");
-  const [history, setHistory] = useState<{phone_number: string, customer_name: string}[]>([]);
+  const [history, setHistory] = useState<{ phone_number: string, customer_name: string }[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  
+
   const [templates, setTemplates] = useState<DigitalProductMaster[]>([]);
   const [showProviderModal, setShowProviderModal] = useState(false);
 
@@ -99,7 +99,7 @@ export default function PulsaTransactionScreen() {
     const profitValue = sellValue - costValue;
 
     try {
-      await addDigitalTransaction({
+      const result = await addDigitalTransaction({
         category,
         phone_number: phoneNumber,
         customer_name: customerName,
@@ -112,10 +112,14 @@ export default function PulsaTransactionScreen() {
       });
 
       Alert.alert("Sukses", `Transaksi ${category} Berhasil Dicatat`, [
-        { text: "OK", onPress: () => {
-          resetForm();
-          loadHistory();
-        }}
+        {
+          text: "OK", onPress: () => {
+            const id = result; // The ID returned from addDigitalTransaction
+            resetForm();
+            loadHistory();
+            navigation.navigate("DigitalDetail", { trxId: id });
+          }
+        }
       ]);
     } catch (e) {
       console.error(e);
@@ -133,27 +137,27 @@ export default function PulsaTransactionScreen() {
     setNotes("");
   };
 
-  const selectFromHistory = (item: {phone_number: string, customer_name: string}) => {
+  const selectFromHistory = (item: { phone_number: string, customer_name: string }) => {
     setPhoneNumber(item.phone_number);
     setCustomerName(item.customer_name || "");
     setShowHistoryModal(false);
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <ScrollView 
+      <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.headerRow}>
           <Text style={styles.header}>✨ Transaksi Digital</Text>
-          <TouchableOpacity 
-            style={styles.historyNavBtn} 
+          <TouchableOpacity
+            style={styles.historyNavBtn}
             onPress={() => navigation.navigate("DigitalHistory")}
           >
             <Text style={styles.historyNavBtnText}>📜 Riwayat</Text>
@@ -163,8 +167,8 @@ export default function PulsaTransactionScreen() {
         {/* Categories Tab */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
           {categories.map((cat) => (
-            <TouchableOpacity 
-              key={cat.id} 
+            <TouchableOpacity
+              key={cat.id}
               style={[styles.categoryCard, category === cat.name && styles.activeCategoryCard]}
               onPress={() => {
                 setCategory(cat.name);
@@ -206,8 +210,8 @@ export default function PulsaTransactionScreen() {
           />
 
           <Text style={styles.label}>Provider / Bank / Game</Text>
-          <TouchableOpacity 
-            style={styles.dropdownTrigger} 
+          <TouchableOpacity
+            style={styles.dropdownTrigger}
             onPress={() => setShowProviderModal(true)}
           >
             <Text style={[styles.dropdownValue, !provider && styles.dropdownPlaceholder]}>
@@ -230,9 +234,9 @@ export default function PulsaTransactionScreen() {
               <Text style={styles.label}>Pilih Produk (Master)</Text>
               <View style={styles.templateGrid}>
                 {templates.map((t) => (
-                  <TouchableOpacity 
-                    key={t.id} 
-                    style={[styles.templatePill, amount === t.nominal.toString() && styles.templatePillActive]} 
+                  <TouchableOpacity
+                    key={t.id}
+                    style={[styles.templatePill, amount === t.nominal.toString() && styles.templatePillActive]}
                     onPress={() => selectTemplate(t)}
                   >
                     <Text style={[styles.templateText, amount === t.nominal.toString() && styles.templateTextActive]}>
@@ -255,7 +259,7 @@ export default function PulsaTransactionScreen() {
             onChangeText={setAmount}
             keyboardType="numeric"
           />
-          
+
           <View style={styles.row}>
             <View style={{ flex: 1, marginRight: 8 }}>
               <Text style={styles.label}>Harga Modal</Text>
@@ -309,8 +313,8 @@ export default function PulsaTransactionScreen() {
               data={providers}
               keyExtractor={(item) => item}
               renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={[styles.selectListItem, provider === item && styles.activeListItem]} 
+                <TouchableOpacity
+                  style={[styles.selectListItem, provider === item && styles.activeListItem]}
                   onPress={() => {
                     setProvider(item);
                     setShowProviderModal(false);
@@ -337,8 +341,8 @@ export default function PulsaTransactionScreen() {
               data={history}
               keyExtractor={(item, index) => `${item.phone_number}-${index}`}
               renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.historyItem} 
+                <TouchableOpacity
+                  style={styles.historyItem}
                   onPress={() => selectFromHistory(item)}
                 >
                   <Text style={styles.historyItemText}>{item.phone_number}</Text>
@@ -362,7 +366,7 @@ const styles = StyleSheet.create({
   header: { fontSize: 24, fontWeight: "bold", color: "#111827" },
   historyNavBtn: { backgroundColor: "#EFF6FF", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: "#BFDBFE" },
   historyNavBtnText: { color: "#1D4ED8", fontWeight: "600" },
-  
+
   categoryScroll: { marginBottom: 20 },
   categoryCard: { backgroundColor: "#FFF", padding: 12, borderRadius: 12, marginRight: 10, alignItems: 'center', minWidth: 80, borderWidth: 1, borderColor: "#E5E7EB" },
   activeCategoryCard: { backgroundColor: "#111827", borderColor: "#111827" },
@@ -382,7 +386,7 @@ const styles = StyleSheet.create({
   historyBtn: { backgroundColor: "#111827", padding: 12, borderRadius: 12, marginLeft: 8, marginBottom: 12, height: 50, justifyContent: "center", alignItems: 'center', width: 50 },
   buyBtn: { backgroundColor: "#111827", padding: 18, borderRadius: 12, alignItems: "center", marginTop: 8 },
   buyBtnText: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
-  
+
   templateSection: { marginBottom: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 16 },
   templateGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   templatePill: { width: '31%', padding: 10, backgroundColor: '#F9FAFB', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
@@ -396,29 +400,29 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   modalTitle: { fontSize: 18, fontWeight: "800", color: '#111827' },
   closeText: { fontSize: 20, color: '#9CA3AF', padding: 4 },
-  
-  dropdownTrigger: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    backgroundColor: "#F9FAFB", 
-    borderWidth: 1, 
-    borderColor: "#E5E7EB", 
-    borderRadius: 12, 
-    padding: 14, 
-    marginBottom: 16 
+
+  dropdownTrigger: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16
   },
   dropdownValue: { fontSize: 15, fontWeight: '600', color: '#111827' },
   dropdownPlaceholder: { color: '#9CA3AF', fontWeight: '400' },
   dropdownArrow: { fontSize: 12, color: '#6B7280' },
 
-  selectListItem: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    padding: 16, 
-    borderRadius: 12, 
-    marginBottom: 4 
+  selectListItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 4
   },
   activeListItem: { backgroundColor: '#EFF6FF' },
   selectListItemText: { fontSize: 16, color: '#374151', fontWeight: '500' },

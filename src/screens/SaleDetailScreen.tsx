@@ -59,11 +59,12 @@ export default function SaleDetailScreen() {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleString("id-ID", {
-      day: "2-digit",
+      day: "numeric",
       month: "long",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
   };
 
@@ -104,15 +105,15 @@ export default function SaleDetailScreen() {
               <View style={styles.divider} />
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Total</Text>
-                <Text style={[styles.value, styles.totalText]}>Rp {sale.total.toLocaleString("id-ID")}</Text>
+                <Text style={[styles.value, styles.totalText]}>Rp {(sale.total || 0).toLocaleString("id-ID")}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Dibayar</Text>
-                <Text style={styles.value}>Rp {sale.paid.toLocaleString("id-ID")}</Text>
+                <Text style={styles.value}>Rp {(sale.paid || 0).toLocaleString("id-ID")}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Kembali</Text>
-                <Text style={styles.value}>Rp {sale.change.toLocaleString("id-ID")}</Text>
+                <Text style={styles.value}>Rp {(sale.change || 0).toLocaleString("id-ID")}</Text>
               </View>
               {(sale.points_earned || 0) > 0 && (
                 <View style={styles.infoRow}>
@@ -135,9 +136,9 @@ export default function SaleDetailScreen() {
           <View style={styles.itemRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.itemName}>{item.product_name || 'Produk Terhapus'}</Text>
-              <Text style={styles.itemMeta}>{item.qty} x Rp {item.price.toLocaleString("id-ID")}</Text>
+              <Text style={styles.itemMeta}>{item.qty} x Rp {(item.price || 0).toLocaleString("id-ID")}</Text>
             </View>
-            <Text style={styles.itemSubtotal}>Rp {item.subtotal.toLocaleString("id-ID")}</Text>
+            <Text style={styles.itemSubtotal}>Rp {(item.subtotal || 0).toLocaleString("id-ID")}</Text>
           </View>
         )}
         ListFooterComponent={

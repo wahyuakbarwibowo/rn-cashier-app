@@ -97,31 +97,33 @@ function CustomDrawerContent(props: any) {
 
       <MenuItem name="Dashboard" label="Dashboard" icon="🏠" />
 
-      <SectionHeader title="PRODUK" />
-      <MenuItem name="Product" label="Stok Barang" icon="📦" />
-      <MenuItem name="TopProducts" label="Produk Terlaris" icon="🏆" />
-      <MenuItem name="LowStock" label="Stok Tipis (Alert)" icon="⚠️" />
-      <MenuItem name="PurchaseForm" label="Tambah Stok (Beli)" icon="📥" />
-      <MenuItem name="DigitalProductsMaster" label="Produk Digital" icon="✨" />
-      <MenuItem name="DigitalCategoriesMaster" label="Kategori Digital" icon="📁" />
-
-      <SectionHeader title="TRANSAKSI" />
+      <SectionHeader title="TRANSAKSI UTAMA" />
       <MenuItem name="SalesTransaction" label="Transaksi Kasir" icon="🛒" />
-      <MenuItem name="SalesHistory" label="Riwayat Transaksi" icon="🕒" />
-      <MenuItem name="Reports" label="Laporan & Grafik" icon="📊" />
-      <MenuItem name="ProfitLoss" label="Laba Rugi (Profit)" icon="📈" />
+      <MenuItem name="SalesHistory" label="Riwayat Kasir" icon="🕒" />
       <MenuItem name="Pulsa" label="Transaksi Digital" icon="✨" />
       <MenuItem name="DigitalHistory" label="Riwayat Digital" icon="📜" />
-      <MenuItem name="DigitalReports" label="Laporan Laba Digital" icon="📈" />
-      <MenuItem name="Expenses" label="Pengeluaran (Operasional)" icon="💸" />
 
-      <SectionHeader title="PELANGGAN & SUPPLIER" />
+      <SectionHeader title="MANAJEMEN STOK" />
+      <MenuItem name="Product" label="Gudang Barang" icon="📦" />
+      <MenuItem name="PurchaseForm" label="Barang Masuk" icon="📥" />
+      <MenuItem name="LowStock" label="Stok Tipis (Alert)" icon="⚠️" />
+      <MenuItem name="DigitalProductsMaster" label="Gudang Digital" icon="✨" />
+      <MenuItem name="DigitalCategoriesMaster" label="Kategori Digital" icon="📁" />
+
+      <SectionHeader title="Informasi Pelanggan & Supplier" />
       <MenuItem name="Customers" label="Daftar Pelanggan" icon="👥" />
       <MenuItem name="Suppliers" label="Master Supplier" icon="🏭" />
       <MenuItem name="Receivables" label="Piutang Pelanggan" icon="💰" />
       <MenuItem name="Payables" label="Hutang Supplier" icon="💸" />
 
-      <SectionHeader title="KONFIGURASI" />
+      <SectionHeader title="LAPORAN & GRAFIK" />
+      <MenuItem name="Reports" label="Laporan Penjualan" icon="📊" />
+      <MenuItem name="ProfitLoss" label="Laba Rugi" icon="📈" />
+      <MenuItem name="TopProducts" label="Produk Terlaris" icon="🏆" />
+      <MenuItem name="DigitalReports" label="Laporan Laba Digital" icon="📈" />
+      <MenuItem name="Expenses" label="Pengeluaran (Operasional)" icon="💸" />
+
+      <SectionHeader title="PENGATURAN" />
       <MenuItem name="PaymentMethods" label="Cara Bayar" icon="💳" />
       <MenuItem name="Settings" label="Pengaturan Toko" icon="⚙️" />
       <MenuItem name="Backup" label="Backup & Restore" icon="💾" />

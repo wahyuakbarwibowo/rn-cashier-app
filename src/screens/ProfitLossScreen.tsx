@@ -10,7 +10,8 @@ import {
   Dimensions,
 } from "react-native";
 import { getDB } from "../database/initDB";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 
 const { width } = Dimensions.get("window");
 
@@ -21,6 +22,8 @@ type ReportData = {
   digitalProfit: number;
   totalExpenses: number;
   netProfit: number;
+  totalReceivables: number;
+  totalPayables: number;
 };
 
 export default function ProfitLossScreen() {
@@ -34,20 +37,24 @@ export default function ProfitLossScreen() {
     digitalProfit: 0,
     totalExpenses: 0,
     netProfit: 0,
+    totalReceivables: 0,
+    totalPayables: 0,
   });
 
-  useEffect(() => {
-    loadData();
-  }, [period]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [period])
+  );
 
   const loadData = async () => {
     try {
       setLoading(true);
       const db = await getDB();
-      
+
       let dateFilter = "";
       const now = new Date();
-      
+
       if (period === "today") {
         const today = now.toISOString().split("T")[0];
         dateFilter = `created_at LIKE '${today}%'`;
@@ -90,12 +97,30 @@ export default function ProfitLossScreen() {
       `;
       const expenseRes = await db.getFirstAsync<{ total: number }>(expenseQuery);
 
+      // 4. Payables (Hutang ke Supplier)
+      const payablesQuery = `
+        SELECT SUM(amount) as total 
+        FROM payables p
+        JOIN purchases pur ON p.purchase_id = pur.id
+        WHERE pur.${dateFilter} AND p.status = 'pending'
+      `;
+      const payablesRes = await db.getFirstAsync<{ total: number }>(payablesQuery);
+
+      // 5. Receivables (Piutang Pelanggan)
+      const receivablesQuery = `
+        SELECT SUM(amount) as total 
+        FROM receivables r
+        JOIN sales s ON r.sale_id = s.id
+        WHERE s.${dateFilter} AND r.status = 'pending'
+      `;
+      const receivablesRes = await db.getFirstAsync<{ total: number }>(receivablesQuery);
+
       const rev = salesRes?.revenue || 0;
       const cogs = salesRes?.cogs || 0;
       const sProf = rev - cogs;
       const dProf = digitalRes?.profit || 0;
       const exp = expenseRes?.total || 0;
-      
+
       setData({
         totalRevenue: rev,
         totalCOGS: cogs,
@@ -103,6 +128,8 @@ export default function ProfitLossScreen() {
         digitalProfit: dProf,
         totalExpenses: exp,
         netProfit: (sProf + dProf) - exp,
+        totalReceivables: receivablesRes?.total || 0,
+        totalPayables: payablesRes?.total || 0,
       });
 
     } catch (e) {
@@ -142,7 +169,7 @@ export default function ProfitLossScreen() {
         <PeriodButton type="year" label="Tahun Ini" />
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
@@ -196,6 +223,18 @@ export default function ProfitLossScreen() {
               <View style={[styles.row, styles.borderTop]}>
                 <Text style={styles.boldLabel}>Total Pengeluaran</Text>
                 <Text style={[styles.boldValue, { color: "#E11D48" }]}>{formatIDR(data.totalExpenses)}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.sectionTitle}>POSISI PIUTANG & HUTANG (BELUM LUNAS)</Text>
+            <View style={styles.card}>
+              <View style={styles.row}>
+                <Text style={styles.label}>Piutang Pelanggan (Uang di Orang)</Text>
+                <Text style={[styles.value, { color: "#3B82F6" }]}>{formatIDR(data.totalReceivables)}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Hutang Supplier (Tagihan ke Toko)</Text>
+                <Text style={[styles.value, { color: "#F59E0B" }]}>{formatIDR(data.totalPayables)}</Text>
               </View>
             </View>
 

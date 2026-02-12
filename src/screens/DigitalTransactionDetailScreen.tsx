@@ -47,11 +47,12 @@ export default function DigitalTransactionDetailScreen() {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleString("id-ID", {
-      day: "2-digit",
+      day: "numeric",
       month: "long",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
   };
 
@@ -105,15 +106,15 @@ export default function DigitalTransactionDetailScreen() {
           </View>
         )}
 
-        <TouchableOpacity 
-          style={styles.printButton} 
+        <TouchableOpacity
+          style={styles.printButton}
           onPress={() => trx && printDigitalReceipt(trx)}
         >
           <Text style={styles.printButtonText}>🖨️ Cetak Struk</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Text style={styles.backButtonText}>Kembali</Text>

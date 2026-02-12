@@ -24,6 +24,17 @@ export default function ReceivablesScreen() {
     }, [])
   );
 
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -34,7 +45,7 @@ export default function ReceivablesScreen() {
            FROM receivables r
            JOIN customers c ON r.customer_id = c.id
            JOIN sales s ON r.sale_id = s.id
-           ORDER BY r.id DESC`
+           ORDER BY r.status DESC, r.id DESC`
         ),
         getShopProfile()
       ]);
@@ -71,16 +82,12 @@ export default function ReceivablesScreen() {
       phone = "62" + phone;
     }
 
-    const date = new Date(item.sale_date).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric"
-    });
+    const date = formatDate(item.sale_date);
     const amount = item.amount.toLocaleString("id-ID");
     const message = `Halo Kak ${item.customer_name},\n\nKami dari *${shopName || "Toko Kasir"}* menginformasikan perihal piutang sebesar *Rp ${amount}* dari transaksi tanggal ${date}.\n\nMohon untuk segera melakukan pembayaran. Terima kasih 🙏`;
 
     const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`;
-    
+
     Linking.canOpenURL(url).then(supported => {
       if (supported) {
         Linking.openURL(url);
@@ -96,7 +103,7 @@ export default function ReceivablesScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>💰 Piutang Pelanggan</Text>
-      
+
       {loading ? (
         <ActivityIndicator size="large" color="#3B82F6" />
       ) : (
@@ -108,7 +115,7 @@ export default function ReceivablesScreen() {
               <View style={styles.row}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{item.customer_name}</Text>
-                  <Text style={styles.date}>TRX-{item.sale_id} | {new Date(item.sale_date).toLocaleDateString()}</Text>
+                  <Text style={styles.date}>TRX-{item.sale_id} | {formatDate(item.sale_date)}</Text>
                 </View>
                 <Text style={styles.amount}>Rp {item.amount.toLocaleString("id-ID")}</Text>
               </View>
@@ -118,14 +125,14 @@ export default function ReceivablesScreen() {
                 </Text>
                 <View style={styles.actionRow}>
                   {item.status === 'pending' && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => handleTagihWA(item)}
                       style={[styles.actionBtn, styles.waBtn]}
                     >
                       <Text style={styles.actionText}>💬 Tagih WA</Text>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => handleUpdateStatus(item.id, item.status)}
                     style={styles.actionBtn}
                   >

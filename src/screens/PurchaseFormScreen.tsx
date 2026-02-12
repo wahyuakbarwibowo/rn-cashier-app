@@ -27,6 +27,7 @@ type SelectedItem = {
 
 export default function PurchaseFormScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -55,9 +56,20 @@ export default function PurchaseFormScreen() {
     return unsubscribe;
   }, [navigation]);
 
+  useEffect(() => {
+    const params = route.params as { addProductId?: number };
+    if (params?.addProductId && products.length > 0) {
+      const product = products.find(p => p.id === params.addProductId);
+      if (product) {
+        handleAddItem(product);
+        navigation.setParams({ addProductId: undefined });
+      }
+    }
+  }, [route.params, products]);
+
   const handleAddItem = (product: Product, asPackage: boolean = false) => {
     const existingIndex = selectedItems.findIndex((i) => i.product.id === product.id && i.isPackage === asPackage);
-    
+
     if (existingIndex > -1) {
       const newList = [...selectedItems];
       newList[existingIndex].qty += 1;
@@ -149,12 +161,12 @@ export default function PurchaseFormScreen() {
       );
 
       Alert.alert("Sukses", "Pembelian berhasil disimpan", [
-        { 
-          text: "OK", 
+        {
+          text: "OK",
           onPress: () => {
             resetForm();
             navigation.navigate("Product");
-          } 
+          }
         }
       ]);
     } catch (error) {
@@ -165,7 +177,7 @@ export default function PurchaseFormScreen() {
 
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     setIsScanning(false);
-    
+
     // Find product with this code
     const product = products.find(p => p.code === data);
     if (product) {
@@ -174,13 +186,13 @@ export default function PurchaseFormScreen() {
       Alert.alert("Sukses", `Berhasil menambah ${product.name}`);
     } else {
       Alert.alert(
-        "Produk Tidak Ditemukan", 
+        "Produk Tidak Ditemukan",
         `Barang dengan kode ${data} belum terdaftar.`,
         [
           { text: "Tutup", style: "cancel" },
-          { 
-            text: "Tambah Produk", 
-            onPress: () => navigation.navigate("Product", { initialCode: data }) 
+          {
+            text: "Tambah Produk",
+            onPress: () => navigation.navigate("Product", { initialCode: data })
           }
         ]
       );
@@ -197,7 +209,7 @@ export default function PurchaseFormScreen() {
     }
     setIsScanning(true);
   };
-  
+
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -209,16 +221,16 @@ export default function PurchaseFormScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <ScrollView 
-        style={styles.container} 
+      <ScrollView
+        style={styles.container}
         contentContainerStyle={{ paddingBottom: 150 }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View style={styles.headerRow}>
           <Text style={styles.header}>🧾 Pembelian</Text>
-          <TouchableOpacity 
-            style={styles.addNewBtn} 
+          <TouchableOpacity
+            style={styles.addNewBtn}
             onPress={() => navigation.navigate("Product")}
           >
             <Text style={styles.addNewBtnText}>+ Barang Baru</Text>
@@ -229,7 +241,7 @@ export default function PurchaseFormScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Pilih Supplier</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.selectorPill, !selectedSupplierId && !supplierName && styles.activeSelectorPill]}
               onPress={() => {
                 setSelectedSupplierId(null);
@@ -239,8 +251,8 @@ export default function PurchaseFormScreen() {
               <Text style={[styles.selectorPillText, !selectedSupplierId && !supplierName && styles.activeSelectorPillText]}>Umum</Text>
             </TouchableOpacity>
             {suppliers.map(s => (
-              <TouchableOpacity 
-                key={s.id} 
+              <TouchableOpacity
+                key={s.id}
                 style={[styles.selectorPill, selectedSupplierId === s.id && styles.activeSelectorPill]}
                 onPress={() => {
                   setSelectedSupplierId(s.id!);
@@ -264,13 +276,13 @@ export default function PurchaseFormScreen() {
 
           <Text style={[styles.cardTitle, { marginTop: 16, marginBottom: 8 }]}>Metode Bayar</Text>
           <View style={styles.row}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.selectorPill, !isDebt && styles.activeSelectorPill, { flex: 1 }]}
               onPress={() => setIsDebt(false)}
             >
               <Text style={[styles.selectorPillText, !isDebt && styles.activeSelectorPillText, { textAlign: 'center' }]}>Tunai</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.selectorPill, isDebt && styles.activeSelectorPill, { flex: 1 }]}
               onPress={() => setIsDebt(true)}
             >
@@ -280,142 +292,142 @@ export default function PurchaseFormScreen() {
         </View>
 
         {/* Product Picker */}
-      <View style={styles.card}>
-        <View style={styles.searchRow}>
-          <TextInput
-            placeholder="Cari produk..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            style={[styles.searchInput, styles.searchInputFlex]}
-          />
-          <TouchableOpacity
-            style={styles.scanActionBtn}
-            onPress={startScan}
-          >
-            <Text style={styles.scanActionIcon}>📷</Text>
-          </TouchableOpacity>
-          {searchQuery.length > 0 && (
+        <View style={styles.card}>
+          <View style={styles.searchRow}>
+            <TextInput
+              placeholder="Cari produk..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={[styles.searchInput, styles.searchInputFlex]}
+            />
             <TouchableOpacity
-              style={styles.clearSearchBtn}
-              onPress={() => setSearchQuery("")}
+              style={styles.scanActionBtn}
+              onPress={startScan}
             >
-              <Text style={styles.clearSearchBtnText}>Batal</Text>
+              <Text style={styles.scanActionIcon}>📷</Text>
             </TouchableOpacity>
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearSearchBtn}
+                onPress={() => setSearchQuery("")}
+              >
+                <Text style={styles.clearSearchBtnText}>Batal</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {searchQuery.length > 0 && (
+            <View style={styles.searchResultList}>
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((item) => (
+                  <View key={String(item.id)} style={styles.productListItem}>
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName}>{item.name}</Text>
+                      {item.code && <Text style={styles.productCode}>{item.code}</Text>}
+                    </View>
+                    <View style={styles.productActions}>
+                      <TouchableOpacity
+                        style={styles.priceActionBtn}
+                        onPress={() => handleAddItem(item, false)}
+                      >
+                        <Text style={styles.priceActionLabel}>Satuan</Text>
+                        <Text style={styles.priceActionValue}>
+                          Rp {item.purchase_price?.toLocaleString("id-ID")}
+                        </Text>
+                      </TouchableOpacity>
+                      {item.purchase_package_price ? (
+                        <TouchableOpacity
+                          style={[styles.priceActionBtn, styles.packageActionBtn]}
+                          onPress={() => handleAddItem(item, true)}
+                        >
+                          <Text style={styles.priceActionLabel}>Paket ({item.purchase_package_qty})</Text>
+                          <Text style={styles.priceActionValue}>
+                            Rp {item.purchase_package_price?.toLocaleString("id-ID")}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyText}>Produk tidak ditemukan</Text>
+              )}
+            </View>
           )}
         </View>
 
-        {searchQuery.length > 0 && (
-          <View style={styles.searchResultList}>
-            {filteredProducts.length > 0 ? (
-              filteredProducts.map((item) => (
-                <View key={String(item.id)} style={styles.productListItem}>
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{item.name}</Text>
-                    {item.code && <Text style={styles.productCode}>{item.code}</Text>}
+        {/* Selected Items */}
+        <View style={[styles.card, { flex: 1 }]}>
+          <Text style={styles.cardTitle}>Item Dipilih</Text>
+
+          <View>
+            {selectedItems.length > 0 ? (
+              selectedItems.map((item, index) => (
+                <View key={`${item.product.id}-${item.isPackage}-${index}`} style={styles.itemRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemName}>
+                      {item.product.name} {item.isPackage ? '(Paket)' : ''}
+                    </Text>
+                    <Text style={styles.itemSubtotal}>
+                      Subtotal: Rp {(item.qty * item.price).toLocaleString("id-ID")}
+                    </Text>
                   </View>
-                  <View style={styles.productActions}>
-                    <TouchableOpacity
-                      style={styles.priceActionBtn}
-                      onPress={() => handleAddItem(item, false)}
-                    >
-                      <Text style={styles.priceActionLabel}>Satuan</Text>
-                      <Text style={styles.priceActionValue}>
-                        Rp {item.purchase_price?.toLocaleString("id-ID")}
-                      </Text>
-                    </TouchableOpacity>
-                    {item.purchase_package_price ? (
-                      <TouchableOpacity
-                        style={[styles.priceActionBtn, styles.packageActionBtn]}
-                        onPress={() => handleAddItem(item, true)}
-                      >
-                        <Text style={styles.priceActionLabel}>Paket ({item.purchase_package_qty})</Text>
-                        <Text style={styles.priceActionValue}>
-                          Rp {item.purchase_package_price?.toLocaleString("id-ID")}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
+
+                  <View style={styles.counter}>
+                    <TextInput
+                      value={item.qty.toString()}
+                      onChangeText={(t) =>
+                        updateItem(item.product.id!, item.isPackage, { qty: Number(t) || 0 })
+                      }
+                      keyboardType="numeric"
+                      style={styles.counterInput}
+                    />
+                    <TextInput
+                      value={item.price.toString()}
+                      onChangeText={(t) =>
+                        updateItem(item.product.id!, item.isPackage, { price: Number(t) || 0 })
+                      }
+                      keyboardType="numeric"
+                      style={styles.counterInput}
+                    />
                   </View>
+
+                  <TouchableOpacity
+                    onPress={() => handleRemoveItem(item.product.id!, item.isPackage)}
+                  >
+                    <Text style={styles.remove}>✕</Text>
+                  </TouchableOpacity>
                 </View>
               ))
             ) : (
-              <Text style={styles.emptyText}>Produk tidak ditemukan</Text>
+              <Text style={styles.emptyText}>Belum ada barang dipilih</Text>
             )}
           </View>
-        )}
-      </View>
-
-      {/* Selected Items */}
-      <View style={[styles.card, { flex: 1 }]}>
-        <Text style={styles.cardTitle}>Item Dipilih</Text>
-
-        <View>
-          {selectedItems.length > 0 ? (
-            selectedItems.map((item, index) => (
-              <View key={`${item.product.id}-${item.isPackage}-${index}`} style={styles.itemRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.itemName}>
-                    {item.product.name} {item.isPackage ? '(Paket)' : ''}
-                  </Text>
-                  <Text style={styles.itemSubtotal}>
-                    Subtotal: Rp {(item.qty * item.price).toLocaleString("id-ID")}
-                  </Text>
-                </View>
-
-                <View style={styles.counter}>
-                  <TextInput
-                    value={item.qty.toString()}
-                    onChangeText={(t) =>
-                      updateItem(item.product.id!, item.isPackage, { qty: Number(t) || 0 })
-                    }
-                    keyboardType="numeric"
-                    style={styles.counterInput}
-                  />
-                  <TextInput
-                    value={item.price.toString()}
-                    onChangeText={(t) =>
-                      updateItem(item.product.id!, item.isPackage, { price: Number(t) || 0 })
-                    }
-                    keyboardType="numeric"
-                    style={styles.counterInput}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  onPress={() => handleRemoveItem(item.product.id!, item.isPackage)}
-                >
-                  <Text style={styles.remove}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>Belum ada barang dipilih</Text>
-          )}
-        </View>
-      </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <View>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>
-            Rp {total.toLocaleString("id-ID")}
-          </Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={handleSave}
-        >
-          <Text style={styles.primaryButtonText}>
-            Simpan Pembelian
-          </Text>
-        </TouchableOpacity>
-      </View>
-      <BarcodeScannerModal
-        visible={isScanning}
-        onScanned={handleBarcodeScanned}
-        onClose={() => setIsScanning(false)}
-      />
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalValue}>
+              Rp {total.toLocaleString("id-ID")}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleSave}
+          >
+            <Text style={styles.primaryButtonText}>
+              Simpan Pembelian
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <BarcodeScannerModal
+          visible={isScanning}
+          onScanned={handleBarcodeScanned}
+          onClose={() => setIsScanning(false)}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );

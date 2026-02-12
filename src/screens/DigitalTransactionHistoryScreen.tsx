@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { getDigitalTransactions, DigitalTransaction } from "../database/pulsa";
 import { TextInput } from "react-native";
 
 export default function DigitalTransactionHistoryScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const initialCategory = route.params?.category;
   const [transactions, setTransactions] = useState<DigitalTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilter, setShowFilter] = useState(false);
@@ -22,9 +24,9 @@ export default function DigitalTransactionHistoryScreen() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = showFilter 
-        ? await getDigitalTransactions(startDate, endDate)
-        : await getDigitalTransactions();
+      const data = showFilter
+        ? await getDigitalTransactions(startDate, endDate, initialCategory)
+        : await getDigitalTransactions(undefined, undefined, initialCategory);
       setTransactions(data);
     } catch (error) {
       console.error(error);
@@ -35,17 +37,22 @@ export default function DigitalTransactionHistoryScreen() {
 
   useEffect(() => {
     loadData();
-  }, [showFilter]);
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadData();
+    });
+    return unsubscribe;
+  }, [showFilter, navigation, initialCategory]);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
     return date.toLocaleString("id-ID", {
-      day: "2-digit",
-      month: "short",
+      day: "numeric",
+      month: "long",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
   };
 
@@ -71,8 +78,8 @@ export default function DigitalTransactionHistoryScreen() {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>📜 Riwayat Digital</Text>
-        <TouchableOpacity 
-          style={[styles.filterToggle, showFilter && styles.filterToggleActive]} 
+        <TouchableOpacity
+          style={[styles.filterToggle, showFilter && styles.filterToggleActive]}
           onPress={() => setShowFilter(!showFilter)}
         >
           <Text style={[styles.filterToggleText, showFilter && styles.filterToggleTextActive]}>
@@ -86,19 +93,19 @@ export default function DigitalTransactionHistoryScreen() {
           <View style={styles.dateGroup}>
             <View style={styles.dateInputWrapper}>
               <Text style={styles.dateLabel}>Dari</Text>
-              <TextInput 
-                style={styles.dateInput} 
-                value={startDate} 
-                onChangeText={setStartDate} 
+              <TextInput
+                style={styles.dateInput}
+                value={startDate}
+                onChangeText={setStartDate}
                 placeholder="YYYY-MM-DD"
               />
             </View>
             <View style={styles.dateInputWrapper}>
               <Text style={styles.dateLabel}>Sampai</Text>
-              <TextInput 
-                style={styles.dateInput} 
-                value={endDate} 
-                onChangeText={setEndDate} 
+              <TextInput
+                style={styles.dateInput}
+                value={endDate}
+                onChangeText={setEndDate}
                 placeholder="YYYY-MM-DD"
               />
             </View>
@@ -116,7 +123,7 @@ export default function DigitalTransactionHistoryScreen() {
         refreshing={loading}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.card}
             onPress={() => navigation.navigate("DigitalDetail", { trxId: item.id })}
           >
@@ -126,7 +133,7 @@ export default function DigitalTransactionHistoryScreen() {
               </View>
               <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
             </View>
-            
+
             <View style={styles.cardBody}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.phoneText}>{item.phone_number}</Text>
@@ -134,8 +141,8 @@ export default function DigitalTransactionHistoryScreen() {
                 <Text style={styles.providerText}>{item.provider}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.amountText}>Rp {item.selling_price.toLocaleString("id-ID")}</Text>
-                <Text style={styles.profitText}>Untung: Rp {item.profit.toLocaleString("id-ID")}</Text>
+                <Text style={styles.amountText}>Rp {(item.selling_price || 0).toLocaleString("id-ID")}</Text>
+                <Text style={styles.profitText}>Untung: Rp {(item.profit || 0).toLocaleString("id-ID")}</Text>
               </View>
             </View>
           </TouchableOpacity>
