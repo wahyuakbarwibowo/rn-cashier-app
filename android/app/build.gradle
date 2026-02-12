@@ -88,7 +88,7 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
  * The advantage is the size of the APK is reduced by about 4MB.
  * Remember to call "assembleRelease" to generate the APKs.
  */
-def enableSeparateBuildPerCPUArchitecture = false
+def enableSeparateBuildPerCPUArchitecture = true
 
 android {
     ndkVersion rootProject.ext.ndkVersion
