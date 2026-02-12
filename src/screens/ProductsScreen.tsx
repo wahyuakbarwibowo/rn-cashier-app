@@ -112,7 +112,12 @@ function useProductForm(onSave: () => void) {
     });
   }, []);
 
-  return { formData, editId, updateField, resetForm, handleSave, populateForm };
+  const generateRandomCode = useCallback(() => {
+    const random = Math.floor(Math.random() * 90000000) + 10000000;
+    updateField("code", String(random));
+  }, [updateField]);
+
+  return { formData, editId, updateField, resetForm, handleSave, populateForm, generateRandomCode };
 }
 
 function useBarcodeScanner(onScanned: (code: string) => void) {
@@ -186,7 +191,7 @@ export default function ProductsScreen({ navigation }: Props) {
     setProducts(items);
   }, []);
 
-  const { formData, editId, updateField, resetForm, handleSave, populateForm } =
+  const { formData, editId, updateField, resetForm, handleSave, populateForm, generateRandomCode } =
     useProductForm(loadProducts);
 
   const { isScanning, startScan, handleBarcodeScanned, closeScan } =
@@ -247,8 +252,14 @@ export default function ProductsScreen({ navigation }: Props) {
               placeholder="Kode (Scan)"
               value={formData.code}
               onChangeText={(v) => updateField("code", v)}
-              style={[styles.input, styles.flexInput]}
+              style={[styles.input, styles.flexInput, { marginBottom: 0 }]}
             />
+            <TouchableOpacity
+              style={[styles.scanBtn, { backgroundColor: '#10B981', marginRight: 8 }]}
+              onPress={generateRandomCode}
+            >
+              <Text style={styles.scanBtnText}>Buat</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.scanBtn} onPress={startScan}>
               <Text style={styles.scanBtnText}>Scan</Text>
             </TouchableOpacity>
