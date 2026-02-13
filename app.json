@@ -34,7 +34,8 @@
         {
           "cameraPermission": "Izinkan $(PRODUCT_NAME) mengakses kamera untuk scan barcode"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

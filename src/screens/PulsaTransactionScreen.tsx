@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from "react";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   Alert,
   FlatList,
-  Modal,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import {
+  Card,
+  Text,
+  TextInput,
+  Button,
+  IconButton,
+  List,
+  Chip,
+  TouchableRipple,
+  Divider,
+  Portal,
+  Modal as PaperModal,
+  Surface,
+  Avatar,
+  HelperText,
+} from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { addDigitalTransaction, updateDigitalTransaction, getRecentNumbers, DigitalTransaction } from "../database/pulsa";
 import {
   getDigitalProducts,
@@ -25,6 +39,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 export default function PulsaTransactionScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const insets = useSafeAreaInsets();
   const [editTrxId, setEditTrxId] = useState<number | null>(null);
   const [categories, setCategories] = useState<DigitalCategory[]>([]);
   const [category, setCategory] = useState<string>("PULSA");
@@ -42,6 +57,7 @@ export default function PulsaTransactionScreen() {
 
   const [templates, setTemplates] = useState<DigitalProductMaster[]>([]);
   const [showProviderModal, setShowProviderModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -173,270 +189,368 @@ export default function PulsaTransactionScreen() {
     >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 100, paddingTop: 12 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.headerRow}>
-          <Text style={styles.header}>✨ Transaksi Digital</Text>
-          <TouchableOpacity
-            style={styles.historyNavBtn}
-            onPress={() => navigation.navigate("DigitalHistory")}
-          >
-            <Text style={styles.historyNavBtnText}>📜 Riwayat</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Categories Tab */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
           {categories.map((cat) => (
-            <TouchableOpacity
+            <Surface
               key={cat.id}
-              style={[styles.categoryCard, category === cat.name && styles.activeCategoryCard]}
-              onPress={() => {
-                setCategory(cat.name);
-                setProvider("");
-                setTemplates([]);
-              }}
+              elevation={category === cat.name ? 2 : 0}
+              style={[styles.categoryCardPaper, category === cat.name && styles.activeCategoryCardPaper]}
             >
-              <Text style={styles.categoryIcon}>{cat.icon}</Text>
-              <Text style={[styles.categoryLabel, category === cat.name && styles.activeCategoryLabel]}>
-                {cat.name}
-              </Text>
-            </TouchableOpacity>
+              <TouchableRipple
+                onPress={() => {
+                  setCategory(cat.name);
+                  setProvider("");
+                  setTemplates([]);
+                }}
+                style={styles.categoryRipple}
+              >
+                <View style={styles.categoryContent}>
+                  <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                  <Text style={[styles.categoryLabel, category === cat.name && styles.activeCategoryLabel]}>
+                    {cat.name}
+                  </Text>
+                </View>
+              </TouchableRipple>
+            </Surface>
           ))}
         </ScrollView>
 
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>No. Pelanggan / HP / ID</Text>
+        <Card style={styles.mainCardPaper}>
+          <Card.Content>
+            <View style={styles.inputRowPaper}>
               <TextInput
-                style={styles.input}
+                label="No. Pelanggan / HP / ID"
                 placeholder="0812xxx atau ID Pelanggan"
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
                 keyboardType="numeric"
+                mode="outlined"
+                style={{ flex: 1 }}
+                right={
+                  <TextInput.Icon
+                    icon="history"
+                    onPress={() => navigation.navigate("DigitalHistory")}
+                  />
+                }
+                left={
+                  <TextInput.Icon
+                    icon="text-box-search-outline"
+                    onPress={() => setShowHistoryModal(true)}
+                  />
+                }
               />
             </View>
-            <TouchableOpacity style={styles.historyBtn} onPress={() => setShowHistoryModal(true)}>
-              <Text style={{ color: "#FFF" }}>🕒</Text>
-            </TouchableOpacity>
-          </View>
 
-          <Text style={styles.label}>Tanggal Transaksi</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="YYYY-MM-DD"
-            value={transactionDate}
-            onChangeText={setTransactionDate}
-          />
-
-          <Text style={styles.label}>Nama Pelanggan (Opsional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Contoh: Budi Santoso"
-            value={customerName}
-            onChangeText={setCustomerName}
-          />
-
-          <Text style={styles.label}>Provider / Bank / Game</Text>
-          <TouchableOpacity
-            style={styles.dropdownTrigger}
-            onPress={() => setShowProviderModal(true)}
-          >
-            <Text style={[styles.dropdownValue, !provider && styles.dropdownPlaceholder]}>
-              {provider || "Pilih Provider / Operator"}
-            </Text>
-            <Text style={styles.dropdownArrow}>▼</Text>
-          </TouchableOpacity>
-
-          {provider === "Lainnya" && (
             <TextInput
-              style={styles.input}
-              placeholder="Masukkan Nama Provider/Bank Manual"
-              onChangeText={setProvider}
+              label="Tanggal Transaksi"
+              placeholder="YYYY-MM-DD"
+              value={transactionDate}
+              onChangeText={setTransactionDate}
+              mode="outlined"
+              style={styles.fieldMargin}
+              right={<TextInput.Icon
+                icon="calendar"
+                onPress={() => setShowDatePicker(true)}
+              />}
             />
-          )}
 
-          {/* Product Templates from Master */}
-          {templates.length > 0 && (
-            <View style={styles.templateSection}>
-              <Text style={styles.label}>Pilih Produk (Master)</Text>
-              <View style={styles.templateGrid}>
-                {templates.map((t) => (
-                  <TouchableOpacity
-                    key={t.id}
-                    style={[styles.templatePill, amount === t.nominal.toString() && styles.templatePillActive]}
-                    onPress={() => selectTemplate(t)}
-                  >
-                    <Text style={[styles.templateText, amount === t.nominal.toString() && styles.templateTextActive]}>
-                      {t.name}
-                    </Text>
-                    <Text style={[styles.templatePrice, amount === t.nominal.toString() && styles.templateTextActive]}>
-                      Rp {t.selling_price.toLocaleString("id-ID")}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
+            {showDatePicker && (
+              <DateTimePicker
+                value={new Date(transactionDate)}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    setTransactionDate(selectedDate.toISOString().split('T')[0]);
+                  }
+                }}
+              />
+            )}
 
-          <Text style={styles.label}>Nominal / Item</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Contoh: 10000"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="numeric"
-          />
+            <TextInput
+              label="Nama Pelanggan (Opsional)"
+              placeholder="Contoh: Budi Santoso"
+              value={customerName}
+              onChangeText={setCustomerName}
+              mode="outlined"
+              style={styles.fieldMargin}
+            />
 
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.label}>Harga Modal</Text>
+            <TextInput
+              label="Provider / Bank / Game"
+              value={provider}
+              placeholder="Pilih Provider / Operator"
+              mode="outlined"
+              editable={false}
+              style={styles.fieldMargin}
+              onPressIn={() => setShowProviderModal(true)}
+              right={<TextInput.Icon icon="menu-down" onPress={() => setShowProviderModal(true)} />}
+            />
+
+            {provider === "Lainnya" && (
               <TextInput
-                style={styles.input}
+                label="Nama Provider Manual"
+                placeholder="Masukkan Nama Provider/Bank Manual"
+                onChangeText={setProvider}
+                mode="outlined"
+                style={styles.fieldMargin}
+              />
+            )}
+
+            {/* Product Templates from Master */}
+            {templates.length > 0 && (
+              <View style={styles.templateSectionPaper}>
+                <Text variant="labelLarge" style={styles.labelPaper}>Pilih Produk (Master)</Text>
+                <View style={styles.templateGridPaper}>
+                  {templates.map((t) => (
+                    <Chip
+                      key={t.id}
+                      selected={amount === t.nominal.toString()}
+                      onPress={() => selectTemplate(t)}
+                      style={styles.templateChip}
+                      showSelectedOverlay
+                      mode="outlined"
+                    >
+                      {t.name} (Rp {t.selling_price.toLocaleString("id-ID")})
+                    </Chip>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <TextInput
+              label="Nominal / Item"
+              placeholder="Contoh: 10000"
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.fieldMargin}
+            />
+
+            <View style={styles.row}>
+              <TextInput
+                label="Harga Modal"
                 placeholder="0"
                 value={costPrice}
                 onChangeText={setCostPrice}
                 keyboardType="numeric"
+                mode="outlined"
+                style={[styles.fieldMargin, { flex: 1, marginRight: 8 }]}
               />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Harga Jual</Text>
               <TextInput
-                style={styles.input}
+                label="Harga Jual"
                 placeholder="0"
                 value={sellingPrice}
                 onChangeText={setSellingPrice}
                 keyboardType="numeric"
+                mode="outlined"
+                style={[styles.fieldMargin, { flex: 1 }]}
               />
             </View>
-          </View>
 
-          <Text style={styles.label}>Catatan (Opsional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Contoh: Token Listrik"
-            value={notes}
-            onChangeText={setNotes}
-          />
+            <TextInput
+              label="Catatan (Opsional)"
+              placeholder="Contoh: Token Listrik"
+              value={notes}
+              onChangeText={setNotes}
+              mode="outlined"
+              style={styles.fieldMargin}
+            />
 
-          <TouchableOpacity style={styles.btn} onPress={handleTransaction}>
-            <Text style={styles.btnText}>{editTrxId ? "Update Transaksi" : "Proses Transaksi"}</Text>
-          </TouchableOpacity>
-
-          {editTrxId && (
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: "#6B7280", marginTop: 10 }]}
-              onPress={() => navigation.goBack()}
+            <Button
+              mode="contained"
+              onPress={handleTransaction}
+              style={styles.mainActionBtn}
+              contentStyle={{ paddingVertical: 8 }}
             >
-              <Text style={styles.btnText}>Batal</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+              {editTrxId ? "Update Transaksi" : "Proses Transaksi"}
+            </Button>
+
+            {editTrxId && (
+              <Button
+                mode="outlined"
+                onPress={() => navigation.goBack()}
+                style={[styles.mainActionBtn, { marginTop: 12 }]}
+                contentStyle={{ paddingVertical: 8 }}
+              >
+                Batal
+              </Button>
+            )}
+          </Card.Content>
+        </Card>
       </ScrollView>
 
       {/* Provider List Modal */}
-      <Modal visible={showProviderModal} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Pilih Provider / Operator</Text>
-            <FlatList
-              data={[...providers, "Lainnya"]}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.providerItem}
-                  onPress={() => {
-                    setProvider(item);
-                    setShowProviderModal(false);
-                  }}
-                >
-                  <Text style={styles.providerText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity
-              style={styles.closeModalBtn}
-              onPress={() => setShowProviderModal(false)}
-            >
-              <Text style={styles.closeModalBtnText}>Tutup</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <Portal>
+        <PaperModal
+          visible={showProviderModal}
+          onDismiss={() => setShowProviderModal(false)}
+          contentContainerStyle={styles.modalContentPaper}
+        >
+          <Text variant="titleLarge" style={styles.modalTitlePaper}>Pilih Provider / Operator</Text>
+          <Divider style={{ marginVertical: 12 }} />
+          <FlatList
+            data={[...providers, "Lainnya"]}
+            keyExtractor={(item) => item}
+            renderItem={({ item }) => (
+              <List.Item
+                title={item}
+                onPress={() => {
+                  setProvider(item);
+                  setShowProviderModal(false);
+                }}
+                right={props => item === provider ? <List.Icon {...props} icon="check" color="#6366F1" /> : null}
+              />
+            )}
+            style={{ maxHeight: 400 }}
+          />
+          <Button mode="text" onPress={() => setShowProviderModal(false)} style={{ marginTop: 8 }}>
+            Tutup
+          </Button>
+        </PaperModal>
+      </Portal>
 
       {/* History Modal */}
-      <Modal visible={showHistoryModal} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Nomor Terakhir</Text>
-            <FlatList
-              data={history}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.providerItem}
-                  onPress={() => {
-                    setPhoneNumber(item.phone_number);
-                    if (item.customer_name) setCustomerName(item.customer_name);
-                    setShowHistoryModal(false);
-                  }}
-                >
-                  <Text style={styles.providerText}>{item.phone_number}</Text>
-                  {item.customer_name && <Text style={{ color: "#6B7280", fontSize: 12 }}>{item.customer_name}</Text>}
-                </TouchableOpacity>
-              )}
-              ListEmptyComponent={<Text style={{ textAlign: "center", color: "#9CA3AF" }}>Belum ada riwayat nomor</Text>}
-            />
-            <TouchableOpacity
-              style={styles.closeModalBtn}
-              onPress={() => setShowHistoryModal(false)}
-            >
-              <Text style={styles.closeModalBtnText}>Tutup</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <Portal>
+        <PaperModal
+          visible={showHistoryModal}
+          onDismiss={() => setShowHistoryModal(false)}
+          contentContainerStyle={styles.modalContentPaper}
+        >
+          <Text variant="titleLarge" style={styles.modalTitlePaper}>Nomor Terakhir</Text>
+          <Divider style={{ marginVertical: 12 }} />
+          <FlatList
+            data={history}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <List.Item
+                title={item.phone_number}
+                description={item.customer_name || "Tanpa Nama"}
+                left={props => <List.Icon {...props} icon="phone-outline" />}
+                onPress={() => {
+                  setPhoneNumber(item.phone_number);
+                  if (item.customer_name) setCustomerName(item.customer_name);
+                  setShowHistoryModal(false);
+                }}
+              />
+            )}
+            ListEmptyComponent={
+              <Text style={styles.emptyTextModal}>Belum ada riwayat nomor</Text>
+            }
+            style={{ maxHeight: 400 }}
+          />
+          <Button mode="text" onPress={() => setShowHistoryModal(false)} style={{ marginTop: 8 }}>
+            Tutup
+          </Button>
+        </PaperModal>
+      </Portal>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20 },
-  header: { fontSize: 22, fontWeight: "bold", color: "#111827" },
-  historyNavBtn: { backgroundColor: "#FFF", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB" },
-  historyNavBtnText: { fontSize: 13, fontWeight: "600", color: "#374151" },
-  categoryScroll: { paddingHorizontal: 20, marginBottom: 16 },
-  categoryCard: { backgroundColor: "#FFF", padding: 12, borderRadius: 16, marginRight: 12, alignItems: "center", minWidth: 80, borderWidth: 1, borderColor: "#E5E7EB" },
-  activeCategoryCard: { backgroundColor: "#3B82F6", borderColor: "#3B82F6" },
-  categoryIcon: { fontSize: 24, marginBottom: 4 },
-  categoryLabel: { fontSize: 12, fontWeight: "bold", color: "#374151" },
-  activeCategoryLabel: { color: "#FFF" },
-  card: { backgroundColor: "#FFF", margin: 20, marginTop: 0, padding: 20, borderRadius: 20, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10 },
-  label: { fontSize: 13, fontWeight: "bold", color: "#374151", marginBottom: 8 },
-  input: { backgroundColor: "#F9FAFB", padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 16, fontSize: 15 },
-  row: { flexDirection: "row", alignItems: "flex-end" },
-  historyBtn: { backgroundColor: "#3B82F6", width: 50, height: 50, borderRadius: 12, justifyContent: "center", alignItems: "center", marginBottom: 16, marginLeft: 8 },
-  btn: { backgroundColor: "#111827", paddingVertical: 16, borderRadius: 16, alignItems: "center" },
-  btnText: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modalContent: { backgroundColor: "#FFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: "80%" },
-  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 16, color: "#111827" },
-  providerItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F3F4F6", flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  providerText: { fontSize: 16, color: "#374151" },
-  closeModalBtn: { marginTop: 16, paddingVertical: 14, alignItems: "center", backgroundColor: "#F3F4F6", borderRadius: 12 },
-  closeModalBtnText: { color: "#4B5563", fontWeight: "bold" },
-  dropdownTrigger: { backgroundColor: "#F9FAFB", padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  dropdownValue: { fontSize: 15, color: "#111827" },
-  dropdownPlaceholder: { color: "#9CA3AF" },
-  dropdownArrow: { color: "#9CA3AF", fontSize: 12 },
-  templateSection: { marginBottom: 16 },
-  templateGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  templatePill: { backgroundColor: "#EFF6FF", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: "#BFDBFE", minWidth: "30%" },
-  templatePillActive: { backgroundColor: "#3B82F6", borderColor: "#3B82F6" },
-  templateText: { fontSize: 13, fontWeight: "bold", color: "#1D4ED8" },
-  templatePrice: { fontSize: 11, color: "#1D4ED8", marginTop: 2 },
-  templateTextActive: { color: "#FFF" },
+  container: {
+    flex: 1,
+    backgroundColor: "#F9FAFB",
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  headerTitle: {
+    fontWeight: "800",
+    color: "#111827",
+  },
+  categoryScroll: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  categoryCardPaper: {
+    borderRadius: 16,
+    marginRight: 12,
+    marginVertical: 4,
+    backgroundColor: "#FFF",
+    overflow: 'hidden',
+    minWidth: 80,
+  },
+  activeCategoryCardPaper: {
+    backgroundColor: "#6366F1",
+  },
+  categoryRipple: {
+    padding: 12,
+  },
+  categoryContent: {
+    alignItems: "center",
+  },
+  categoryIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  categoryLabel: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#374151",
+  },
+  activeCategoryLabel: {
+    color: "#FFF",
+  },
+  mainCardPaper: {
+    margin: 20,
+    marginTop: 0,
+    borderRadius: 20,
+  },
+  inputRowPaper: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  fieldMargin: {
+    marginBottom: 16,
+  },
+  templateSectionPaper: {
+    marginBottom: 16,
+  },
+  labelPaper: {
+    marginBottom: 8,
+    color: "#374151",
+    fontWeight: "600",
+  },
+  templateGridPaper: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  templateChip: {
+    marginBottom: 4,
+  },
+  row: {
+    flexDirection: "row",
+  },
+  mainActionBtn: {
+    marginTop: 8,
+    borderRadius: 12,
+  },
+  modalContentPaper: {
+    backgroundColor: "white",
+    padding: 24,
+    margin: 20,
+    borderRadius: 20,
+  },
+  modalTitlePaper: {
+    fontWeight: "bold",
+  },
+  emptyTextModal: {
+    textAlign: "center",
+    color: "#9CA3AF",
+    paddingVertical: 20,
+  },
 });

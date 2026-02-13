@@ -1,16 +1,23 @@
 import React, { useEffect, useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Dimensions,
   RefreshControl,
   InteractionManager,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { getDB } from "../database/initDB";
+import {
+  Card,
+  Text,
+  Badge,
+  TouchableRipple,
+  Surface,
+  IconButton,
+  Avatar
+} from "react-native-paper";
 
 const { width } = Dimensions.get("window");
 
@@ -30,7 +37,6 @@ export default function DashboardScreen() {
       const db = await getDB();
       const today = new Date().toISOString().split("T")[0];
 
-      // Jalankan query secara paralel untuk efisiensi
       const [salesRes, expenseRes, stockRes, customerRes, receivableRes] = await Promise.all([
         db.getFirstAsync<{ total: number }>("SELECT SUM(total) as total FROM sales WHERE created_at LIKE ?", [`${today}%`]),
         db.getFirstAsync<{ total: number }>("SELECT SUM(amount) as total FROM expenses WHERE created_at LIKE ?", [`${today}%`]),
@@ -68,7 +74,6 @@ export default function DashboardScreen() {
     };
   }, [navigation]);
 
-
   const onRefresh = async () => {
     setRefreshing(true);
     await loadStats();
@@ -76,20 +81,23 @@ export default function DashboardScreen() {
   };
 
   const MenuCard = ({ title, icon, color, onPress, badge }: any) => (
-    <TouchableOpacity
-      style={[styles.menuCard, { borderLeftColor: color }]}
+    <Card
+      style={[styles.menuCard, { borderLeftColor: color, borderLeftWidth: 4 }]}
       onPress={onPress}
+      mode="elevated"
     >
-      <View style={styles.menuIconContainer}>
+      <Card.Content style={styles.menuIconContainer}>
         <Text style={[styles.menuIcon, { color }]}>{icon}</Text>
         {badge > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badge}</Text>
-          </View>
+          <Badge size={20} style={styles.paperBadge}>{badge}</Badge>
         )}
-      </View>
-      <Text style={styles.menuTitle}>{title}</Text>
-    </TouchableOpacity>
+      </Card.Content>
+      <Card.Title
+        title={title}
+        titleStyle={[styles.menuTitle, { fontSize: 13 }]}
+        style={{ minHeight: 40 }}
+      />
+    </Card>
   );
 
   return (
@@ -102,86 +110,94 @@ export default function DashboardScreen() {
       {/* 1. Header & Daily Summary */}
       <View style={styles.headerDashboard}>
         <View style={styles.headerInfo}>
-          <Text style={styles.todayDate}>{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
-          <Text style={styles.welcomeText}>Halo, Selamat Berjualan! 👋</Text>
+          <Text variant="labelMedium" style={styles.todayDate}>
+            {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </Text>
+          <Text variant="headlineSmall" style={styles.welcomeText}>Halo, Selamat Berjualan! 👋</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.mainNetCard}
-          onPress={() => navigation.navigate("ProfitLoss")}
-        >
-          <View>
-            <Text style={styles.netLabel}>Estimasi Laba Hari Ini</Text>
-            <Text style={styles.netValue}>
-              Rp {((stats.todaySales || 0) - (stats.todayExpenses || 0)).toLocaleString("id-ID")}
-            </Text>
-          </View>
-          <View style={styles.netIconBg}>
-            <Text style={styles.netIcon}>📈</Text>
-          </View>
-        </TouchableOpacity>
+        <Surface elevation={0} style={styles.surfaceCard}>
+          <TouchableRipple
+            onPress={() => navigation.navigate("ProfitLoss")}
+            rippleColor="rgba(255, 255, 255, .32)"
+            style={styles.mainNetCardRipple}
+          >
+            <View style={styles.mainNetCardContent}>
+              <View>
+                <Text variant="labelLarge" style={styles.netLabel}>Estimasi Laba Hari Ini</Text>
+                <Text variant="displaySmall" style={styles.netValue}>
+                  Rp {((stats.todaySales || 0) - (stats.todayExpenses || 0)).toLocaleString("id-ID")}
+                </Text>
+              </View>
+              <Avatar.Icon size={48} icon="trending-up" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} color="white" />
+            </View>
+          </TouchableRipple>
+        </Surface>
 
         <View style={styles.summaryRow}>
-          <View style={styles.summaryStatItem}>
-            <View style={[styles.statIconCircle, { backgroundColor: '#ECFDF5' }]}>
-              <Text style={styles.statIconSmall}>💰</Text>
+          <Surface elevation={1} style={styles.summaryStatItem}>
+            <Avatar.Text size={36} label="💰" style={{ backgroundColor: '#ECFDF5' }} labelStyle={{ fontSize: 16 }} />
+            <View style={{ marginLeft: 10 }}>
+              <Text variant="labelSmall" style={styles.statLabelSmall}>Penjualan</Text>
+              <Text variant="titleSmall" style={styles.statValueSmall}>Rp {(stats.todaySales || 0).toLocaleString("id-ID")}</Text>
             </View>
-            <View>
-              <Text style={styles.statLabelSmall}>Penjualan</Text>
-              <Text style={styles.statValueSmall}>Rp {(stats.todaySales || 0).toLocaleString("id-ID")}</Text>
+          </Surface>
+          <Surface elevation={1} style={styles.summaryStatItem}>
+            <Avatar.Text size={36} label="💸" style={{ backgroundColor: '#FEF2F2' }} labelStyle={{ fontSize: 16 }} />
+            <View style={{ marginLeft: 10 }}>
+              <Text variant="labelSmall" style={styles.statLabelSmall}>Pengeluaran</Text>
+              <Text variant="titleSmall" style={[styles.statValueSmall, { color: '#EF4444' }]}>Rp {(stats.todayExpenses || 0).toLocaleString("id-ID")}</Text>
             </View>
-          </View>
-          <View style={styles.summaryStatItem}>
-            <View style={[styles.statIconCircle, { backgroundColor: '#FEF2F2' }]}>
-              <Text style={styles.statIconSmall}>💸</Text>
-            </View>
-            <View>
-              <Text style={styles.statLabelSmall}>Pengeluaran</Text>
-              <Text style={[styles.statValueSmall, { color: '#EF4444' }]}>Rp {(stats.todayExpenses || 0).toLocaleString("id-ID")}</Text>
-            </View>
-          </View>
+          </Surface>
         </View>
       </View>
 
       <View style={styles.content}>
-        {/* 2. Quick Actions - HIGH PRIORITY */}
+        {/* 2. Quick Actions */}
         <View style={styles.quickActionsContainer}>
-          <TouchableOpacity
-            style={[styles.quickActionBtn, { backgroundColor: '#6366F1' }]}
-            onPress={() => navigation.navigate("SalesTransaction")}
-          >
-            <Text style={styles.quickActionIcon}>🛒</Text>
-            <Text style={styles.quickActionLabel}>Transaksi Kasir</Text>
-            <Text style={styles.quickActionSub}>Jualan Barang Fisik</Text>
-          </TouchableOpacity>
+          <Surface elevation={4} style={[styles.quickActionSurface, { backgroundColor: '#6366F1' }]}>
+            <TouchableRipple
+              onPress={() => navigation.navigate("SalesTransaction")}
+              style={styles.quickActionRipple}
+            >
+              <View>
+                <Text style={styles.quickActionIcon}>🛒</Text>
+                <Text variant="titleMedium" style={styles.quickActionLabel}>Transaksi Kasir</Text>
+                <Text variant="labelSmall" style={styles.quickActionSub}>Jualan Barang Fisik</Text>
+              </View>
+            </TouchableRipple>
+          </Surface>
 
-          <TouchableOpacity
-            style={[styles.quickActionBtn, { backgroundColor: '#F59E0B' }]}
-            onPress={() => navigation.navigate("Pulsa")}
-          >
-            <Text style={styles.quickActionIcon}>✨</Text>
-            <Text style={styles.quickActionLabel}>Transaksi Digital</Text>
-            <Text style={styles.quickActionSub}>Pulsa, Token, Tagihan</Text>
-          </TouchableOpacity>
+          <Surface elevation={4} style={[styles.quickActionSurface, { backgroundColor: '#F59E0B' }]}>
+            <TouchableRipple
+              onPress={() => navigation.navigate("Pulsa")}
+              style={styles.quickActionRipple}
+            >
+              <View>
+                <Text style={styles.quickActionIcon}>✨</Text>
+                <Text variant="titleMedium" style={styles.quickActionLabel}>Transaksi Digital</Text>
+                <Text variant="labelSmall" style={styles.quickActionSub}>Pulsa, Token, Tagihan</Text>
+              </View>
+            </TouchableRipple>
+          </Surface>
         </View>
 
         {/* 3. Operational Alerts */}
         <View style={styles.alertsContainer}>
-          <TouchableOpacity
-            style={[styles.alertCard, { borderLeftColor: '#F59E0B' }]}
-            onPress={() => navigation.navigate("LowStock")}
-          >
-            <Text style={styles.alertEmoji}>⚠️</Text>
-            <View>
-              <Text style={styles.alertTitle}>{stats.lowStockCount} Stok Tipis (Alert)</Text>
-              <Text style={styles.alertSub}>Segera restok barang Anda</Text>
-            </View>
-          </TouchableOpacity>
+          <Card style={styles.alertCardPaper} onPress={() => navigation.navigate("LowStock")}>
+            <Card.Title
+              title={`${stats.lowStockCount} Stok Tipis (Alert)`}
+              subtitle="Segera restok barang Anda"
+              left={(props) => <Avatar.Text {...props} label="⚠️" style={{ backgroundColor: 'transparent' }} labelStyle={{ fontSize: 24 }} />}
+              titleStyle={styles.alertTitle}
+              subtitleStyle={styles.alertSub}
+            />
+          </Card>
         </View>
 
         {/* 4. Categorized Menus */}
         <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Manajemen & Laporan</Text>
+          <Text variant="titleLarge" style={styles.sectionTitle}>Manajemen & Laporan</Text>
 
           <View style={styles.menuGridNew}>
             <MenuCard
@@ -224,27 +240,28 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        <View style={styles.extraSection}>
-          <Text style={styles.sectionTitle}>Fitur Lainnya</Text>
+        <Surface elevation={0} style={styles.extraSectionPaper}>
+          <Text variant="titleMedium" style={styles.sectionTitle}>Fitur Lainnya</Text>
           <View style={styles.extraGrid}>
-            <TouchableOpacity style={styles.extraItem} onPress={() => navigation.navigate("Suppliers")}>
-              <Text style={styles.extraIcon}>🏭</Text>
-              <Text style={styles.extraText}>Master Supplier</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.extraItem} onPress={() => navigation.navigate("Receivables")}>
-              <Text style={styles.extraIcon}>💰</Text>
-              <Text style={styles.extraText}>Piutang Pelanggan</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.extraItem} onPress={() => navigation.navigate("Expenses")}>
-              <Text style={styles.extraIcon}>💸</Text>
-              <Text style={styles.extraText}>Pengeluaran (Operasional)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.extraItem} onPress={() => navigation.navigate("Backup")}>
-              <Text style={styles.extraIcon}>💾</Text>
-              <Text style={styles.extraText}>Backup & Restore</Text>
-            </TouchableOpacity>
+            {[
+              { label: "Master Supplier", icon: "🏭", route: "Suppliers" },
+              { label: "Piutang Pelanggan", icon: "💰", route: "Receivables" },
+              { label: "Pengeluaran", icon: "💸", route: "Expenses" },
+              { label: "Backup & Restore", icon: "💾", route: "Backup" },
+            ].map((item, idx) => (
+              <TouchableRipple
+                key={idx}
+                onPress={() => navigation.navigate(item.route as any)}
+                style={styles.extraItemRipple}
+              >
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={styles.extraIcon}>{item.icon}</Text>
+                  <Text variant="labelSmall" style={styles.extraText}>{item.label}</Text>
+                </View>
+              </TouchableRipple>
+            ))}
           </View>
-        </View>
+        </Surface>
 
         <View style={{ height: 40 }} />
       </View>
@@ -281,40 +298,6 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginTop: 4,
   },
-  mainNetCard: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    padding: 24,
-    borderRadius: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-    marginBottom: 16,
-  },
-  netLabel: {
-    color: "#FFF",
-    fontSize: 14,
-    opacity: 0.9,
-    fontWeight: "600",
-  },
-  netValue: {
-    color: "#FFF",
-    fontSize: 28,
-    fontWeight: "900",
-    marginTop: 4,
-  },
-  netIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  netIcon: {
-    fontSize: 24,
-  },
   summaryRow: {
     flexDirection: "row",
     gap: 12,
@@ -327,17 +310,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     elevation: 2,
-  },
-  statIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  statIconSmall: {
-    fontSize: 16,
   },
   statLabelSmall: {
     fontSize: 10,
@@ -359,15 +331,13 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 20,
   },
-  quickActionBtn: {
+  quickActionSurface: {
     flex: 1,
-    padding: 20,
     borderRadius: 24,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
+    overflow: 'hidden',
+  },
+  quickActionRipple: {
+    padding: 20,
   },
   quickActionIcon: {
     fontSize: 32,
@@ -387,21 +357,12 @@ const styles = StyleSheet.create({
   alertsContainer: {
     marginBottom: 24,
   },
-  alertCard: {
+  alertCardPaper: {
     backgroundColor: "#FFF",
-    padding: 16,
     borderRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    borderLeftWidth: 6,
     elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-  },
-  alertEmoji: {
-    fontSize: 24,
-    marginRight: 12,
+    borderLeftWidth: 6,
+    borderLeftColor: '#F59E0B',
   },
   alertTitle: {
     fontSize: 15,
@@ -411,7 +372,6 @@ const styles = StyleSheet.create({
   alertSub: {
     fontSize: 12,
     color: "#64748B",
-    marginTop: 2,
   },
   menuSection: {
     marginBottom: 24,
@@ -431,14 +391,11 @@ const styles = StyleSheet.create({
   menuCard: {
     backgroundColor: "#FFF",
     width: (width - 52) / 2,
-    padding: 20,
     borderRadius: 24,
     elevation: 2,
-    borderBottomWidth: 4,
-    borderBottomColor: "#F1F5F9",
   },
   menuIconContainer: {
-    marginBottom: 12,
+    paddingBottom: 0,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -447,11 +404,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   menuTitle: {
-    fontSize: 14,
     fontWeight: "800",
     color: "#334155",
   },
-  extraSection: {
+  extraSectionPaper: {
     backgroundColor: "#F1F5F9",
     padding: 20,
     marginHorizontal: -20,
@@ -464,9 +420,10 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 12,
   },
-  extraItem: {
+  extraItemRipple: {
     width: (width - 64) / 4,
-    alignItems: "center",
+    borderRadius: 14,
+    paddingVertical: 8,
   },
   extraIcon: {
     fontSize: 20,
@@ -482,15 +439,36 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
   },
-  badge: {
+  paperBadge: {
     backgroundColor: "#EF4444",
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    position: 'absolute',
+    top: 5,
+    right: 5,
   },
-  badgeText: {
+  surfaceCard: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 16,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  mainNetCardRipple: {
+    padding: 24,
+  },
+  mainNetCardContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  netLabel: {
     color: "#FFF",
-    fontSize: 10,
-    fontWeight: "bold",
+    opacity: 0.9,
+    fontWeight: "600",
+  },
+  netValue: {
+    color: "#FFF",
+    fontWeight: "900",
+    marginTop: 4,
   },
 });
