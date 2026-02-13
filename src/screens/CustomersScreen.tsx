@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from "../database/customers";
@@ -90,75 +92,80 @@ export default function CustomersScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>👥 Atur Pelanggan</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <Text style={styles.header}>👥 Atur Pelanggan</Text>
 
-      <View style={styles.card}>
-        <TextInput
-          style={styles.input}
-          placeholder="Nama Pelanggan"
-          value={name}
-          onChangeText={setName}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Nomor Telepon"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Alamat (Opsional)"
-          value={address}
-          onChangeText={setAddress}
-        />
-        <View style={styles.row}>
-          <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
-            <Text style={styles.btnText}>{editId ? "Update" : "Simpan"}</Text>
-          </TouchableOpacity>
-          {editId && (
-            <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={resetForm}>
-              <Text style={styles.btnText}>Batal</Text>
+        <View style={styles.card}>
+          <TextInput
+            style={styles.input}
+            placeholder="Nama Pelanggan"
+            value={name}
+            onChangeText={setName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Nomor Telepon"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Alamat (Opsional)"
+            value={address}
+            onChangeText={setAddress}
+          />
+          <View style={styles.row}>
+            <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
+              <Text style={styles.btnText}>{editId ? "Update" : "Simpan"}</Text>
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 20 }} />
-      ) : (
-        <FlatList
-          data={customers}
-          keyExtractor={(item) => item.id!.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.customerItem}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.customerName}>{item.name}</Text>
-                <Text style={styles.customerPhone}>{item.phone || "-"}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.pointsBadge}
-                onPress={() => navigation.navigate("CustomerPointsHistory", {
-                  customerId: item.id!,
-                  customerName: item.name
-                })}
-              >
-                <Text style={styles.pointsText}>{item.points || 0} Pts</Text>
+            {editId && (
+              <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={resetForm}>
+                <Text style={styles.btnText}>Batal</Text>
               </TouchableOpacity>
-              <View style={styles.actions}>
-                <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionBtn}>
-                  <Text style={{ color: "#3B82F6" }}>Edit</Text>
+            )}
+          </View>
+        </View>
+
+        {loading ? (
+          <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 20 }} />
+        ) : (
+          <FlatList
+            data={customers}
+            keyExtractor={(item) => item.id!.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.customerItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.customerName}>{item.name}</Text>
+                  <Text style={styles.customerPhone}>{item.phone || "-"}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.pointsBadge}
+                  onPress={() => navigation.navigate("CustomerPointsHistory", {
+                    customerId: item.id!,
+                    customerName: item.name
+                  })}
+                >
+                  <Text style={styles.pointsText}>{item.points || 0} Pts</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(item.id!)} style={styles.actionBtn}>
-                  <Text style={{ color: "#EF4444" }}>Hapus</Text>
-                </TouchableOpacity>
+                <View style={styles.actions}>
+                  <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionBtn}>
+                    <Text style={{ color: "#3B82F6" }}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item.id!)} style={styles.actionBtn}>
+                    <Text style={{ color: "#EF4444" }}>Hapus</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          )}
-        />
-      )}
-    </View>
+            )}
+          />
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 

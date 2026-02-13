@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   FlatList,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { getDB } from "../database/initDB";
 
@@ -197,98 +199,103 @@ export default function ReportsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>📊 Laporan</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <Text style={styles.header}>📊 Laporan</Text>
 
-      {/* Report Types */}
-      <View style={styles.tabScrollContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs}>
-          {[
-            { id: 'SALES', label: 'Penjualan' },
-            { id: 'STOCK', label: 'Stok' },
-            { id: 'PROFIT', label: 'Laba' },
-            { id: 'PURCHASES', label: 'Pembelian' },
-            { id: 'PAYABLES', label: 'Hutang' },
-            { id: 'RECEIVABLES', label: 'Piutang' }
-          ].map((t) => (
+        {/* Report Types */}
+        <View style={styles.tabScrollContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs}>
+            {[
+              { id: 'SALES', label: 'Penjualan' },
+              { id: 'STOCK', label: 'Stok' },
+              { id: 'PROFIT', label: 'Laba' },
+              { id: 'PURCHASES', label: 'Pembelian' },
+              { id: 'PAYABLES', label: 'Hutang' },
+              { id: 'RECEIVABLES', label: 'Piutang' }
+            ].map((t) => (
+              <TouchableOpacity
+                key={t.id}
+                style={[styles.tab, reportType === t.id && styles.activeTab]}
+                onPress={() => setReportType(t.id as ReportType)}
+              >
+                <Text style={[styles.tabText, reportType === t.id && styles.activeTabText]}>{t.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Date Filters */}
+        <View style={styles.filters}>
+          {['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY', 'CUSTOM'].map((f) => (
             <TouchableOpacity
-              key={t.id}
-              style={[styles.tab, reportType === t.id && styles.activeTab]}
-              onPress={() => setReportType(t.id as ReportType)}
+              key={f}
+              style={[styles.filterBtn, filterType === f && styles.activeFilterBtn]}
+              onPress={() => setFilterType(f as FilterType)}
             >
-              <Text style={[styles.tabText, reportType === t.id && styles.activeTabText]}>{t.label}</Text>
+              <Text style={[styles.filterText, filterType === f && styles.activeFilterText]}>
+                {f === 'DAILY' ? 'Hari' : f === 'WEEKLY' ? 'Mggu' : f === 'MONTHLY' ? 'Bln' : f === 'YEARLY' ? 'Thn' : 'Pilih'}
+              </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
-      </View>
-
-      {/* Date Filters */}
-      <View style={styles.filters}>
-        {['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY', 'CUSTOM'].map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterBtn, filterType === f && styles.activeFilterBtn]}
-            onPress={() => setFilterType(f as FilterType)}
-          >
-            <Text style={[styles.filterText, filterType === f && styles.activeFilterText]}>
-              {f === 'DAILY' ? 'Hari' : f === 'WEEKLY' ? 'Mggu' : f === 'MONTHLY' ? 'Bln' : f === 'YEARLY' ? 'Thn' : 'Pilih'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {filterType === 'CUSTOM' && (
-        <View style={styles.customDateContainer}>
-          <View style={styles.dateInputGroup}>
-            <Text style={styles.dateLabel}>Dari:</Text>
-            <TextInput
-              style={styles.dateInput}
-              value={startDate}
-              onChangeText={setStartDate}
-              placeholder="YYYY-MM-DD"
-            />
-          </View>
-          <View style={styles.dateInputGroup}>
-            <Text style={styles.dateLabel}>Sampai:</Text>
-            <TextInput
-              style={styles.dateInput}
-              value={endDate}
-              onChangeText={setEndDate}
-              placeholder="YYYY-MM-DD"
-            />
-          </View>
-          <TouchableOpacity style={styles.applyBtn} onPress={loadReport}>
-            <Text style={styles.applyBtnText}>Terapkan</Text>
-          </TouchableOpacity>
         </View>
-      )}
 
-      {/* Summary Card */}
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Total {reportType}</Text>
-        <Text style={styles.summaryValue}>
-          Rp {(summary.total || summary.totalAsset || summary.totalProfit || summary.totalPurchases || summary.totalPayables || summary.totalReceivables || 0).toLocaleString("id-ID")}
-        </Text>
-      </View>
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 20 }} />
-      ) : (
-        <FlatList
-          data={data}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={renderItem}
-          ListHeaderComponent={
-            <View style={styles.listHeader}>
-              <Text style={styles.headerCell}>{reportType === 'STOCK' ? 'Nama' : (reportType === 'PAYABLES' || reportType === 'RECEIVABLES') ? 'Pihak' : 'ID'}</Text>
-              {reportType === 'STOCK' && <Text style={styles.headerCell}>Stok</Text>}
-              <Text style={styles.headerCell}>{(reportType === 'PROFIT' || reportType === 'PAYABLES' || reportType === 'RECEIVABLES') ? 'Nilai' : 'Total'}</Text>
+        {filterType === 'CUSTOM' && (
+          <View style={styles.customDateContainer}>
+            <View style={styles.dateInputGroup}>
+              <Text style={styles.dateLabel}>Dari:</Text>
+              <TextInput
+                style={styles.dateInput}
+                value={startDate}
+                onChangeText={setStartDate}
+                placeholder="YYYY-MM-DD"
+              />
             </View>
-          }
-          style={styles.list}
-        />
-      )}
-    </View>
+            <View style={styles.dateInputGroup}>
+              <Text style={styles.dateLabel}>Sampai:</Text>
+              <TextInput
+                style={styles.dateInput}
+                value={endDate}
+                onChangeText={setEndDate}
+                placeholder="YYYY-MM-DD"
+              />
+            </View>
+            <TouchableOpacity style={styles.applyBtn} onPress={loadReport}>
+              <Text style={styles.applyBtnText}>Terapkan</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Summary Card */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Total {reportType}</Text>
+          <Text style={styles.summaryValue}>
+            Rp {(summary.total || summary.totalAsset || summary.totalProfit || summary.totalPurchases || summary.totalPayables || summary.totalReceivables || 0).toLocaleString("id-ID")}
+          </Text>
+        </View>
+
+        {loading ? (
+          <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 20 }} />
+        ) : (
+          <FlatList
+            data={data}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={renderItem}
+            ListHeaderComponent={
+              <View style={styles.listHeader}>
+                <Text style={styles.headerCell}>{reportType === 'STOCK' ? 'Nama' : (reportType === 'PAYABLES' || reportType === 'RECEIVABLES') ? 'Pihak' : 'ID'}</Text>
+                {reportType === 'STOCK' && <Text style={styles.headerCell}>Stok</Text>}
+                <Text style={styles.headerCell}>{(reportType === 'PROFIT' || reportType === 'PAYABLES' || reportType === 'RECEIVABLES') ? 'Nilai' : 'Total'}</Text>
+              </View>
+            }
+            style={styles.list}
+          />
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 

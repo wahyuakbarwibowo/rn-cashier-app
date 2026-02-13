@@ -9,11 +9,13 @@ import {
   Modal,
   Alert,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { 
-  getDigitalProducts, 
-  addDigitalProduct, 
-  updateDigitalProduct, 
+import {
+  getDigitalProducts,
+  addDigitalProduct,
+  updateDigitalProduct,
   deleteDigitalProduct,
   DigitalProductMaster,
   getDigitalCategories,
@@ -87,10 +89,12 @@ export default function DigitalProductsMasterScreen() {
   const handleDeleteCategory = async (id: number) => {
     Alert.alert("Hapus", "Hapus kategori ini?", [
       { text: "Batal", style: "cancel" },
-      { text: "Hapus", style: "destructive", onPress: async () => {
-        await deleteDigitalCategory(id);
-        loadCategories();
-      }}
+      {
+        text: "Hapus", style: "destructive", onPress: async () => {
+          await deleteDigitalCategory(id);
+          loadCategories();
+        }
+      }
     ]);
   };
 
@@ -148,10 +152,11 @@ export default function DigitalProductsMasterScreen() {
   const handleDelete = (id: number) => {
     Alert.alert("Hapus", "Yakin ingin menghapus produk ini?", [
       { text: "Batal", style: "cancel" },
-      { text: "Hapus", style: "destructive", onPress: async () => {
+      {
+        text: "Hapus", style: "destructive", onPress: async () => {
           await deleteDigitalProduct(id);
           loadProducts();
-        } 
+        }
       }
     ]);
   };
@@ -161,8 +166,8 @@ export default function DigitalProductsMasterScreen() {
       <View style={styles.header}>
         <Text style={[styles.title, { marginRight: 10 }]}>📦 Produk Digital</Text>
         <View style={styles.headerBtns}>
-          <TouchableOpacity 
-            style={[styles.addBtn, { backgroundColor: '#3B82F6', marginRight: 8 }]} 
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: '#3B82F6', marginRight: 8 }]}
             onPress={() => {
               setEditingCat(null);
               setNewCatName("");
@@ -213,14 +218,18 @@ export default function DigitalProductsMasterScreen() {
 
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{editingProduct ? "Edit Produk" : "Tambah Produk"}</Text>
-            <ScrollView>
-              <Text style={styles.inputLabel}>Kategori</Text>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1, justifyContent: 'center' }}
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{editingProduct ? "Edit Produk" : "Tambah Produk"}</Text>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>Kategori</Text>
                 <View style={styles.pickerRow}>
                   {categories.map(cat => (
-                    <TouchableOpacity 
-                      key={cat.id} 
+                    <TouchableOpacity
+                      key={cat.id}
                       onPress={() => setCategory(cat.name)}
                       style={[styles.pickerPill, category === cat.name && styles.pickerPillActive]}
                     >
@@ -229,36 +238,37 @@ export default function DigitalProductsMasterScreen() {
                   ))}
                 </View>
 
-              <Text style={styles.inputLabel}>Provider (Misal: Telkomsel, Token PLN)</Text>
-              <TextInput style={styles.input} value={provider} onChangeText={setProvider} placeholder="Masukkan provider" />
+                <Text style={styles.inputLabel}>Provider (Misal: Telkomsel, Token PLN)</Text>
+                <TextInput style={styles.input} value={provider} onChangeText={setProvider} placeholder="Masukkan provider" />
 
-              <Text style={styles.inputLabel}>Nama Produk (Misal: Pulsa 10rb)</Text>
-              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Masukkan nama produk" />
+                <Text style={styles.inputLabel}>Nama Produk (Misal: Pulsa 10rb)</Text>
+                <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Masukkan nama produk" />
 
-              <View style={styles.formRow}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.inputLabel}>Nominal</Text>
-                  <TextInput style={styles.input} value={nominal} onChangeText={setNominal} keyboardType="numeric" placeholder="0" />
+                <View style={styles.formRow}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={styles.inputLabel}>Nominal</Text>
+                    <TextInput style={styles.input} value={nominal} onChangeText={setNominal} keyboardType="numeric" placeholder="0" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.inputLabel}>Harga Modal</Text>
+                    <TextInput style={styles.input} value={costPrice} onChangeText={setCostPrice} keyboardType="numeric" placeholder="0" />
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Harga Modal</Text>
-                  <TextInput style={styles.input} value={costPrice} onChangeText={setCostPrice} keyboardType="numeric" placeholder="0" />
+
+                <Text style={styles.inputLabel}>Harga Jual Otomatis</Text>
+                <TextInput style={styles.input} value={sellingPrice} onChangeText={setSellingPrice} keyboardType="numeric" placeholder="0" />
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={() => setModalVisible(false)}>
+                    <Text style={{ color: '#111827', fontWeight: 'bold' }}>Batal</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
+                    <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Simpan</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
-
-              <Text style={styles.inputLabel}>Harga Jual Otomatis</Text>
-              <TextInput style={styles.input} value={sellingPrice} onChangeText={setSellingPrice} keyboardType="numeric" placeholder="0" />
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={() => setModalVisible(false)}>
-                  <Text style={{ color: '#111827', fontWeight: 'bold' }}>Batal</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
-                  <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Simpan</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -267,21 +277,21 @@ export default function DigitalProductsMasterScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Manajemen Kategori</Text>
-            
+
             <View style={styles.addCatForm}>
               <View style={{ flex: 1 }}>
-                <TextInput 
-                  style={styles.input} 
-                  placeholder="Nama Kategori" 
-                  value={newCatName} 
-                  onChangeText={setNewCatName} 
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nama Kategori"
+                  value={newCatName}
+                  onChangeText={setNewCatName}
                 />
               </View>
-              <TextInput 
-                style={[styles.input, { width: 45, marginLeft: 5 }]} 
-                placeholder="Icon" 
-                value={newCatIcon} 
-                onChangeText={setNewCatIcon} 
+              <TextInput
+                style={[styles.input, { width: 45, marginLeft: 5 }]}
+                placeholder="Icon"
+                value={newCatIcon}
+                onChangeText={setNewCatIcon}
               />
               <TouchableOpacity style={styles.miniAddBtn} onPress={handleAddCategory}>
                 <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>
@@ -312,14 +322,14 @@ export default function DigitalProductsMasterScreen() {
               )}
             />
 
-            <TouchableOpacity 
-              style={{ 
-                backgroundColor: '#111827', 
-                padding: 16, 
-                borderRadius: 12, 
-                alignItems: 'center', 
-                marginTop: 20 
-              }} 
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#111827',
+                padding: 16,
+                borderRadius: 12,
+                alignItems: 'center',
+                marginTop: 20
+              }}
               onPress={() => setCatModalVisible(false)}
             >
               <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>Tutup</Text>
@@ -365,7 +375,7 @@ const styles = StyleSheet.create({
   btn: { flex: 1, padding: 16, borderRadius: 12, alignItems: 'center' },
   cancelBtn: { backgroundColor: '#F3F4F6' },
   saveBtn: { backgroundColor: '#111827' },
-  
+
   addCatForm: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 16 },
   miniAddBtn: { backgroundColor: '#10B981', height: 45, borderRadius: 10, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 15 },
   catItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },

@@ -9,6 +9,8 @@ import {
   Alert,
   Modal,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { getExpenses, addExpense, deleteExpense, Expense } from "../database/expenses";
@@ -120,71 +122,76 @@ export default function ExpensesScreen() {
 
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Catat Pengeluaran Baru</Text>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ width: '100%' }}
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Catat Pengeluaran Baru</Text>
 
-            <Text style={styles.label}>Kategori</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
-              {categories.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.catPill,
-                    category === cat && styles.activeCatPill,
-                  ]}
-                  onPress={() => setCategory(cat)}
-                >
-                  <Text
+              <Text style={styles.label}>Kategori</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+                {categories.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
                     style={[
-                      styles.catPillText,
-                      category === cat && styles.activeCatPillText,
+                      styles.catPill,
+                      category === cat && styles.activeCatPill,
                     ]}
+                    onPress={() => setCategory(cat)}
                   >
-                    {cat}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.catPillText,
+                        category === cat && styles.activeCatPillText,
+                      ]}
+                    >
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <TextInput
+                placeholder="Atau ketik kategori baru..."
+                value={category}
+                onChangeText={setCategory}
+                style={styles.input}
+              />
+
+              <Text style={styles.label}>Jumlah (Rp)</Text>
+              <TextInput
+                placeholder="0"
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="numeric"
+                style={styles.input}
+              />
+
+              <Text style={styles.label}>Catatan (Opsional)</Text>
+              <TextInput
+                placeholder="Misal: Bayar listrik Januari"
+                value={notes}
+                onChangeText={setNotes}
+                style={styles.input}
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.cancelBtnText}>Batal</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <TextInput
-              placeholder="Atau ketik kategori baru..."
-              value={category}
-              onChangeText={setCategory}
-              style={styles.input}
-            />
-
-            <Text style={styles.label}>Jumlah (Rp)</Text>
-            <TextInput
-              placeholder="0"
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-              style={styles.input}
-            />
-
-            <Text style={styles.label}>Catatan (Opsional)</Text>
-            <TextInput
-              placeholder="Misal: Bayar listrik Januari"
-              value={notes}
-              onChangeText={setNotes}
-              style={styles.input}
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelBtnText}>Batal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.saveBtn}
-                onPress={handleAddExpense}
-              >
-                <Text style={styles.saveBtnText}>Simpan</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.saveBtn}
+                  onPress={handleAddExpense}
+                >
+                  <Text style={styles.saveBtnText}>Simpan</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>

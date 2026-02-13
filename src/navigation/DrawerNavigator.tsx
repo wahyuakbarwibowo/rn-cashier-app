@@ -37,96 +37,107 @@ import { getShopProfile } from "../database/settings";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
+// Move components outside and use React.memo to prevent unnecessary re-renders
+const MenuItem = React.memo(({ name, label, icon, focused, onNavigate }: {
+  name: string,
+  label: string,
+  icon: string,
+  focused: boolean,
+  onNavigate: (name: string) => void
+}) => (
+  <DrawerItem
+    label={`${icon}  ${label}`}
+    focused={focused}
+    onPress={() => onNavigate(name)}
+    activeTintColor="#E11D48" // Rose 600
+    inactiveTintColor="#64748b" // Slate 500
+    activeBackgroundColor="#FFF1F2" // Rose 50
+    labelStyle={[styles.drawerLabel, { fontWeight: focused ? '700' : '500' }]}
+    style={styles.drawerItem}
+  />
+));
+
+const SectionHeader = React.memo(({ title }: { title: string }) => (
+  <View style={styles.sectionHeader}>
+    <Text style={styles.sectionHeaderText}>{title}</Text>
+  </View>
+));
+
 function CustomDrawerContent(props: any) {
   const { state, navigation } = props;
-  const drawerStatus = useDrawerStatus();
-  const [shopProfile, setShopProfile] = useState<{ name: string; cashier_name: string }>({
+  const [shopProfile, setShopProfile] = useState<{ name: string, cashier_name: string }>({
     name: "AMINMART",
     cashier_name: "Sistem Kasir"
   });
 
+  // Load profile only once or when focused, rather than on every drawer status change
   useEffect(() => {
-    if (drawerStatus === 'open') {
-      loadProfile();
-    }
-  }, [drawerStatus]);
-
-  useEffect(() => {
+    let isMounted = true;
+    const loadProfile = async () => {
+      const profile = await getShopProfile();
+      if (profile && isMounted) {
+        setShopProfile({
+          name: profile.name || "KASIR KU",
+          cashier_name: profile.cashier_name || "Kasir"
+        });
+      }
+    };
     loadProfile();
+    return () => { isMounted = false; };
   }, []);
 
-  const loadProfile = async () => {
-    const profile = await getShopProfile();
-    if (profile) {
-      setShopProfile({
-        name: profile.name || "KASIR KU",
-        cashier_name: profile.cashier_name || "Kasir"
-      });
-    }
-  };
+  const currentRouteName = state.routes[state.index].name;
 
-  const isActive = (routeName: string) => {
-    return state.routes[state.index].name === routeName;
-  };
-
-  const MenuItem = ({ name, label, icon }: { name: string, label: string, icon: string }) => (
-    <DrawerItem
-      label={`${icon}  ${label}`}
-      focused={isActive(name)}
-      onPress={() => navigation.navigate(name)}
-      activeTintColor="#E11D48" // Rose 600
-      inactiveTintColor="#64748b" // Slate 500
-      activeBackgroundColor="#FFF1F2" // Rose 50
-      labelStyle={[styles.drawerLabel, { fontWeight: isActive(name) ? '700' : '500' }]}
-      style={styles.drawerItem}
-    />
-  );
-
-  const SectionHeader = ({ title }: { title: string }) => (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionHeaderText}>{title}</Text>
-    </View>
-  );
+  // Memoized navigation handler
+  const handleNavigate = React.useCallback((name: string) => {
+    navigation.navigate(name);
+  }, [navigation]);
 
   return (
-    <DrawerContentScrollView {...props} style={styles.drawerScroll}>
+    <DrawerContentScrollView {...props} style={styles.drawerScroll} scrollEnabled={true}>
       <View style={styles.drawerHeader}>
         <Text style={styles.drawerBrand} numberOfLines={1}>{shopProfile.name}</Text>
         <Text style={styles.drawerTagline} numberOfLines={1}>{shopProfile.cashier_name}</Text>
       </View>
 
-      <MenuItem name="Dashboard" label="Dashboard" icon="🏠" />
+      <MenuItem
+        name="Dashboard"
+        label="Dashboard"
+        icon="🏠"
+        focused={currentRouteName === "Dashboard"}
+        onNavigate={handleNavigate}
+      />
 
       <SectionHeader title="TRANSAKSI UTAMA" />
-      <MenuItem name="SalesTransaction" label="Transaksi Kasir" icon="🛒" />
-      <MenuItem name="SalesHistory" label="Riwayat Kasir" icon="🕒" />
-      <MenuItem name="Pulsa" label="Transaksi Digital" icon="✨" />
-      <MenuItem name="DigitalHistory" label="Riwayat Digital" icon="📜" />
+      <MenuItem name="SalesTransaction" label="Transaksi Kasir" icon="🛒" focused={currentRouteName === "SalesTransaction"} onNavigate={handleNavigate} />
+      <MenuItem name="SalesHistory" label="Riwayat Kasir" icon="🕒" focused={currentRouteName === "SalesHistory"} onNavigate={handleNavigate} />
+      <MenuItem name="Pulsa" label="Transaksi Digital" icon="✨" focused={currentRouteName === "Pulsa"} onNavigate={handleNavigate} />
+      <MenuItem name="DigitalHistory" label="Riwayat Digital" icon="📜" focused={currentRouteName === "DigitalHistory"} onNavigate={handleNavigate} />
 
       <SectionHeader title="MANAJEMEN STOK" />
-      <MenuItem name="Product" label="Gudang Barang" icon="📦" />
-      <MenuItem name="PurchaseForm" label="Barang Masuk" icon="📥" />
-      <MenuItem name="LowStock" label="Stok Tipis (Alert)" icon="⚠️" />
-      <MenuItem name="DigitalProductsMaster" label="Gudang Digital" icon="✨" />
-      <MenuItem name="DigitalCategoriesMaster" label="Kategori Digital" icon="📁" />
+      <MenuItem name="Product" label="Gudang Barang" icon="📦" focused={currentRouteName === "Product"} onNavigate={handleNavigate} />
+      <MenuItem name="PurchaseForm" label="Barang Masuk" icon="📥" focused={currentRouteName === "PurchaseForm"} onNavigate={handleNavigate} />
+      <MenuItem name="LowStock" label="Stok Tipis (Alert)" icon="⚠️" focused={currentRouteName === "LowStock"} onNavigate={handleNavigate} />
+      <MenuItem name="DigitalProductsMaster" label="Gudang Digital" icon="✨" focused={currentRouteName === "DigitalProductsMaster"} onNavigate={handleNavigate} />
+      <MenuItem name="DigitalCategoriesMaster" label="Kategori Digital" icon="📁" focused={currentRouteName === "DigitalCategoriesMaster"} onNavigate={handleNavigate} />
 
       <SectionHeader title="Informasi Pelanggan & Supplier" />
-      <MenuItem name="Customers" label="Daftar Pelanggan" icon="👥" />
-      <MenuItem name="Suppliers" label="Master Supplier" icon="🏭" />
-      <MenuItem name="Receivables" label="Piutang Pelanggan" icon="💰" />
-      <MenuItem name="Payables" label="Hutang Supplier" icon="💸" />
+      <MenuItem name="Customers" label="Daftar Pelanggan" icon="👥" focused={currentRouteName === "Customers"} onNavigate={handleNavigate} />
+      <MenuItem name="Suppliers" label="Master Supplier" icon="🏭" focused={currentRouteName === "Suppliers"} onNavigate={handleNavigate} />
+      <MenuItem name="Receivables" label="Piutang Pelanggan" icon="💰" focused={currentRouteName === "Receivables"} onNavigate={handleNavigate} />
+      <MenuItem name="Payables" label="Hutang Supplier" icon="💸" focused={currentRouteName === "Payables"} onNavigate={handleNavigate} />
 
       <SectionHeader title="LAPORAN & GRAFIK" />
-      <MenuItem name="Reports" label="Laporan Penjualan" icon="📊" />
-      <MenuItem name="ProfitLoss" label="Laba Rugi" icon="📈" />
-      <MenuItem name="TopProducts" label="Produk Terlaris" icon="🏆" />
-      <MenuItem name="DigitalReports" label="Laporan Laba Digital" icon="📈" />
-      <MenuItem name="Expenses" label="Pengeluaran (Operasional)" icon="💸" />
+      <MenuItem name="Reports" label="Laporan Penjualan" icon="📊" focused={currentRouteName === "Reports"} onNavigate={handleNavigate} />
+      <MenuItem name="ProfitLoss" label="Laba Rugi" icon="📈" focused={currentRouteName === "ProfitLoss"} onNavigate={handleNavigate} />
+      <MenuItem name="TopProducts" label="Produk Terlaris" icon="🏆" focused={currentRouteName === "TopProducts"} onNavigate={handleNavigate} />
+      <MenuItem name="DigitalReports" label="Laporan Laba Digital" icon="📈" focused={currentRouteName === "DigitalReports"} onNavigate={handleNavigate} />
+      <MenuItem name="Expenses" label="Pengeluaran (Operasional)" icon="💸" focused={currentRouteName === "Expenses"} onNavigate={handleNavigate} />
 
       <SectionHeader title="PENGATURAN" />
-      <MenuItem name="PaymentMethods" label="Cara Bayar" icon="💳" />
-      <MenuItem name="Settings" label="Pengaturan Toko" icon="⚙️" />
-      <MenuItem name="Backup" label="Backup & Restore" icon="💾" />
+      <MenuItem name="PaymentMethods" label="Cara Bayar" icon="💳" focused={currentRouteName === "PaymentMethods"} onNavigate={handleNavigate} />
+      <MenuItem name="Settings" label="Pengaturan Toko" icon="⚙️" focused={currentRouteName === "Settings"} onNavigate={handleNavigate} />
+      <MenuItem name="Backup" label="Backup & Restore" icon="💾" focused={currentRouteName === "Backup"} onNavigate={handleNavigate} />
 
       <View style={{ height: 20 }} />
     </DrawerContentScrollView>

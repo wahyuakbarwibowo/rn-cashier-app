@@ -9,6 +9,8 @@ import {
   Alert,
   Modal,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import BarcodeScannerModal from "../components/BarcodeScannerModal";
@@ -270,135 +272,135 @@ export default function ProductsScreen({ navigation }: Props) {
       style={{ flex: 1 }}
     >
       <View style={styles.container}>
-      <Text style={styles.header}>Katalog Produk</Text>
+        <Text style={styles.header}>Katalog Produk</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          {editId ? "Edit Produk" : "Tambah Produk"}
-        </Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            {editId ? "Edit Produk" : "Tambah Produk"}
+          </Text>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.row}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.row}>
+              <TextInput
+                placeholder="Kode (Scan)"
+                value={formData.code}
+                onChangeText={(v) => updateField("code", v)}
+                style={[styles.input, styles.flexInput, { marginBottom: 0 }]}
+              />
+              <TouchableOpacity
+                style={[styles.scanBtn, { backgroundColor: '#10B981', marginRight: 8 }]}
+                onPress={generateRandomCode}
+              >
+                <Text style={styles.scanBtnText}>Buat</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.scanBtn} onPress={startScan}>
+                <Text style={styles.scanBtnText}>Scan</Text>
+              </TouchableOpacity>
+            </View>
+
             <TextInput
-              placeholder="Kode (Scan)"
-              value={formData.code}
-              onChangeText={(v) => updateField("code", v)}
-              style={[styles.input, styles.flexInput, { marginBottom: 0 }]}
+              placeholder="Nama produk"
+              value={formData.name}
+              onChangeText={(v) => updateField("name", v)}
+              style={styles.input}
             />
-            <TouchableOpacity
-              style={[styles.scanBtn, { backgroundColor: '#10B981', marginRight: 8 }]}
-              onPress={generateRandomCode}
-            >
-              <Text style={styles.scanBtnText}>Buat</Text>
+
+            <TextInput
+              placeholder="Stok"
+              value={formData.stock}
+              onChangeText={(v) => updateField("stock", v)}
+              keyboardType="numeric"
+              style={styles.input}
+            />
+
+            <Text style={styles.subTitle}>Harga Beli</Text>
+            <View style={styles.row}>
+              <TextInput
+                placeholder="Satuan"
+                value={formData.purchasePrice}
+                onChangeText={(v) => updateField("purchasePrice", v)}
+                keyboardType="numeric"
+                style={[styles.input, styles.flexInput]}
+              />
+              <TextInput
+                placeholder="Paket"
+                value={formData.purchasePackagePrice}
+                onChangeText={(v) => updateField("purchasePackagePrice", v)}
+                keyboardType="numeric"
+                style={[styles.input, styles.flexInput]}
+              />
+              <TextInput
+                placeholder="Isi"
+                value={formData.purchasePackageQty}
+                onChangeText={(v) => updateField("purchasePackageQty", v)}
+                keyboardType="numeric"
+                style={[styles.input, styles.qtyInput]}
+              />
+            </View>
+
+            <Text style={styles.subTitle}>Harga Jual</Text>
+            <View style={styles.row}>
+              <TextInput
+                placeholder="Satuan"
+                value={formData.sellingPrice}
+                onChangeText={(v) => updateField("sellingPrice", v)}
+                keyboardType="numeric"
+                style={[styles.input, styles.flexInput]}
+              />
+              <TextInput
+                placeholder="Paket"
+                value={formData.packagePrice}
+                onChangeText={(v) => updateField("packagePrice", v)}
+                keyboardType="numeric"
+                style={[styles.input, styles.flexInput]}
+              />
+              <TextInput
+                placeholder="Isi"
+                value={formData.packageQty}
+                onChangeText={(v) => updateField("packageQty", v)}
+                keyboardType="numeric"
+                style={[styles.input, styles.qtyInput]}
+              />
+            </View>
+
+            <TextInput
+              placeholder="Diskon (%)"
+              value={formData.discount}
+              onChangeText={(v) => updateField("discount", v)}
+              keyboardType="numeric"
+              style={styles.input}
+            />
+
+            <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
+              <Text style={styles.primaryButtonText}>
+                {editId ? "Update" : "Simpan"}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.scanBtn} onPress={startScan}>
-              <Text style={styles.scanBtnText}>Scan</Text>
-            </TouchableOpacity>
-          </View>
 
-          <TextInput
-            placeholder="Nama produk"
-            value={formData.name}
-            onChangeText={(v) => updateField("name", v)}
-            style={styles.input}
-          />
+            {editId && (
+              <TouchableOpacity
+                style={[styles.secondaryButton, styles.cancelButton]}
+                onPress={resetForm}
+              >
+                <Text style={styles.secondaryButtonText}>Batal</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        </View>
 
-          <TextInput
-            placeholder="Stok"
-            value={formData.stock}
-            onChangeText={(v) => updateField("stock", v)}
-            keyboardType="numeric"
-            style={styles.input}
-          />
+        <FlatList
+          data={products}
+          keyExtractor={(item) => item.id?.toString() ?? ""}
+          contentContainerStyle={styles.listContent}
+          renderItem={renderProductItem}
+        />
 
-          <Text style={styles.subTitle}>Harga Beli</Text>
-          <View style={styles.row}>
-            <TextInput
-              placeholder="Satuan"
-              value={formData.purchasePrice}
-              onChangeText={(v) => updateField("purchasePrice", v)}
-              keyboardType="numeric"
-              style={[styles.input, styles.flexInput]}
-            />
-            <TextInput
-              placeholder="Paket"
-              value={formData.purchasePackagePrice}
-              onChangeText={(v) => updateField("purchasePackagePrice", v)}
-              keyboardType="numeric"
-              style={[styles.input, styles.flexInput]}
-            />
-            <TextInput
-              placeholder="Isi"
-              value={formData.purchasePackageQty}
-              onChangeText={(v) => updateField("purchasePackageQty", v)}
-              keyboardType="numeric"
-              style={[styles.input, styles.qtyInput]}
-            />
-          </View>
-
-          <Text style={styles.subTitle}>Harga Jual</Text>
-          <View style={styles.row}>
-            <TextInput
-              placeholder="Satuan"
-              value={formData.sellingPrice}
-              onChangeText={(v) => updateField("sellingPrice", v)}
-              keyboardType="numeric"
-              style={[styles.input, styles.flexInput]}
-            />
-            <TextInput
-              placeholder="Paket"
-              value={formData.packagePrice}
-              onChangeText={(v) => updateField("packagePrice", v)}
-              keyboardType="numeric"
-              style={[styles.input, styles.flexInput]}
-            />
-            <TextInput
-              placeholder="Isi"
-              value={formData.packageQty}
-              onChangeText={(v) => updateField("packageQty", v)}
-              keyboardType="numeric"
-              style={[styles.input, styles.qtyInput]}
-            />
-          </View>
-
-          <TextInput
-            placeholder="Diskon (%)"
-            value={formData.discount}
-            onChangeText={(v) => updateField("discount", v)}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-
-          <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
-            <Text style={styles.primaryButtonText}>
-              {editId ? "Update" : "Simpan"}
-            </Text>
-          </TouchableOpacity>
-
-          {editId && (
-            <TouchableOpacity
-              style={[styles.secondaryButton, styles.cancelButton]}
-              onPress={resetForm}
-            >
-              <Text style={styles.secondaryButtonText}>Batal</Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
+        <BarcodeScannerModal
+          visible={isScanning}
+          onScanned={handleBarcodeScanned}
+          onClose={closeScan}
+        />
       </View>
-
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id?.toString() ?? ""}
-        contentContainerStyle={styles.listContent}
-        renderItem={renderProductItem}
-      />
-
-      <BarcodeScannerModal
-        visible={isScanning}
-        onScanned={handleBarcodeScanned}
-        onClose={closeScan}
-      />
-    </View>
     </KeyboardAvoidingView>
   );
 }

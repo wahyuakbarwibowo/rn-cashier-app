@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { getSuppliers, addSupplier, updateSupplier, deleteSupplier } from "../database/suppliers";
 import { Supplier } from "../types/supplier";
@@ -87,67 +89,72 @@ export default function SuppliersScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>🏭 Master Supplier</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <Text style={styles.header}>🏭 Master Supplier</Text>
 
-      <View style={styles.card}>
-        <TextInput
-          style={styles.input}
-          placeholder="Nama Supplier"
-          value={name}
-          onChangeText={setName}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Nomor Telepon"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Alamat (Opsional)"
-          value={address}
-          onChangeText={setAddress}
-        />
-        <View style={styles.row}>
-          <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
-            <Text style={styles.btnText}>{editId ? "Update" : "Simpan"}</Text>
-          </TouchableOpacity>
-          {editId && (
-            <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={resetForm}>
-              <Text style={styles.btnText}>Batal</Text>
+        <View style={styles.card}>
+          <TextInput
+            style={styles.input}
+            placeholder="Nama Supplier"
+            value={name}
+            onChangeText={setName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Nomor Telepon"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Alamat (Opsional)"
+            value={address}
+            onChangeText={setAddress}
+          />
+          <View style={styles.row}>
+            <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
+              <Text style={styles.btnText}>{editId ? "Update" : "Simpan"}</Text>
             </TouchableOpacity>
-          )}
+            {editId && (
+              <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={resetForm}>
+                <Text style={styles.btnText}>Batal</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 20 }} />
-      ) : (
-        <FlatList
-          data={suppliers}
-          keyExtractor={(item) => item.id!.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.supplierItem}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.supplierName}>{item.name}</Text>
-                <Text style={styles.supplierPhone}>{item.phone || "-"}</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 20 }} />
+        ) : (
+          <FlatList
+            data={suppliers}
+            keyExtractor={(item) => item.id!.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.supplierItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.supplierName}>{item.name}</Text>
+                  <Text style={styles.supplierPhone}>{item.phone || "-"}</Text>
+                </View>
+                <View style={styles.actions}>
+                  <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionBtn}>
+                    <Text style={{ color: "#3B82F6" }}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item.id!)} style={styles.actionBtn}>
+                    <Text style={{ color: "#EF4444" }}>Hapus</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.actions}>
-                <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionBtn}>
-                  <Text style={{ color: "#3B82F6" }}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(item.id!)} style={styles.actionBtn}>
-                  <Text style={{ color: "#EF4444" }}>Hapus</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          ListEmptyComponent={<Text style={styles.emptyText}>Belum ada data supplier</Text>}
-        />
-      )}
-    </View>
+            )}
+            ListEmptyComponent={<Text style={styles.emptyText}>Belum ada data supplier</Text>}
+          />
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
