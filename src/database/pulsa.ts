@@ -38,11 +38,11 @@ export const getDigitalTransactions = async (startDate?: string, endDate?: strin
   return await db.getAllAsync<DigitalTransaction>(query, params);
 };
 
-export const addDigitalTransaction = async (trx: Omit<DigitalTransaction, "id" | "created_at">): Promise<number> => {
+export const addDigitalTransaction = async (trx: Omit<DigitalTransaction, "id">): Promise<number> => {
   const db = await getDB();
   const result = await db.runAsync(
     `INSERT INTO phone_history (category, phone_number, customer_name, provider, amount, cost_price, selling_price, profit, notes, created_at) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       trx.category,
       trx.phone_number,
@@ -52,10 +52,36 @@ export const addDigitalTransaction = async (trx: Omit<DigitalTransaction, "id" |
       trx.cost_price,
       trx.selling_price,
       trx.profit,
-      trx.notes || null
+      trx.notes || null,
+      trx.created_at || new Date().toISOString()
     ]
   );
   return result.lastInsertRowId;
+};
+
+export const updateDigitalTransaction = async (id: number, trx: Partial<DigitalTransaction>): Promise<void> => {
+  const db = await getDB();
+  const sets: string[] = [];
+  const params: any[] = [];
+
+  if (trx.category) { sets.push("category = ?"); params.push(trx.category); }
+  if (trx.phone_number) { sets.push("phone_number = ?"); params.push(trx.phone_number); }
+  if (trx.customer_name !== undefined) { sets.push("customer_name = ?"); params.push(trx.customer_name); }
+  if (trx.provider) { sets.push("provider = ?"); params.push(trx.provider); }
+  if (trx.amount !== undefined) { sets.push("amount = ?"); params.push(trx.amount); }
+  if (trx.cost_price !== undefined) { sets.push("cost_price = ?"); params.push(trx.cost_price); }
+  if (trx.selling_price !== undefined) { sets.push("selling_price = ?"); params.push(trx.selling_price); }
+  if (trx.profit !== undefined) { sets.push("profit = ?"); params.push(trx.profit); }
+  if (trx.notes !== undefined) { sets.push("notes = ?"); params.push(trx.notes); }
+  if (trx.created_at) { sets.push("created_at = ?"); params.push(trx.created_at); }
+
+  if (sets.length === 0) return;
+
+  params.push(id);
+  await db.runAsync(
+    `UPDATE phone_history SET ${sets.join(", ")} WHERE id = ?`,
+    params
+  );
 };
 
 // Keep old names for compatibility during migration

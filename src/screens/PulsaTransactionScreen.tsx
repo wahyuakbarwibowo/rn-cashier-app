@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { addDigitalTransaction, getRecentNumbers, DigitalTransaction } from "../database/pulsa";
+import { addDigitalTransaction, updateDigitalTransaction, getRecentNumbers, DigitalTransaction } from "../database/pulsa";
 import {
   getDigitalProducts,
   DigitalProductMaster,
@@ -20,10 +20,12 @@ import {
   DigitalCategory,
   getDistinctProvidersByCategory
 } from "../database/digital_products";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 export default function PulsaTransactionScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const [editTrxId, setEditTrxId] = useState<number | null>(null);
   const [categories, setCategories] = useState<DigitalCategory[]>([]);
   const [category, setCategory] = useState<string>("PULSA");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -34,6 +36,7 @@ export default function PulsaTransactionScreen() {
   const [costPrice, setCostPrice] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
   const [notes, setNotes] = useState("");
+  const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
   const [history, setHistory] = useState<{ phone_number: string, customer_name: string }[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
@@ -43,7 +46,23 @@ export default function PulsaTransactionScreen() {
   useEffect(() => {
     loadCategories();
     loadHistory();
-  }, []);
+
+    if (route.params?.editTrx) {
+      const etrx = route.params.editTrx;
+      setEditTrxId(etrx.id);
+      setCategory(etrx.category);
+      setPhoneNumber(etrx.phone_number);
+      setCustomerName(etrx.customer_name || "");
+      setProvider(etrx.provider);
+      setAmount(etrx.amount.toString());
+      setCostPrice(etrx.cost_price.toString());
+      setSellingPrice(etrx.selling_price.toString());
+      setNotes(etrx.notes || "");
+      if (etrx.created_at) {
+        setTransactionDate(etrx.created_at.split(' ')[0] || etrx.created_at.split('T')[0]);
+      }
+    }
+  }, [route.params?.editTrx]);
 
   useEffect(() => {
     if (category) {
@@ -61,7 +80,7 @@ export default function PulsaTransactionScreen() {
 
   const loadProviders = async () => {
     const data = await getDistinctProvidersByCategory(category);
-    setProviders(data.map(d => d.provider));
+    setProviders(data.map((d: any) => d.provider));
   };
 
   useEffect(() => {
@@ -99,48 +118,51 @@ export default function PulsaTransactionScreen() {
     const profitValue = sellValue - costValue;
 
     try {
-      const result = await addDigitalTransaction({
-        category,
-        phone_number: phoneNumber,
-        customer_name: customerName,
-        provider: provider || category,
-        amount: parseFloat(amount),
-        cost_price: costValue,
-        selling_price: sellValue,
-        profit: profitValue,
-        notes,
-      });
+      if (editTrxId) {
+        await updateDigitalTransaction(editTrxId, {
+          category,
+          phone_number: phoneNumber,
+          customer_name: customerName,
+          provider,
+          amount: parseFloat(amount),
+          cost_price: costValue,
+          selling_price: sellValue,
+          profit: profitValue,
+          notes,
+          created_at: transactionDate + " " + new Date().toLocaleTimeString('en-GB')
+        });
+        Alert.alert("Sukses", "Transaksi berhasil diperbarui");
+      } else {
+        await addDigitalTransaction({
+          category,
+          phone_number: phoneNumber,
+          customer_name: customerName,
+          provider: provider,
+          amount: parseFloat(amount),
+          cost_price: costValue,
+          selling_price: sellValue,
+          profit: profitValue,
+          notes: notes,
+          created_at: transactionDate + " " + new Date().toLocaleTimeString('en-GB')
+        });
+        Alert.alert("Sukses", "Transaksi berhasil disimpan");
+      }
 
-      Alert.alert("Sukses", `Transaksi ${category} Berhasil Dicatat`, [
-        {
-          text: "OK", onPress: () => {
-            const id = result; // The ID returned from addDigitalTransaction
-            resetForm();
-            loadHistory();
-            navigation.navigate("DigitalDetail", { trxId: id });
-          }
-        }
-      ]);
+      if (!editTrxId) {
+        setPhoneNumber("");
+        setCustomerName("");
+        setAmount("");
+        setCostPrice("");
+        setSellingPrice("");
+        setNotes("");
+      } else {
+        navigation.goBack();
+      }
+      loadHistory();
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Gagal mencatat transaksi");
+      Alert.alert("Error", "Gagal menyimpan transaksi");
     }
-  };
-
-  const resetForm = () => {
-    setPhoneNumber("");
-    setCustomerName("");
-    setProvider("");
-    setAmount("");
-    setCostPrice("");
-    setSellingPrice("");
-    setNotes("");
-  };
-
-  const selectFromHistory = (item: { phone_number: string, customer_name: string }) => {
-    setPhoneNumber(item.phone_number);
-    setCustomerName(item.customer_name || "");
-    setShowHistoryModal(false);
   };
 
   return (
@@ -201,6 +223,14 @@ export default function PulsaTransactionScreen() {
             </TouchableOpacity>
           </View>
 
+          <Text style={styles.label}>Tanggal Transaksi</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="YYYY-MM-DD"
+            value={transactionDate}
+            onChangeText={setTransactionDate}
+          />
+
           <Text style={styles.label}>Nama Pelanggan (Opsional)</Text>
           <TextInput
             style={styles.input}
@@ -251,10 +281,10 @@ export default function PulsaTransactionScreen() {
             </View>
           )}
 
-          <Text style={styles.label}>Nominal Transaksi</Text>
+          <Text style={styles.label}>Nominal / Item</Text>
           <TextInput
             style={styles.input}
-            placeholder="Contoh: 50000"
+            placeholder="Contoh: 10000"
             value={amount}
             onChangeText={setAmount}
             keyboardType="numeric"
@@ -265,93 +295,105 @@ export default function PulsaTransactionScreen() {
               <Text style={styles.label}>Harga Modal</Text>
               <TextInput
                 style={styles.input}
+                placeholder="0"
                 value={costPrice}
                 onChangeText={setCostPrice}
                 keyboardType="numeric"
-                placeholder="0"
               />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Harga Jual</Text>
               <TextInput
                 style={styles.input}
+                placeholder="0"
                 value={sellingPrice}
                 onChangeText={setSellingPrice}
                 keyboardType="numeric"
-                placeholder="0"
               />
             </View>
           </View>
 
-          <Text style={styles.label}>Catatan / Token / Ref (Opsional)</Text>
+          <Text style={styles.label}>Catatan (Opsional)</Text>
           <TextInput
-            style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-            placeholder="Masukkan kode token atau catatan lainnya"
+            style={styles.input}
+            placeholder="Contoh: Token Listrik"
             value={notes}
             onChangeText={setNotes}
-            multiline
           />
 
-          <TouchableOpacity style={styles.buyBtn} onPress={handleTransaction}>
-            <Text style={styles.buyBtnText}>Proses {category}</Text>
+          <TouchableOpacity style={styles.btn} onPress={handleTransaction}>
+            <Text style={styles.btnText}>{editTrxId ? "Update Transaksi" : "Proses Transaksi"}</Text>
           </TouchableOpacity>
-        </View>
 
+          {editTrxId && (
+            <TouchableOpacity
+              style={[styles.btn, { backgroundColor: "#6B7280", marginTop: 10 }]}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.btnText}>Batal</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </ScrollView>
 
-      {/* Provider Modal */}
-      <Modal visible={showProviderModal} transparent animationType="fade">
+      {/* Provider List Modal */}
+      <Modal visible={showProviderModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: "70%" }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Pilih Provider {category}</Text>
-              <TouchableOpacity onPress={() => setShowProviderModal(false)}>
-                <Text style={styles.closeText}>✕</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Pilih Provider / Operator</Text>
             <FlatList
-              data={providers}
+              data={[...providers, "Lainnya"]}
               keyExtractor={(item) => item}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.selectListItem, provider === item && styles.activeListItem]}
+                  style={styles.providerItem}
                   onPress={() => {
                     setProvider(item);
                     setShowProviderModal(false);
                   }}
                 >
-                  <Text style={[styles.selectListItemText, provider === item && styles.activeListItemText]}>{item}</Text>
-                  {provider === item && <Text style={styles.checkIcon}>✓</Text>}
+                  <Text style={styles.providerText}>{item}</Text>
                 </TouchableOpacity>
               )}
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>Tidak ada daftar provider untuk kategori ini</Text>
-              }
             />
+            <TouchableOpacity
+              style={styles.closeModalBtn}
+              onPress={() => setShowProviderModal(false)}
+            >
+              <Text style={styles.closeModalBtnText}>Tutup</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
       {/* History Modal */}
-      <Modal visible={showHistoryModal} transparent animationType="slide">
+      <Modal visible={showHistoryModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Riwayat Terakhir</Text>
+            <Text style={styles.modalTitle}>Nomor Terakhir</Text>
             <FlatList
               data={history}
-              keyExtractor={(item, index) => `${item.phone_number}-${index}`}
+              keyExtractor={(item, index) => index.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.historyItem}
-                  onPress={() => selectFromHistory(item)}
+                  style={styles.providerItem}
+                  onPress={() => {
+                    setPhoneNumber(item.phone_number);
+                    if (item.customer_name) setCustomerName(item.customer_name);
+                    setShowHistoryModal(false);
+                  }}
                 >
-                  <Text style={styles.historyItemText}>{item.phone_number}</Text>
-                  {item.customer_name && <Text style={styles.historyItemSub}>{item.customer_name}</Text>}
+                  <Text style={styles.providerText}>{item.phone_number}</Text>
+                  {item.customer_name && <Text style={{ color: "#6B7280", fontSize: 12 }}>{item.customer_name}</Text>}
                 </TouchableOpacity>
               )}
+              ListEmptyComponent={<Text style={{ textAlign: "center", color: "#9CA3AF" }}>Belum ada riwayat nomor</Text>}
             />
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowHistoryModal(false)}>
-              <Text style={{ color: "#FFF", fontWeight: "bold" }}>Tutup</Text>
+            <TouchableOpacity
+              style={styles.closeModalBtn}
+              onPress={() => setShowHistoryModal(false)}
+            >
+              <Text style={styles.closeModalBtnText}>Tutup</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -361,77 +403,40 @@ export default function PulsaTransactionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F3F4F6", padding: 16 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  header: { fontSize: 24, fontWeight: "bold", color: "#111827" },
-  historyNavBtn: { backgroundColor: "#EFF6FF", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: "#BFDBFE" },
-  historyNavBtnText: { color: "#1D4ED8", fontWeight: "600" },
-
-  categoryScroll: { marginBottom: 20 },
-  categoryCard: { backgroundColor: "#FFF", padding: 12, borderRadius: 12, marginRight: 10, alignItems: 'center', minWidth: 80, borderWidth: 1, borderColor: "#E5E7EB" },
-  activeCategoryCard: { backgroundColor: "#111827", borderColor: "#111827" },
-  categoryIcon: { fontSize: 20, marginBottom: 4 },
-  categoryLabel: { fontSize: 11, fontWeight: "bold", color: "#6B7280" },
+  container: { flex: 1, backgroundColor: "#F9FAFB" },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20 },
+  header: { fontSize: 22, fontWeight: "bold", color: "#111827" },
+  historyNavBtn: { backgroundColor: "#FFF", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB" },
+  historyNavBtnText: { fontSize: 13, fontWeight: "600", color: "#374151" },
+  categoryScroll: { paddingHorizontal: 20, marginBottom: 16 },
+  categoryCard: { backgroundColor: "#FFF", padding: 12, borderRadius: 16, marginRight: 12, alignItems: "center", minWidth: 80, borderWidth: 1, borderColor: "#E5E7EB" },
+  activeCategoryCard: { backgroundColor: "#3B82F6", borderColor: "#3B82F6" },
+  categoryIcon: { fontSize: 24, marginBottom: 4 },
+  categoryLabel: { fontSize: 12, fontWeight: "bold", color: "#374151" },
   activeCategoryLabel: { color: "#FFF" },
-
-  card: { backgroundColor: "#FFF", padding: 20, borderRadius: 16, elevation: 4, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 10 },
-  row: { flexDirection: "row", alignItems: "flex-end", marginBottom: 0 },
-  input: { backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, padding: 12, marginBottom: 12, fontSize: 15 },
-  label: { fontSize: 13, fontWeight: "600", marginBottom: 6, color: "#4B5563" },
-  providerScroll: { marginBottom: 16 },
-  providerPill: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#F3F4F6", borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: "#E5E7EB" },
-  activePill: { backgroundColor: "#3B82F6", borderColor: "#3B82F6" },
-  pillText: { color: "#4B5563", fontWeight: "600" },
-  activePillText: { color: "#FFF" },
-  historyBtn: { backgroundColor: "#111827", padding: 12, borderRadius: 12, marginLeft: 8, marginBottom: 12, height: 50, justifyContent: "center", alignItems: 'center', width: 50 },
-  buyBtn: { backgroundColor: "#111827", padding: 18, borderRadius: 12, alignItems: "center", marginTop: 8 },
-  buyBtnText: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
-
-  templateSection: { marginBottom: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 16 },
-  templateGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  templatePill: { width: '31%', padding: 10, backgroundColor: '#F9FAFB', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
-  templatePillActive: { backgroundColor: '#111827', borderColor: '#111827' },
-  templateText: { fontSize: 12, fontWeight: 'bold', color: '#111827' },
-  templatePrice: { fontSize: 10, color: '#6B7280', marginTop: 2 },
-  templateTextActive: { color: '#FFF' },
-
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 },
-  modalContent: { backgroundColor: "#FFF", borderRadius: 24, padding: 20, maxHeight: "80%", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 20, elevation: 10 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  modalTitle: { fontSize: 18, fontWeight: "800", color: '#111827' },
-  closeText: { fontSize: 20, color: '#9CA3AF', padding: 4 },
-
-  dropdownTrigger: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16
-  },
-  dropdownValue: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  dropdownPlaceholder: { color: '#9CA3AF', fontWeight: '400' },
-  dropdownArrow: { fontSize: 12, color: '#6B7280' },
-
-  selectListItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 4
-  },
-  activeListItem: { backgroundColor: '#EFF6FF' },
-  selectListItemText: { fontSize: 16, color: '#374151', fontWeight: '500' },
-  activeListItemText: { color: '#1D4ED8', fontWeight: '700' },
-  checkIcon: { color: '#1D4ED8', fontWeight: 'bold', fontSize: 18 },
-
-  historyItem: { padding: 16, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
-  historyItemText: { fontSize: 16, color: "#111827", fontWeight: 'bold' },
-  historyItemSub: { fontSize: 13, color: "#6B7280" },
-  emptyText: { textAlign: "center", color: "#9CA3AF", marginTop: 20, fontStyle: 'italic' },
-  closeBtn: { backgroundColor: "#EF4444", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 16 }
+  card: { backgroundColor: "#FFF", margin: 20, marginTop: 0, padding: 20, borderRadius: 20, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10 },
+  label: { fontSize: 13, fontWeight: "bold", color: "#374151", marginBottom: 8 },
+  input: { backgroundColor: "#F9FAFB", padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 16, fontSize: 15 },
+  row: { flexDirection: "row", alignItems: "flex-end" },
+  historyBtn: { backgroundColor: "#3B82F6", width: 50, height: 50, borderRadius: 12, justifyContent: "center", alignItems: "center", marginBottom: 16, marginLeft: 8 },
+  btn: { backgroundColor: "#111827", paddingVertical: 16, borderRadius: 16, alignItems: "center" },
+  btnText: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalContent: { backgroundColor: "#FFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: "80%" },
+  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 16, color: "#111827" },
+  providerItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F3F4F6", flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  providerText: { fontSize: 16, color: "#374151" },
+  closeModalBtn: { marginTop: 16, paddingVertical: 14, alignItems: "center", backgroundColor: "#F3F4F6", borderRadius: 12 },
+  closeModalBtnText: { color: "#4B5563", fontWeight: "bold" },
+  dropdownTrigger: { backgroundColor: "#F9FAFB", padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  dropdownValue: { fontSize: 15, color: "#111827" },
+  dropdownPlaceholder: { color: "#9CA3AF" },
+  dropdownArrow: { color: "#9CA3AF", fontSize: 12 },
+  templateSection: { marginBottom: 16 },
+  templateGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  templatePill: { backgroundColor: "#EFF6FF", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: "#BFDBFE", minWidth: "30%" },
+  templatePillActive: { backgroundColor: "#3B82F6", borderColor: "#3B82F6" },
+  templateText: { fontSize: 13, fontWeight: "bold", color: "#1D4ED8" },
+  templatePrice: { fontSize: 11, color: "#1D4ED8", marginTop: 2 },
+  templateTextActive: { color: "#FFF" },
 });

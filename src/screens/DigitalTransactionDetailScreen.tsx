@@ -79,10 +79,18 @@ export default function DigitalTransactionDetailScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
         <View style={styles.header}>
-          <Text style={styles.title}>Detail Transaksi Digital</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{trx.category}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Detail Transaksi Digital</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{trx.category}</Text>
+            </View>
           </View>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate("PulsaTransaction", { editTrx: trx })}
+          >
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.card}>
@@ -150,4 +158,6 @@ const styles = StyleSheet.create({
   printButtonText: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
   backButton: { backgroundColor: "#111827", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 10 },
   backButtonText: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
+  editButton: { backgroundColor: "#3B82F6", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
+  editButtonText: { color: "#FFF", fontWeight: "bold" },
 });

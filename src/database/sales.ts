@@ -6,7 +6,7 @@ export async function addSale(
   items: { product_id: number; qty: number; price: number; subtotal: number }[]
 ): Promise<number> {
   const db = await getDB();
-  const createdAt = new Date().toISOString();
+  const createdAt = sale.created_at || new Date().toISOString();
 
   const result = await db.runAsync(
     "INSERT INTO sales (customer_id, payment_method_id, total, paid, change, points_earned, points_redeemed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
