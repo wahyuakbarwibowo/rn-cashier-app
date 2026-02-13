@@ -7,6 +7,8 @@ import {
   FlatList,
   StyleSheet,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { getPaymentMethods, addPaymentMethod, deletePaymentMethod } from "../database/payment_methods";
 import { PaymentMethod } from "../types/database";
@@ -34,42 +36,49 @@ export default function PaymentMethodsScreen() {
   const handleDelete = (id: number) => {
     Alert.alert("Hapus", "Hapus cara bayar ini?", [
       { text: "Batal", style: "cancel" },
-      { text: "Hapus", style: "destructive", onPress: async () => {
-        await deletePaymentMethod(id);
-        loadMethods();
-      }}
+      {
+        text: "Hapus", style: "destructive", onPress: async () => {
+          await deletePaymentMethod(id);
+          loadMethods();
+        }
+      }
     ]);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>💳 Atur Cara Bayar</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <Text style={styles.header}>💳 Atur Cara Bayar</Text>
 
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="Cara Bayar Baru..."
-          value={newName}
-          onChangeText={setNewName}
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="Cara Bayar Baru..."
+            value={newName}
+            onChangeText={setNewName}
+          />
+          <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+            <Text style={styles.addBtnText}>Tambah</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={methods}
+          keyExtractor={(item) => item.id!.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.item}>
+              <Text style={styles.itemText}>{item.name}</Text>
+              <TouchableOpacity onPress={() => handleDelete(item.id!)}>
+                <Text style={{ color: "#EF4444" }}>Hapus</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         />
-        <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
-          <Text style={styles.addBtnText}>Tambah</Text>
-        </TouchableOpacity>
       </View>
-
-      <FlatList
-        data={methods}
-        keyExtractor={(item) => item.id!.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Text style={styles.itemText}>{item.name}</Text>
-            <TouchableOpacity onPress={() => handleDelete(item.id!)}>
-              <Text style={{ color: "#EF4444" }}>Hapus</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -8,13 +8,15 @@ import {
   TextInput,
   Modal,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { 
-  getDigitalCategories, 
-  addDigitalCategory, 
+import {
+  getDigitalCategories,
+  addDigitalCategory,
   updateDigitalCategory,
-  deleteDigitalCategory, 
-  DigitalCategory 
+  deleteDigitalCategory,
+  DigitalCategory
 } from "../database/digital_products";
 
 export default function DigitalCategoriesMasterScreen() {
@@ -69,10 +71,11 @@ export default function DigitalCategoriesMasterScreen() {
   const handleDelete = (id: number) => {
     Alert.alert("Hapus", "Yakin ingin menghapus kategori ini?", [
       { text: "Batal", style: "cancel" },
-      { text: "Hapus", style: "destructive", onPress: async () => {
+      {
+        text: "Hapus", style: "destructive", onPress: async () => {
           await deleteDigitalCategory(id);
           loadCategories();
-        } 
+        }
       }
     ]);
   };
@@ -109,34 +112,39 @@ export default function DigitalCategoriesMasterScreen() {
 
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{editingCategory ? "Edit Kategori" : "Tambah Kategori"}</Text>
-            
-            <Text style={styles.inputLabel}>Nama Kategori</Text>
-            <TextInput 
-              style={styles.input} 
-              value={name} 
-              onChangeText={setName} 
-              placeholder="Misal: VOUCHER" 
-            />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ width: '100%' }}
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{editingCategory ? "Edit Kategori" : "Tambah Kategori"}</Text>
 
-            <Text style={styles.inputLabel}>Icon (Emoji)</Text>
-            <TextInput 
-              style={styles.input} 
-              value={icon} 
-              onChangeText={setIcon} 
-              placeholder="✨" 
-            />
+              <Text style={styles.inputLabel}>Nama Kategori</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Misal: VOUCHER"
+              />
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={() => setModalVisible(false)}>
-                <Text style={{ color: '#111827', fontWeight: 'bold' }}>Batal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
-                <Text style={{ color: '#FFF', fontWeight: 'bold' }}>{editingCategory ? "Update" : "Simpan"}</Text>
-              </TouchableOpacity>
+              <Text style={styles.inputLabel}>Icon (Emoji)</Text>
+              <TextInput
+                style={styles.input}
+                value={icon}
+                onChangeText={setIcon}
+                placeholder="✨"
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={() => setModalVisible(false)}>
+                  <Text style={{ color: '#111827', fontWeight: 'bold' }}>Batal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
+                  <Text style={{ color: '#FFF', fontWeight: 'bold' }}>{editingCategory ? "Update" : "Simpan"}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
@@ -149,15 +157,15 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
   addBtn: { backgroundColor: '#3B82F6', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
   addBtnText: { color: '#FFF', fontWeight: 'bold' },
-  card: { 
-    backgroundColor: '#FFF', 
-    padding: 16, 
-    borderRadius: 12, 
-    marginBottom: 12, 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+  card: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 2 
+    elevation: 2
   },
   cardInfo: { flexDirection: 'row', alignItems: 'center' },
   catIcon: { fontSize: 24, marginRight: 12 },

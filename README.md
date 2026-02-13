@@ -18,6 +18,10 @@
 *   **Manajemen Kategori Dinamis**: Tambah, edit, dan hapus kategori produk digital sesuka hati (PULSA, PDAM, VOUCHER, dll).
 *   **Optimasi Struk Thermal**: Cetak struk 58mm yang rapi untuk semua jenis transaksi (Retail & Digital).
 *   **📜 Riwayat Transaksi Digital**: Navigasi khusus untuk melihat detail transaksi digital masa lalu.
+*   **✏️ Edit Transaksi Digital**: Fitur untuk mengubah data transaksi digital yang sudah tersimpan jika terjadi kesalahan input.
+*   **📅 Input Tanggal Transaksi**: Keleluasaan untuk menentukan atau merubah tanggal transaksi (Backdate) pada modul penjualan dan produk digital.
+*   **🔄 Reload & Refresh**: Tombol penyegaran data instan di layar transaksi untuk memastikan data stok dan riwayat selalu aktual tanpa harus keluar layar.
+*   **⌨️ Enhanced UX (Keyboard Avoidance)**: Optimasi seluruh layar input agar bidang isian tidak tertutup oleh keyboard virtual, memastikan pengalaman mengetik yang nyaman.
 *   **📅 Filter Rentang Tanggal**: Filter laporan dan riwayat berdasarkan periode waktu tertentu (Hari, Minggu, Bulan, Tahun).
 *   **💾 Backup & Restore**: Amankan data lokal Anda dengan fitur ekspor/impor database.
 
