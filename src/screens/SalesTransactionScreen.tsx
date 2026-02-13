@@ -74,6 +74,7 @@ export default function SalesTransactionScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paidAmount, setPaidAmount] = useState<string>("0");
+  const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -202,9 +203,16 @@ export default function SalesTransactionScreen() {
     setSelectedCustomerId(null);
     setCustomerName("");
     setRedeemPoints(false);
+    setTransactionDate(new Date().toISOString().split('T')[0]);
     if (paymentMethods.length > 0) {
       setSelectedPaymentMethodId(paymentMethods[0].id!);
     }
+  };
+
+  const handleReload = () => {
+    loadInitialData();
+    resetForm();
+    Alert.alert("Refreshed", "Data dan keranjang berhasil dimuat ulang");
   };
 
   const handleFinishTransaction = async () => {
@@ -291,6 +299,7 @@ export default function SalesTransactionScreen() {
           change: isDebt ? 0 : change,
           points_earned: earnedPoints,
           points_redeemed: pointsToRedeem,
+          created_at: transactionDate + " " + new Date().toLocaleTimeString('en-GB')
         },
         finalSalesItems
       );
@@ -317,7 +326,20 @@ export default function SalesTransactionScreen() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <View style={styles.container}>
-        <Text style={styles.header}>🛒 Penjualan Baru</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.header}>🛒 Penjualan Baru</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity style={styles.reloadBtn} onPress={handleReload}>
+              <Text style={styles.reloadBtnText}>🔄 Refresh</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.historyBtn}
+              onPress={() => navigation.navigate("SalesHistory")}
+            >
+              <Text style={styles.historyBtnText}>📜 Riwayat</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Customer & Payment Method */}
         <View style={styles.topSelectors}>
@@ -528,6 +550,15 @@ export default function SalesTransactionScreen() {
         {/* Payment & Total */}
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 24) }]}>
           <View style={styles.paymentInfo}>
+            <View style={styles.paymentRow}>
+              <Text style={styles.label}>Tanggal Transaksi</Text>
+              <TextInput
+                value={transactionDate}
+                onChangeText={setTransactionDate}
+                style={styles.dateInput}
+                placeholder="YYYY-MM-DD"
+              />
+            </View>
             {pointsToRedeem > 0 && (
               <View style={[styles.paymentRow, { marginBottom: 4 }]}>
                 <Text style={[styles.label, { color: '#FB7185' }]}>Potongan Poin</Text>
@@ -605,7 +636,7 @@ export default function SalesTransactionScreen() {
           onClose={() => setIsScanning(false)}
         />
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingView >
   );
 }
 
@@ -614,6 +645,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F3F4F6",
     padding: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  historyBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  historyBtnText: {
+    color: "#3B82F6",
+    fontWeight: "bold",
+    fontSize: 13,
   },
   header: {
     fontSize: 24,
@@ -1012,4 +1062,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginTop: 2,
   },
+  dateInput: { borderBottomWidth: 1, borderBottomColor: "#E5E7EB", padding: 4, width: 120, textAlign: 'right', fontSize: 14, color: '#374151' },
+  reloadBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#F3F4F6' },
+  reloadBtnText: { color: "#6B7280", fontWeight: "bold", fontSize: 13 },
 });

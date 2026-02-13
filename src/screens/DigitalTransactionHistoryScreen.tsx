@@ -140,9 +140,17 @@ export default function DigitalTransactionHistoryScreen() {
                 {item.customer_name && <Text style={styles.customerText}>{item.customer_name}</Text>}
                 <Text style={styles.providerText}>{item.provider}</Text>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.amountText}>Rp {(item.selling_price || 0).toLocaleString("id-ID")}</Text>
-                <Text style={styles.profitText}>Untung: Rp {(item.profit || 0).toLocaleString("id-ID")}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ alignItems: 'flex-end', marginRight: 12 }}>
+                  <Text style={styles.amountText}>Rp {(item.selling_price || 0).toLocaleString("id-ID")}</Text>
+                  <Text style={styles.profitText}>Untung: Rp {(item.profit || 0).toLocaleString("id-ID")}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.editBtnSmall}
+                  onPress={() => navigation.navigate("PulsaTransaction", { editTrx: item })}
+                >
+                  <Text style={styles.editBtnSmallText}>Edit</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </TouchableOpacity>
@@ -238,5 +246,7 @@ const styles = StyleSheet.create({
   amountText: { fontSize: 16, fontWeight: "bold", color: "#111827" },
   profitText: { fontSize: 11, color: "#16A34A", fontWeight: '600', marginTop: 4 },
   emptyContainer: { alignItems: "center", marginTop: 50 },
-  emptyText: { color: "#9CA3AF", fontSize: 16 }
+  emptyText: { color: "#9CA3AF", fontSize: 16 },
+  editBtnSmall: { backgroundColor: "#EFF6FF", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, borderWidth: 1, borderColor: "#BFDBFE" },
+  editBtnSmallText: { color: "#3B82F6", fontSize: 11, fontWeight: "bold" },
 });

@@ -265,7 +265,11 @@ export default function ProductsScreen({ navigation }: Props) {
   );
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
       <Text style={styles.header}>Katalog Produk</Text>
 
       <View style={styles.card}>
@@ -395,6 +399,7 @@ export default function ProductsScreen({ navigation }: Props) {
         onClose={closeScan}
       />
     </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -424,7 +429,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     marginBottom: 20,
-    maxHeight: 400,
+    maxHeight: 500,
     elevation: 6,
     shadowColor: "#000",
     shadowOpacity: 0.08,
