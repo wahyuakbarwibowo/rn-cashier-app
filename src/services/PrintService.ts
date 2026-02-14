@@ -1,11 +1,27 @@
 import * as Print from 'expo-print';
 import { DigitalTransaction } from '../database/pulsa';
-import { getShopProfile } from '../database/settings';
+import { getShopProfile, ShopProfile } from '../database/settings'; // Import ShopProfile type
+
+// Module-level flag to prevent concurrent print requests
+let isPrinting = false;
 
 export const printDigitalReceipt = async (trx: DigitalTransaction) => {
+  // Check if another print request is already in progress
+  if (isPrinting) {
+    console.warn("Gagal mencetak struk: [Error: Another print request is already in progress]");
+    // Throw an error to indicate that the request could not be processed
+    throw new Error("Another print request is already in progress");
+  }
+
+  // Set the flag to true to indicate a print request has started
+  isPrinting = true;
+
   const profile = await getShopProfile();
   const shopName = profile?.name || "KASIR KU";
+  const cashierName = profile?.cashier_name || "";
   const footerNote = profile?.footer_note || "Terima Kasih Atas Kepercayaan Anda";
+  const shopPhoneNumber = profile?.phone_number || "";
+  const shopAddress = profile?.address || "";
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
@@ -24,42 +40,47 @@ export const printDigitalReceipt = async (trx: DigitalTransaction) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
         <style>
           @page { margin: 0; }
-          body { 
-            font-family: 'monospace'; 
-            padding: 5px; 
+          body {
+            font-family: 'monospace';
+            padding: 5px;
             width: 300px; /* Standard 58mm width in pixels approx */
             margin: 0 auto;
-            color: #000; 
+            color: #000;
           }
           .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 8px; }
           .shop-name { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+          .cashier-name { font-size: 11px; margin-top: 2px; }
           .trx-meta { font-size: 11px; margin-top: 2px; }
-          
+
           .info-table { width: 100%; font-size: 12px; border-collapse: collapse; margin: 10px 0; }
           .info-table td { padding: 2px 0; vertical-align: top; }
           .label { width: 40%; color: #333; }
-          
+
           .divider { border-top: 1px dashed #000; margin: 8px 0; }
-          
+
           .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; padding: 5px 0; }
-          
-          .notes-box { 
-            margin-top: 10px; 
-            padding: 8px; 
-            border: 1px solid #000; 
+
+          .notes-box {
+            margin-top: 10px;
+            padding: 8px;
+            border: 1px solid #000;
             text-align: center;
           }
           .notes-title { font-size: 10px; font-weight: bold; margin-bottom: 3px; }
           .notes-content { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
-          
+
           .footer { text-align: center; margin-top: 20px; font-size: 10px; line-height: 1.4; }
         </style>
       </head>
       <body>
         <div class="header">
           <div class="shop-name">${shopName}</div>
+          ${cashierName ? `<div class="cashier-name">Kasir: ${cashierName}</div>` : ''}
           <div class="trx-meta">TRX #${trx.id} | ${formatDate(trx.created_at)}</div>
         </div>
+
+        ${shopPhoneNumber ? `<div style="text-align: center; font-size: 11px; margin-bottom: 2px;">Telp: ${shopPhoneNumber}</div>` : ''}
+        ${shopAddress ? `<div style="text-align: center; font-size: 11px; margin-bottom: 4px; word-wrap: break-word;">${shopAddress}</div>` : ''}
 
         <table class="info-table">
           <tr>
@@ -98,9 +119,6 @@ export const printDigitalReceipt = async (trx: DigitalTransaction) => {
 
         <div class="footer">
           ${footerNote.replace(/\n/g, '<br>')}
-          <br><br>
-          * Simpan sebagai bukti sah *<br>
-          Terima Kasih
         </div>
       </body>
     </html>
@@ -113,14 +131,30 @@ export const printDigitalReceipt = async (trx: DigitalTransaction) => {
     });
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
-    throw error;
+    throw error; // Re-throw the error to be caught by the caller
+  } finally {
+    // Reset the flag regardless of success or failure
+    isPrinting = false;
   }
 };
 
 export const printSaleReceipt = async (sale: any, items: any[]) => {
+  // Check if another print request is already in progress
+  if (isPrinting) {
+    console.warn("Gagal mencetak struk: [Error: Another print request is already in progress]");
+    // Throw an error to indicate that the request could not be processed
+    throw new Error("Another print request is already in progress");
+  }
+
+  // Set the flag to true to indicate a print request has started
+  isPrinting = true;
+
   const profile = await getShopProfile();
   const shopName = profile?.name || "AMINMART";
+  const cashierName = profile?.cashier_name || "";
   const footerNote = profile?.footer_note || "Terima Kasih Atas Kepercayaan Anda";
+  const shopPhoneNumber = profile?.phone_number || "";
+  const shopAddress = profile?.address || "";
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
@@ -149,32 +183,37 @@ export const printSaleReceipt = async (sale: any, items: any[]) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
         <style>
           @page { margin: 0; }
-          body { 
-            font-family: 'monospace'; 
-            padding: 5px; 
+          body {
+            font-family: 'monospace';
+            padding: 5px;
             width: 300px;
             margin: 0 auto;
-            color: #000; 
+            color: #000;
           }
           .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 8px; }
           .shop-name { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+          .cashier-name { font-size: 11px; margin-top: 2px; }
           .trx-meta { font-size: 11px; margin-top: 2px; }
-          
+
           .items-table { width: 100%; font-size: 12px; border-collapse: collapse; margin: 10px 0; }
-          
+
           .divider { border-top: 1px dashed #000; margin: 8px 0; }
-          
+
           .row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
           .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; margin-top: 5px; }
-          
+
           .footer { text-align: center; margin-top: 20px; font-size: 10px; line-height: 1.4; }
         </style>
       </head>
       <body>
         <div class="header">
           <div class="shop-name">${shopName}</div>
+          ${cashierName ? `<div class="cashier-name">Kasir: ${cashierName}</div>` : ''}
           <div class="trx-meta">TRX #${sale.id} | ${formatDate(sale.created_at)}</div>
         </div>
+
+        ${shopPhoneNumber ? `<div style="text-align: center; font-size: 11px; margin-bottom: 2px;">Telp: ${shopPhoneNumber}</div>` : ''}
+        ${shopAddress ? `<div style="text-align: center; font-size: 11px; margin-bottom: 4px; word-wrap: break-word;">${shopAddress}</div>` : ''}
 
         <table class="items-table">
           ${itemsHtml}
@@ -204,8 +243,6 @@ export const printSaleReceipt = async (sale: any, items: any[]) => {
 
         <div class="footer">
           ${footerNote.replace(/\n/g, '<br>')}
-          <br><br>
-          * Terima Kasih *
         </div>
       </body>
     </html>
@@ -218,6 +255,9 @@ export const printSaleReceipt = async (sale: any, items: any[]) => {
     });
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
-    throw error;
+    throw error; // Re-throw the error to be caught by the caller
+  } finally {
+    // Reset the flag regardless of success or failure
+    isPrinting = false;
   }
 };

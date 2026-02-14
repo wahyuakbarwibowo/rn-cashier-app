@@ -1,14 +1,20 @@
 import React, { useEffect, useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
-  ActivityIndicator,
   FlatList,
-  TouchableOpacity,
   Alert,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
+import {
+  Card,
+  Text,
+  Button,
+  ActivityIndicator,
+  Divider,
+  Chip,
+  Surface,
+} from "react-native-paper";
 import { getSaleItems } from "../database/sales";
 import { getDB } from "../database/initDB";
 import { Sale, SaleItem, Product } from "../types/database";
@@ -34,18 +40,16 @@ export default function SaleDetailScreen() {
       setLoading(true);
       const db = await getDB();
 
-      // Get Sale
       const saleData = await db.getFirstAsync<Sale>(
         "SELECT * FROM sales WHERE id = ?",
         [saleId]
       );
       setSale(saleData || null);
 
-      // Get Items with Product Name
       const itemsData = await db.getAllAsync<any>(
-        `SELECT si.*, p.name as product_name 
-         FROM sales_items si 
-         JOIN products p ON si.product_id = p.id 
+        `SELECT si.*, p.name as product_name
+         FROM sales_items si
+         JOIN products p ON si.product_id = p.id
          WHERE si.sale_id = ?`,
         [saleId]
       );
@@ -72,7 +76,7 @@ export default function SaleDetailScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" animating color="#FB7185" />
       </View>
     );
   }
@@ -80,7 +84,7 @@ export default function SaleDetailScreen() {
   if (!sale) {
     return (
       <View style={styles.center}>
-        <Text>Transaksi tidak ditemukan</Text>
+        <Text variant="bodyLarge">Transaksi tidak ditemukan</Text>
       </View>
     );
   }
@@ -95,75 +99,98 @@ export default function SaleDetailScreen() {
           <>
             <View style={styles.header}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.title}>Detail Transaksi</Text>
-                <Text style={styles.trxId}>TRX-{sale.id?.toString().padStart(5, '0')}</Text>
+                <Text variant="headlineSmall" style={styles.title}>Detail Transaksi</Text>
+                <Chip
+                  icon="receipt"
+                  mode="flat"
+                  compact
+                  style={styles.trxChip}
+                  textStyle={styles.trxChipText}
+                >
+                  TRX-{sale.id?.toString().padStart(5, '0')}
+                </Chip>
               </View>
-              {/* Note: Editing complex retail sales with points/stock might need careful implementation, 
-                  for now we can navigate to transaction with items if needed, but the user asked 
-                  specifically for the ability to edit. */}
-              <TouchableOpacity
+              <Button
+                mode="contained"
+                compact
+                buttonColor="#6366F1"
+                textColor="#FFF"
                 style={styles.editButton}
                 onPress={() => Alert.alert("Coming Soon", "Fitur edit transaksi retail sedang dikembangkan.")}
               >
-                <Text style={styles.editButtonText}>Edit</Text>
-              </TouchableOpacity>
+                Edit
+              </Button>
             </View>
 
-            <View style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Tanggal</Text>
-                <Text style={styles.value}>{formatDate(sale.created_at)}</Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Total</Text>
-                <Text style={[styles.value, styles.totalText]}>Rp {(sale.total || 0).toLocaleString("id-ID")}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Dibayar</Text>
-                <Text style={styles.value}>Rp {(sale.paid || 0).toLocaleString("id-ID")}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Kembali</Text>
-                <Text style={styles.value}>Rp {(sale.change || 0).toLocaleString("id-ID")}</Text>
-              </View>
-              {(sale.points_earned || 0) > 0 && (
+            <Card style={styles.infoCard} mode="elevated">
+              <Card.Content>
                 <View style={styles.infoRow}>
-                  <Text style={[styles.label, { color: '#FB7185' }]}>Poin Didapat</Text>
-                  <Text style={[styles.value, { color: '#FB7185' }]}>+{sale.points_earned} Pts</Text>
+                  <Text variant="bodyMedium" style={styles.label}>Tanggal</Text>
+                  <Text variant="bodyMedium" style={styles.value}>{formatDate(sale.created_at)}</Text>
                 </View>
-              )}
-              {(sale.points_redeemed || 0) > 0 && (
+                <Divider style={styles.divider} />
                 <View style={styles.infoRow}>
-                  <Text style={[styles.label, { color: '#E11D48' }]}>Poin Ditukar</Text>
-                  <Text style={[styles.value, { color: '#E11D48' }]}>-{sale.points_redeemed} Pts</Text>
+                  <Text variant="bodyMedium" style={styles.label}>Total</Text>
+                  <Text variant="titleMedium" style={styles.totalText}>Rp {(sale.total || 0).toLocaleString("id-ID")}</Text>
                 </View>
-              )}
-            </View>
+                <View style={styles.infoRow}>
+                  <Text variant="bodyMedium" style={styles.label}>Dibayar</Text>
+                  <Text variant="bodyMedium" style={styles.value}>Rp {(sale.paid || 0).toLocaleString("id-ID")}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text variant="bodyMedium" style={styles.label}>Kembali</Text>
+                  <Text variant="bodyMedium" style={styles.value}>Rp {(sale.change || 0).toLocaleString("id-ID")}</Text>
+                </View>
+                {(sale.points_earned || 0) > 0 && (
+                  <View style={styles.infoRow}>
+                    <Text variant="bodyMedium" style={{ color: '#FB7185' }}>Poin Didapat</Text>
+                    <Text variant="bodyMedium" style={{ color: '#FB7185', fontWeight: '600' }}>+{sale.points_earned} Pts</Text>
+                  </View>
+                )}
+                {(sale.points_redeemed || 0) > 0 && (
+                  <View style={styles.infoRow}>
+                    <Text variant="bodyMedium" style={{ color: '#E11D48' }}>Poin Ditukar</Text>
+                    <Text variant="bodyMedium" style={{ color: '#E11D48', fontWeight: '600' }}>-{sale.points_redeemed} Pts</Text>
+                  </View>
+                )}
+              </Card.Content>
+            </Card>
 
-            <Text style={styles.sectionTitle}>Daftar Barang</Text>
+            <Text variant="titleMedium" style={styles.sectionTitle}>Daftar Barang</Text>
           </>
         }
         renderItem={({ item }) => (
-          <View style={styles.itemRow}>
+          <Surface style={styles.itemRow} elevation={1}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>{item.product_name || 'Produk Terhapus'}</Text>
-              <Text style={styles.itemMeta}>{item.qty} x Rp {(item.price || 0).toLocaleString("id-ID")}</Text>
+              <Text variant="bodyLarge" style={styles.itemName}>{item.product_name || 'Produk Terhapus'}</Text>
+              <Text variant="bodySmall" style={styles.itemMeta}>{item.qty} x Rp {(item.price || 0).toLocaleString("id-ID")}</Text>
             </View>
-            <Text style={styles.itemSubtotal}>Rp {(item.subtotal || 0).toLocaleString("id-ID")}</Text>
-          </View>
+            <Text variant="titleSmall" style={styles.itemSubtotal}>Rp {(item.subtotal || 0).toLocaleString("id-ID")}</Text>
+          </Surface>
         )}
         ListFooterComponent={
           <>
-            <TouchableOpacity
+            <Button
+              mode="contained"
+              icon="printer"
+              buttonColor="#10B981"
+              textColor="#FFF"
               style={styles.printButton}
+              contentStyle={styles.buttonContent}
+              labelStyle={styles.buttonLabel}
               onPress={() => sale && printSaleReceipt(sale, items)}
             >
-              <Text style={styles.printButtonText}>🖨️ Cetak Struk</Text>
-            </TouchableOpacity>
+              Cetak Struk
+            </Button>
 
-            <TouchableOpacity
+            <Button
+              mode="contained"
+              icon="arrow-left"
+              buttonColor="#1E293B"
+              textColor="#FFF"
               style={styles.backButton}
+              contentStyle={styles.buttonContent}
+              labelStyle={styles.buttonLabel}
               onPress={() => {
                 const params = route.params as any;
                 if (params?.from === "SalesHistory") {
@@ -173,8 +200,8 @@ export default function SaleDetailScreen() {
                 }
               }}
             >
-              <Text style={styles.backButtonText}>Kembali</Text>
-            </TouchableOpacity>
+              Kembali
+            </Button>
           </>
         }
       />
@@ -194,24 +221,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
     fontWeight: "bold",
-    color: "#111827",
+    color: "#1E293B",
   },
-  trxId: {
-    fontSize: 16,
-    color: "#3B82F6",
+  trxChip: {
+    alignSelf: "flex-start",
+    marginTop: 6,
+    backgroundColor: "#FFF1F2",
+  },
+  trxChipText: {
+    color: "#E11D48",
     fontWeight: "600",
+  },
+  editButton: {
+    borderRadius: 10,
   },
   infoCard: {
     backgroundColor: "#FFF",
     borderRadius: 16,
-    padding: 16,
     marginBottom: 20,
-    elevation: 2,
   },
   infoRow: {
     flexDirection: "row",
@@ -219,28 +252,22 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   label: {
-    color: "#6B7280",
-    fontSize: 14,
+    color: "#64748B",
   },
   value: {
-    color: "#111827",
-    fontSize: 14,
+    color: "#1E293B",
     fontWeight: "500",
   },
   totalText: {
-    fontSize: 18,
     fontWeight: "bold",
-    color: "#16A34A",
+    color: "#10B981",
   },
   divider: {
-    height: 1,
-    backgroundColor: "#F3F4F6",
     marginVertical: 12,
   },
   sectionTitle: {
-    fontSize: 18,
     fontWeight: "bold",
-    color: "#111827",
+    color: "#1E293B",
     marginBottom: 12,
   },
   itemRow: {
@@ -253,43 +280,29 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   itemName: {
-    fontSize: 15,
     fontWeight: "600",
-    color: "#111827",
+    color: "#1E293B",
   },
   itemMeta: {
-    fontSize: 13,
-    color: "#6B7280",
+    color: "#64748B",
   },
   itemSubtotal: {
-    fontSize: 15,
     fontWeight: "bold",
-    color: "#111827",
-  },
-  backButton: {
-    backgroundColor: "#111827",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  backButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: "#1E293B",
   },
   printButton: {
-    backgroundColor: "#16A34A",
-    padding: 16,
     borderRadius: 12,
-    alignItems: "center",
     marginTop: 10,
   },
-  printButtonText: {
-    color: "#FFF",
+  backButton: {
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  buttonContent: {
+    paddingVertical: 6,
+  },
+  buttonLabel: {
     fontSize: 16,
     fontWeight: "bold",
   },
-  editButton: { backgroundColor: "#3B82F6", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
-  editButtonText: { color: "#FFF", fontWeight: "bold" },
 });
