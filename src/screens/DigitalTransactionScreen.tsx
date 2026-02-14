@@ -36,7 +36,7 @@ import {
 } from "../database/digital_products";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-export default function PulsaTransactionScreen() {
+export default function DigitalTransactionScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();

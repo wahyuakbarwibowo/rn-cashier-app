@@ -21,13 +21,18 @@ import { Sale, SaleItem, Product } from "../types/database";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { printSaleReceipt } from "../services/PrintService";
 
+type SaleWithMeta = Sale & {
+  payment_method_name?: string;
+  customer_name?: string;
+};
+
 export default function SaleDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { saleId } = route.params;
 
-  const [sale, setSale] = useState<Sale | null>(null);
+  const [sale, setSale] = useState<SaleWithMeta | null>(null);
   const [items, setItems] = useState<(SaleItem & { product_name?: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,8 +45,12 @@ export default function SaleDetailScreen() {
       setLoading(true);
       const db = await getDB();
 
-      const saleData = await db.getFirstAsync<Sale>(
-        "SELECT * FROM sales WHERE id = ?",
+      const saleData = await db.getFirstAsync<SaleWithMeta>(
+        `SELECT s.*, pm.name as payment_method_name, c.name as customer_name
+         FROM sales s
+         LEFT JOIN payment_methods pm ON s.payment_method_id = pm.id
+         LEFT JOIN customers c ON s.customer_id = c.id
+         WHERE s.id = ?`,
         [saleId]
       );
       setSale(saleData || null);
@@ -116,7 +125,11 @@ export default function SaleDetailScreen() {
                 buttonColor="#6366F1"
                 textColor="#FFF"
                 style={styles.editButton}
-                onPress={() => Alert.alert("Coming Soon", "Fitur edit transaksi retail sedang dikembangkan.")}
+                onPress={() => {
+                  if (sale.id) {
+                    navigation.navigate("SalesTransaction", { editSaleId: sale.id });
+                  }
+                }}
               >
                 Edit
               </Button>
@@ -128,6 +141,20 @@ export default function SaleDetailScreen() {
                   <Text variant="bodyMedium" style={styles.label}>Tanggal</Text>
                   <Text variant="bodyMedium" style={styles.value}>{formatDate(sale.created_at)}</Text>
                 </View>
+                {sale.customer_name && (
+                  <View style={styles.infoRow}>
+                    <Text variant="bodyMedium" style={styles.label}>Pelanggan</Text>
+                    <Text variant="bodyMedium" style={styles.value}>{sale.customer_name}</Text>
+                  </View>
+                )}
+                {sale.payment_method_name && (
+                  <View style={styles.infoRow}>
+                    <Text variant="bodyMedium" style={styles.label}>Pembayaran</Text>
+                    <Chip compact mode="flat" style={styles.paymentChip} textStyle={styles.paymentChipText}>
+                      {sale.payment_method_name}
+                    </Chip>
+                  </View>
+                )}
                 <Divider style={styles.divider} />
                 <View style={styles.infoRow}>
                   <Text variant="bodyMedium" style={styles.label}>Total</Text>
@@ -261,6 +288,15 @@ const styles = StyleSheet.create({
   totalText: {
     fontWeight: "bold",
     color: "#10B981",
+  },
+  paymentChip: {
+    backgroundColor: "#EEF2FF",
+    height: 28,
+  },
+  paymentChipText: {
+    color: "#6366F1",
+    fontWeight: "600",
+    fontSize: 12,
   },
   divider: {
     marginVertical: 12,

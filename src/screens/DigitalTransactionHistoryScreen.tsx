@@ -147,7 +147,7 @@ export default function DigitalTransactionHistoryScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.editBtnSmall}
-                  onPress={() => navigation.navigate("PulsaTransaction", { editTrx: item })}
+                  onPress={() => navigation.navigate("DigitalTransaction", { editTrx: item })}
                 >
                   <Text style={styles.editBtnSmallText}>Edit</Text>
                 </TouchableOpacity>

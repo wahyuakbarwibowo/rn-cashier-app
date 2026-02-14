@@ -1,6 +1,6 @@
 import { DrawerScreenProps } from "@react-navigation/drawer";
 import { DrawerParamList } from "../navigation/types";
-import { StyleSheet, Text, TouchableOpacity, View, Image, Alert } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, Image, Alert, ScrollView } from "react-native";
 import * as Print from 'expo-print';
 
 type Props = DrawerScreenProps<DrawerParamList, "ProductDetail">;
@@ -38,80 +38,82 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Card */}
-      <View style={styles.card}>
-        {/* Product Name */}
-        <Text style={styles.name}>{product.name}</Text>
+    <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.container}>
+        {/* Card */}
+        <View style={styles.card}>
+          {/* Product Name */}
+          <Text style={styles.name}>{product.name}</Text>
 
-        {/* Code & Barcode Image */}
-        {product.code && (
-          <View style={styles.barcodeContainer}>
-            <Image
-              source={{ uri: barcodeUrl }}
-              style={styles.barcodeImage}
-              resizeMode="contain"
-            />
-            <Text style={styles.code}>Kode: {product.code}</Text>
-          </View>
-        )}
+          {/* Code & Barcode Image */}
+          {product.code && (
+            <View style={styles.barcodeContainer}>
+              <Image
+                source={{ uri: barcodeUrl }}
+                style={styles.barcodeImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.code}>Kode: {product.code}</Text>
+            </View>
+          )}
 
-        {/* Selling Price */}
-        {product.selling_price && (
-          <Text style={styles.price}>
-            {formatPrice(product.selling_price)}
-          </Text>
-        )}
+          {/* Selling Price */}
+          {product.selling_price && (
+            <Text style={styles.price}>
+              {formatPrice(product.selling_price)}
+            </Text>
+          )}
 
-        <View style={styles.divider} />
+          <View style={styles.divider} />
 
-        {/* Detail Rows */}
-        <DetailRow label="Harga Beli" value={formatPrice(product.purchase_price)} />
-        <DetailRow
-          label="Harga Paket"
-          value={
-            product.package_price && product.package_qty
-              ? `${formatPrice(product.package_price)} / ${product.package_qty} pcs`
-              : "-"
-          }
-        />
-        <DetailRow
-          label="Diskon"
-          value={product.discount ? `${product.discount}%` : "-"}
-        />
-        <DetailRow
-          label="Stok"
-          value={product.stock !== undefined ? product.stock.toString() : "-"}
-        />
+          {/* Detail Rows */}
+          <DetailRow label="Harga Beli" value={formatPrice(product.purchase_price)} />
+          <DetailRow
+            label="Harga Paket"
+            value={
+              product.package_price && product.package_qty
+                ? `${formatPrice(product.package_price)} / ${product.package_qty} pcs`
+                : "-"
+            }
+          />
+          <DetailRow
+            label="Diskon"
+            value={product.discount ? `${product.discount}%` : "-"}
+          />
+          <DetailRow
+            label="Stok"
+            value={product.stock !== undefined ? product.stock.toString() : "-"}
+          />
 
-        <View style={styles.divider} />
+          <View style={styles.divider} />
 
-        {/* Timestamp */}
-        {product.created_at && (
-          <Text style={styles.timestamp}>
-            Dibuat: {new Date(product.created_at).toLocaleDateString("id-ID")}
-          </Text>
-        )}
+          {/* Timestamp */}
+          {product.created_at && (
+            <Text style={styles.timestamp}>
+              Dibuat: {new Date(product.created_at).toLocaleDateString("id-ID")}
+            </Text>
+          )}
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.button, styles.printButton]}
+            onPress={printBarcode}
+          >
+            <Text style={styles.buttonText}>🖨️ Cetak Barcode</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate("SalesTransaction", { addProductId: product.id })}
+          >
+            <Text style={styles.buttonText}>Tambah ke Keranjang</Text>
+          </TouchableOpacity>
+        </View>
+
       </View>
-
-      {/* Action Buttons */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.button, styles.printButton]}
-          onPress={printBarcode}
-        >
-          <Text style={styles.buttonText}>🖨️ Cetak Barcode</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("SalesTransaction", { addProductId: product.id })}
-        >
-          <Text style={styles.buttonText}>Tambah ke Keranjang</Text>
-        </TouchableOpacity>
-      </View>
-
-    </View>
+    </ScrollView>
   )
 }
 
@@ -131,11 +133,14 @@ function DetailRow({ label, value }: DetailRowProps) {
 
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  scrollContainer: {
+    flexGrow: 1,
     backgroundColor: "#F3F4F6",
     padding: 16,
     paddingBottom: 32,
+  },
+  container: {
+    flex: 1,
   },
   card: {
     backgroundColor: "#FFFFFF",
