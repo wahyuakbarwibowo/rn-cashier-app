@@ -23,7 +23,7 @@ import {
   Modal as PaperModal,
   Surface,
   Avatar,
-  HelperText,
+  HelperText, // Imported HelperText
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { addDigitalTransaction, updateDigitalTransaction, getRecentNumbers, DigitalTransaction } from "../database/pulsa";
@@ -59,6 +59,17 @@ export default function PulsaTransactionScreen() {
   const [showProviderModal, setShowProviderModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  // Validation States
+  const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
+  const [transactionDateError, setTransactionDateError] = useState<string | null>(null);
+  const [providerError, setProviderError] = useState<string | null>(null);
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [sellingPriceError, setSellingPriceError] = useState<string | null>(null);
+  const [costPriceError, setCostPriceError] = useState<string | null>(null);
+
+  // Profit state
+  const [profit, setProfit] = useState<number>(0);
+
   useEffect(() => {
     loadCategories();
     loadHistory();
@@ -75,7 +86,9 @@ export default function PulsaTransactionScreen() {
       setSellingPrice(etrx.selling_price.toString());
       setNotes(etrx.notes || "");
       if (etrx.created_at) {
-        setTransactionDate(etrx.created_at.split(' ')[0] || etrx.created_at.split('T')[0]);
+        // Attempt to parse date from ISO or T-split format
+        const datePart = etrx.created_at.split('T')[0].split(' ')[0];
+        setTransactionDate(datePart || new Date().toISOString().split('T')[0]);
       }
     }
   }, [route.params?.editTrx]);
@@ -96,7 +109,20 @@ export default function PulsaTransactionScreen() {
 
   const loadProviders = async () => {
     const data = await getDistinctProvidersByCategory(category);
-    setProviders(data.map((d: any) => d.provider));
+    const providerNames = data.map((d: any) => d.provider);
+    setProviders(providerNames);
+    // Auto-select "Lainnya" if no providers are found for the category
+    if (providerNames.length === 0) {
+      setProvider("Lainnya");
+    } else if (provider && !providerNames.includes(provider) && provider !== "Lainnya") {
+      // If current provider is not in the new list and not "Lainnya", reset it to force selection
+      setProvider("");
+      setProviderError("Provider wajib dipilih."); // Set error if reset
+    } else if (provider === "Lainnya" && providerNames.length > 0) {
+        // If user previously selected "Lainnya" but now providers exist, reset
+        setProvider("");
+        setProviderError("Provider wajib dipilih.");
+    }
   };
 
   useEffect(() => {
@@ -115,68 +141,155 @@ export default function PulsaTransactionScreen() {
   const loadTemplates = async () => {
     const data = await getDigitalProducts(category, provider);
     setTemplates(data);
+    // If there are templates, and current amount/prices are empty, pre-fill from first template
+    if (data.length > 0 && !amount && !costPrice && !sellingPrice) {
+      selectTemplate(data[0]);
+    }
   };
 
   const selectTemplate = (item: DigitalProductMaster) => {
     setAmount(item.nominal.toString());
     setCostPrice(item.cost_price.toString());
     setSellingPrice(item.selling_price.toString());
+    // Clear potential errors if user selects a template after making errors
+    setAmountError(null);
+    setCostPriceError(null);
+    setSellingPriceError(null);
+  };
+
+  // Recalculate profit when prices change
+  useEffect(() => {
+    const costValue = parseFloat(costPrice) || 0;
+    const sellValue = parseFloat(sellingPrice) || 0;
+    setProfit(sellValue - costValue);
+  }, [costPrice, sellingPrice]);
+
+  // Handler to clear specific error when user types into a field
+  const clearErrorOnInput = (setErrorFn: (err: null) => void) => {
+    setErrorFn(null);
   };
 
   const handleTransaction = async () => {
-    if (!phoneNumber || (providers.length > 0 && !provider) || !amount || !sellingPrice) {
-      Alert.alert("Error", "Mohon lengkapi data");
-      return;
+    // --- Reset previous errors ---
+    setPhoneNumberError(null);
+    setTransactionDateError(null);
+    setProviderError(null);
+    setAmountError(null);
+    setSellingPriceError(null);
+    setCostPriceError(null);
+
+    // --- Validation ---
+    let isValid = true;
+
+    if (!phoneNumber.trim()) {
+      setPhoneNumberError("Nomor pelanggan wajib diisi.");
+      isValid = false;
+    }
+    if (!transactionDate) {
+      setTransactionDateError("Tanggal transaksi wajib diisi.");
+      isValid = false;
+    }
+    // Provider is required if there are providers listed (and not "Lainnya" which is handled by a separate input)
+    if (providers.length > 0 && !provider && provider !== "Lainnya") {
+      setProviderError("Provider wajib dipilih.");
+      isValid = false;
+    } else if (provider === "Lainnya" && !provider.trim()) {
+        // If user selected "Lainnya" but entered empty text
+        setProviderError("Nama provider manual wajib diisi.");
+        isValid = false;
     }
 
+    if (!amount) {
+      setAmountError("Nominal wajib diisi.");
+      isValid = false;
+    } else {
+      const amountValue = parseFloat(amount);
+      if (isNaN(amountValue) || amountValue <= 0) {
+        setAmountError("Nominal harus berupa angka positif.");
+        isValid = false;
+      }
+    }
+    if (!sellingPrice) {
+      setSellingPriceError("Harga Jual wajib diisi.");
+      isValid = false;
+    } else {
+      const sellValue = parseFloat(sellingPrice);
+      if (isNaN(sellValue) || sellValue <= 0) {
+        setSellingPriceError("Harga Jual harus berupa angka positif.");
+        isValid = false;
+      }
+    }
     const costValue = parseFloat(costPrice) || 0;
-    const sellValue = parseFloat(sellingPrice) || 0;
-    const profitValue = sellValue - costValue;
+    if (costValue < 0) {
+      setCostPriceError("Harga Modal tidak boleh negatif.");
+      isValid = false;
+    }
+
+    if (!isValid) {
+      return; // Stop if validation fails
+    }
+    // --- End Validation ---
+
+    const finalCostValue = parseFloat(costPrice) || 0;
+    const finalSellValue = parseFloat(sellingPrice); // Already validated to be a number > 0
+    const profitValue = finalSellValue - finalCostValue;
 
     try {
+      // Construct the timestamp for created_at. Use the selected date and current time.
+      const currentTime = new Date().toLocaleTimeString('en-GB'); // e.g., "14:30:00"
+      const createdAtTimestamp = `${transactionDate} ${currentTime}`;
+
       if (editTrxId) {
         await updateDigitalTransaction(editTrxId, {
           category,
-          phone_number: phoneNumber,
-          customer_name: customerName,
-          provider,
+          phone_number: phoneNumber.trim(),
+          customer_name: customerName.trim(),
+          provider: provider.trim(),
           amount: parseFloat(amount),
-          cost_price: costValue,
-          selling_price: sellValue,
+          cost_price: finalCostValue,
+          selling_price: finalSellValue,
           profit: profitValue,
-          notes,
-          created_at: transactionDate + " " + new Date().toLocaleTimeString('en-GB')
+          notes: notes.trim(),
+          created_at: createdAtTimestamp
         });
         Alert.alert("Sukses", "Transaksi berhasil diperbarui");
       } else {
         await addDigitalTransaction({
           category,
-          phone_number: phoneNumber,
-          customer_name: customerName,
-          provider: provider,
+          phone_number: phoneNumber.trim(),
+          customer_name: customerName.trim(),
+          provider: provider.trim(),
           amount: parseFloat(amount),
-          cost_price: costValue,
-          selling_price: sellValue,
+          cost_price: finalCostValue,
+          selling_price: finalSellValue,
           profit: profitValue,
-          notes: notes,
-          created_at: transactionDate + " " + new Date().toLocaleTimeString('en-GB')
+          notes: notes.trim(),
+          created_at: createdAtTimestamp
         });
         Alert.alert("Sukses", "Transaksi berhasil disimpan");
-      }
-
-      if (!editTrxId) {
+        // Clear fields only if not editing and transaction is successful
         setPhoneNumber("");
         setCustomerName("");
         setAmount("");
         setCostPrice("");
         setSellingPrice("");
         setNotes("");
-      } else {
-        navigation.goBack();
+        // Reset errors after successful save when not editing
+        setPhoneNumberError(null);
+        setTransactionDateError(null);
+        setProviderError(null);
+        setAmountError(null);
+        setSellingPriceError(null);
+        setCostPriceError(null);
       }
-      loadHistory();
+
+      loadHistory(); // Always load history after transaction
+      if (editTrxId) {
+        navigation.goBack(); // Go back after successful update
+      }
+
     } catch (e) {
-      console.error(e);
+      console.error("Transaction error:", e);
       Alert.alert("Error", "Gagal menyimpan transaksi");
     }
   };
@@ -203,8 +316,9 @@ export default function PulsaTransactionScreen() {
               <TouchableRipple
                 onPress={() => {
                   setCategory(cat.name);
-                  setProvider("");
-                  setTemplates([]);
+                  setProvider(""); // Reset provider when category changes
+                  setTemplates([]); // Clear templates
+                  clearErrorOnInput(setProviderError); // Clear provider error
                 }}
                 style={styles.categoryRipple}
               >
@@ -221,42 +335,52 @@ export default function PulsaTransactionScreen() {
 
         <Card style={styles.mainCardPaper}>
           <Card.Content>
+            {/* Phone Number Input */}
             <View style={styles.inputRowPaper}>
               <TextInput
                 label="No. Pelanggan / HP / ID"
                 placeholder="0812xxx atau ID Pelanggan"
                 value={phoneNumber}
-                onChangeText={setPhoneNumber}
+                onChangeText={(text) => { setPhoneNumber(text); clearErrorOnInput(setPhoneNumberError); }}
                 keyboardType="numeric"
                 mode="outlined"
                 style={{ flex: 1 }}
+                error={!!phoneNumberError}
                 right={
                   <TextInput.Icon
                     icon="history"
-                    onPress={() => navigation.navigate("DigitalHistory")}
+                    onPress={() => navigation.navigate("DigitalHistory")} // Navigating to history screen
                   />
                 }
                 left={
                   <TextInput.Icon
                     icon="text-box-search-outline"
-                    onPress={() => setShowHistoryModal(true)}
+                    onPress={() => setShowHistoryModal(true)} // Opening modal for history selection
                   />
                 }
               />
             </View>
+            <HelperText type="error" visible={!!phoneNumberError}>
+              {phoneNumberError}
+            </HelperText>
 
+            {/* Date Input */}
             <TextInput
               label="Tanggal Transaksi"
               placeholder="YYYY-MM-DD"
               value={transactionDate}
-              onChangeText={setTransactionDate}
+              onChangeText={(text) => { setTransactionDate(text); clearErrorOnInput(setTransactionDateError); }}
               mode="outlined"
               style={styles.fieldMargin}
+              error={!!transactionDateError}
               right={<TextInput.Icon
                 icon="calendar"
                 onPress={() => setShowDatePicker(true)}
               />}
             />
+            <HelperText type="error" visible={!!transactionDateError}>
+              {transactionDateError}
+            </HelperText>
 
             {showDatePicker && (
               <DateTimePicker
@@ -267,36 +391,45 @@ export default function PulsaTransactionScreen() {
                   setShowDatePicker(false);
                   if (selectedDate) {
                     setTransactionDate(selectedDate.toISOString().split('T')[0]);
+                    clearErrorOnInput(setTransactionDateError); // Clear date error on selection
                   }
                 }}
               />
             )}
 
+            {/* Customer Name Input */}
             <TextInput
               label="Nama Pelanggan (Opsional)"
               placeholder="Contoh: Budi Santoso"
               value={customerName}
-              onChangeText={setCustomerName}
+              onChangeText={(text) => { setCustomerName(text); }} // No error for optional field
               mode="outlined"
               style={styles.fieldMargin}
             />
 
+            {/* Provider Input */}
             <TextInput
               label="Provider / Bank / Game"
               value={provider}
               placeholder="Pilih Provider / Operator"
               mode="outlined"
               editable={false}
-              style={styles.fieldMargin}
+              style={[styles.fieldMargin, { backgroundColor: '#f0f0f0' }]} // Indicate non-editable
               onPressIn={() => setShowProviderModal(true)}
               right={<TextInput.Icon icon="menu-down" onPress={() => setShowProviderModal(true)} />}
+              error={!!providerError}
             />
+            <HelperText type="error" visible={!!providerError}>
+              {providerError}
+            </HelperText>
 
+            {/* Manual Provider Input (if "Lainnya" is selected) */}
             {provider === "Lainnya" && (
               <TextInput
                 label="Nama Provider Manual"
                 placeholder="Masukkan Nama Provider/Bank Manual"
-                onChangeText={setProvider}
+                value={provider} // Bind value to provider state
+                onChangeText={(text) => { setProvider(text); clearErrorOnInput(setProviderError); }}
                 mode="outlined"
                 style={styles.fieldMargin}
               />
@@ -323,51 +456,88 @@ export default function PulsaTransactionScreen() {
               </View>
             )}
 
+            {/* Amount Input */}
             <TextInput
               label="Nominal / Item"
               placeholder="Contoh: 10000"
               value={amount}
-              onChangeText={setAmount}
+              onChangeText={(text) => { setAmount(text); clearErrorOnInput(setAmountError); }}
               keyboardType="numeric"
               mode="outlined"
               style={styles.fieldMargin}
+              error={!!amountError}
             />
+            <HelperText type="error" visible={!!amountError}>
+              {amountError}
+            </HelperText>
 
+            {/* Price Inputs Row */}
             <View style={styles.row}>
-              <TextInput
-                label="Harga Modal"
-                placeholder="0"
-                value={costPrice}
-                onChangeText={setCostPrice}
-                keyboardType="numeric"
-                mode="outlined"
-                style={[styles.fieldMargin, { flex: 1, marginRight: 8 }]}
-              />
-              <TextInput
-                label="Harga Jual"
-                placeholder="0"
-                value={sellingPrice}
-                onChangeText={setSellingPrice}
-                keyboardType="numeric"
-                mode="outlined"
-                style={[styles.fieldMargin, { flex: 1 }]}
-              />
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <TextInput
+                  label="Harga Modal"
+                  placeholder="0"
+                  value={costPrice}
+                  onChangeText={(text) => { setCostPrice(text); clearErrorOnInput(setCostPriceError); }}
+                  keyboardType="numeric"
+                  mode="outlined"
+                  error={!!costPriceError}
+                />
+                <HelperText type="error" visible={!!costPriceError}>
+                  {costPriceError}
+                </HelperText>
+              </View>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  label="Harga Jual"
+                  placeholder="0"
+                  value={sellingPrice}
+                  onChangeText={(text) => { setSellingPrice(text); clearErrorOnInput(setSellingPriceError); }}
+                  keyboardType="numeric"
+                  mode="outlined"
+                  error={!!sellingPriceError}
+                />
+                <HelperText type="error" visible={!!sellingPriceError}>
+                  {sellingPriceError}
+                </HelperText>
+              </View>
             </View>
 
+            {/* Display Profit */}
+            <View style={styles.profitDisplay}>
+              <Text variant="titleMedium">Keuntungan:</Text>
+              <Text variant="titleMedium" style={styles.profitValue}>
+                Rp {profit.toLocaleString("id-ID")}
+              </Text>
+            </View>
+
+            {/* Notes Input */}
             <TextInput
               label="Catatan (Opsional)"
               placeholder="Contoh: Token Listrik"
               value={notes}
-              onChangeText={setNotes}
+              onChangeText={(text) => { setNotes(text); }}
               mode="outlined"
               style={styles.fieldMargin}
             />
 
+            {/* Action Buttons */}
             <Button
               mode="contained"
               onPress={handleTransaction}
               style={styles.mainActionBtn}
               contentStyle={{ paddingVertical: 8 }}
+              // Disable button if essential fields are not valid
+              disabled={
+                !phoneNumber.trim() ||
+                !transactionDate ||
+                (providers.length > 0 && !provider && provider !== "Lainnya") ||
+                !amount ||
+                !sellingPrice ||
+                (costPrice && parseFloat(costPrice) < 0) || // Check cost price negativity
+                (amount && (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0)) ||
+                (sellingPrice && (isNaN(parseFloat(sellingPrice)) || parseFloat(sellingPrice) <= 0))
+              }
             >
               {editTrxId ? "Update Transaksi" : "Proses Transaksi"}
             </Button>
@@ -390,7 +560,7 @@ export default function PulsaTransactionScreen() {
       <Portal>
         <PaperModal
           visible={showProviderModal}
-          onDismiss={() => setShowProviderModal(false)}
+          onDismiss={() => { setShowProviderModal(false); clearErrorOnInput(setProviderError); }} // Clear error when modal is dismissed
           contentContainerStyle={styles.modalContentPaper}
         >
           <Text variant="titleLarge" style={styles.modalTitlePaper}>Pilih Provider / Operator</Text>
@@ -404,13 +574,14 @@ export default function PulsaTransactionScreen() {
                 onPress={() => {
                   setProvider(item);
                   setShowProviderModal(false);
+                  clearErrorOnInput(setProviderError); // Clear error on selection
                 }}
                 right={props => item === provider ? <List.Icon {...props} icon="check" color="#6366F1" /> : null}
               />
             )}
             style={{ maxHeight: 400 }}
           />
-          <Button mode="text" onPress={() => setShowProviderModal(false)} style={{ marginTop: 8 }}>
+          <Button mode="text" onPress={() => { setShowProviderModal(false); clearErrorOnInput(setProviderError); }} style={{ marginTop: 8 }}>
             Tutup
           </Button>
         </PaperModal>
@@ -437,6 +608,7 @@ export default function PulsaTransactionScreen() {
                   setPhoneNumber(item.phone_number);
                   if (item.customer_name) setCustomerName(item.customer_name);
                   setShowHistoryModal(false);
+                  clearErrorOnInput(setPhoneNumberError); // Clear phone number error on selection
                 }}
               />
             )}
@@ -468,7 +640,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontWeight: "800",
-    color: "#111827",
+    color: "#1E293B",
   },
   categoryScroll: {
     paddingHorizontal: 20,
@@ -498,7 +670,7 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 12,
     fontWeight: "bold",
-    color: "#374151",
+    color: "#334155",
   },
   activeCategoryLabel: {
     color: "#FFF",
@@ -511,17 +683,17 @@ const styles = StyleSheet.create({
   inputRowPaper: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 0, // Removed, HelperText will provide spacing below
   },
   fieldMargin: {
-    marginBottom: 16,
+    marginBottom: 0, // Removed, HelperText will provide spacing below
   },
   templateSectionPaper: {
     marginBottom: 16,
   },
   labelPaper: {
     marginBottom: 8,
-    color: "#374151",
+    color: "#334155",
     fontWeight: "600",
   },
   templateGridPaper: {
@@ -534,6 +706,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    alignItems: "flex-start", // Align items to top to account for HelperText
   },
   mainActionBtn: {
     marginTop: 8,
@@ -550,7 +723,21 @@ const styles = StyleSheet.create({
   },
   emptyTextModal: {
     textAlign: "center",
-    color: "#9CA3AF",
+    color: "#94A3B8",
     paddingVertical: 20,
+  },
+  // New styles for profit display and adjusted spacing
+  profitDisplay: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 16,
+    marginBottom: 12, // Adjusted to align with other field margins
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  profitValue: {
+    fontWeight: "bold",
+    color: "#6366F1", // Example color, matching active category
   },
 });

@@ -1,0 +1,12 @@
+{
+  "skills": {
+    "commit": {
+      "description": "Create a git commit with conventional commit message",
+      "path": ".claude/skills/commit.md"
+    },
+    "pr": {
+      "description": "Create a GitHub Pull Request from current branch",
+      "path": ".claude/skills/pr.md"
+    }
+  }
+}

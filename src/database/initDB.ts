@@ -76,6 +76,12 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       try {
         await database.execAsync("ALTER TABLE shop_profile ADD COLUMN cashier_name TEXT;");
       } catch (e) { }
+      try {
+        await database.execAsync("ALTER TABLE shop_profile ADD COLUMN phone_number TEXT;");
+      } catch (e) { }
+      try {
+        await database.execAsync("ALTER TABLE shop_profile ADD COLUMN address TEXT;");
+      } catch (e) { }
 
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS sales (

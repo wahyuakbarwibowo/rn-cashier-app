@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react"; // Added useRef
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   View,
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  Alert,
+  Alert, // Keep for critical errors, but will replace some with Snackbar
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -25,7 +25,8 @@ import {
   Surface,
   Avatar,
   SegmentedButtons,
-  HelperText
+  HelperText, // Import HelperText
+  Snackbar // Import Snackbar
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -33,7 +34,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import BarcodeScannerModal from "../components/BarcodeScannerModal";
 import { getProducts } from "../database/products";
-import { addSale } from "../database/sales";
+import { addSale, getSaleDetail } from "../database/sales"; // Import getSaleDetail for navigation
 import { getCustomers, addCustomer } from "../database/customers";
 import { getPaymentMethods } from "../database/payment_methods";
 import { Product, Customer, PaymentMethod } from "../types/database";
@@ -43,29 +44,34 @@ type CartItem = {
   qty: number; // Total units
 };
 
-// Simplified consolidation: one row per product ID
+// Helper to optimize cart items by consolidating quantities for the same product
 const optimizeCartItems = (items: CartItem[]): CartItem[] => {
   const map = new Map<number, CartItem>();
   for (const item of items) {
     const id = item.product.id!;
     if (map.has(id)) {
+      // If item exists, increase quantity
       map.get(id)!.qty += item.qty;
     } else {
+      // Otherwise, add new item
       map.set(id, { ...item });
     }
   }
+  // Return only items with quantity greater than 0
   return Array.from(map.values()).filter(i => i.qty > 0);
 };
 
-// Helper to calculate effective price breakdown for display
+// Helper to calculate effective price breakdown for display, considering packages
 const getPriceBreakdown = (item: CartItem) => {
   const p = item.product;
   const qty = item.qty;
 
+  // Check if package pricing is available and applicable
   if (p.package_price && p.package_qty && p.package_qty > 0) {
     const numPacks = Math.floor(qty / p.package_qty);
     const remainder = qty % p.package_qty;
     const totalPrice = (numPacks * p.package_price) + (remainder * (p.selling_price || 0));
+    const unitPrice = totalPrice / qty; // Effective unit price
 
     let label = "";
     if (numPacks > 0 && remainder > 0) {
@@ -76,17 +82,18 @@ const getPriceBreakdown = (item: CartItem) => {
       label = `${remainder} Satuan`;
     }
 
-    return { totalPrice, label, unitPrice: totalPrice / qty };
+    return { totalPrice, label, unitPrice };
   }
 
+  // Default to single unit pricing
   const totalPrice = qty * (p.selling_price || 0);
   return { totalPrice, label: `${qty} Satuan`, unitPrice: p.selling_price || 0 };
 };
 
 export default function SalesTransactionScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
+  const insets = useSafeAreaInsets();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paidAmount, setPaidAmount] = useState<string>("0");
@@ -105,6 +112,24 @@ export default function SalesTransactionScreen() {
   const [isScanning, setIsScanning] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  // Snackbar State
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarType, setSnackbarType] = useState<'success' | 'error'>('success'); // 'success' or 'error'
+
+  // Validation States
+  const [paidAmountError, setPaidAmountError] = useState<string | null>(null);
+  const [customerNameError, setCustomerNameError] = useState<string | null>(null);
+  const [transactionDateError, setTransactionDateError] = useState<string | null>(null);
+  const [selectedPaymentMethodError, setSelectedPaymentMethodError] = useState<string | null>(null);
+
+  // Ref for accessing navigation params safely
+  const navigationRef = useRef(navigation);
+
+  // Calculate isDebt here so it's available in the component's render scope
+  const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethodId);
+  const isDebt = selectedMethod?.name?.toLowerCase().includes("hutang") ?? false;
+
   useFocusEffect(
     React.useCallback(() => {
       loadInitialData();
@@ -116,22 +141,35 @@ export default function SalesTransactionScreen() {
         getProducts().then(allProducts => {
           const p = allProducts.find(x => x.id === productId);
           if (p) handleAddToCart(p);
-          navigation.setParams({ addProductId: undefined });
+          // Clear the param after using it
+          navigationRef.current.setParams({ addProductId: undefined });
         });
       }
+      // Clear customer/payment selections if they were made on a previous screen that's not the current one.
+      // This might be too aggressive, consider if this reset is always desired.
+      // For now, we'll rely on explicit selections within this screen.
     }, [route.params])
   );
 
   const loadInitialData = async () => {
-    const [p, c, m] = await Promise.all([
-      getProducts(),
-      getCustomers(),
-      getPaymentMethods()
-    ]);
-    setProducts(p);
-    setCustomers(c);
-    setPaymentMethods(m);
-    if (m.length > 0) setSelectedPaymentMethodId(m[0].id!);
+    try {
+      const [p, c, m] = await Promise.all([
+        getProducts(),
+        getCustomers(),
+        getPaymentMethods()
+      ]);
+      setProducts(p);
+      setCustomers(c);
+      setPaymentMethods(m);
+      if (m.length > 0) {
+        setSelectedPaymentMethodId(m[0].id!);
+      } else {
+        setSelectedPaymentMethodId(null); // No payment methods available
+      }
+    } catch (error) {
+      console.error("Error loading initial data:", error);
+      showSnackbar("Gagal memuat data. Coba lagi.", "error");
+    }
   };
 
 
@@ -146,25 +184,30 @@ export default function SalesTransactionScreen() {
       const existingIndex = prevCart.findIndex((i) => i.product.id === product.id);
 
       if (existingIndex > -1) {
-        return prevCart.map((item, idx) =>
+        // If item exists, increase quantity
+        const updatedCart = prevCart.map((item, idx) =>
           idx === existingIndex ? { ...item, qty: item.qty + unitsToAdd } : item
         );
+        return updatedCart.filter(i => i.qty > 0); // Ensure no negative qty, though logic prevents it
       } else {
+        // Add new item to cart
         return [...prevCart, { product, qty: unitsToAdd }];
       }
     });
+    setSearchQuery(""); // Clear search query after adding
+    showSnackbar(`${product.name} berhasil ditambahkan.`, "success");
   };
 
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     setIsScanning(false);
 
-    // Find product with this code
+    // Find product with this code from the loaded products
     const product = products.find(p => p.code === data);
     if (product) {
       handleAddToCart(product);
-      setSearchQuery(""); // Clear search if any
-      Alert.alert("Sukses", `Berhasil menambah ${product.name}`);
+      // No need to clear search query here as we are coming from scanner
     } else {
+      // Use Alert for "not found" scenario, or navigate to add product
       Alert.alert(
         "Produk Tidak Ditemukan",
         `Barang dengan kode ${data} belum terdaftar.`,
@@ -172,7 +215,7 @@ export default function SalesTransactionScreen() {
           { text: "Tutup", style: "cancel" },
           {
             text: "Tambah Produk",
-            onPress: () => navigation.navigate("Product", { initialCode: data })
+            onPress: () => navigation.navigate("Product", { initialCode: data }) // Navigate to add product screen with scanned code
           }
         ]
       );
@@ -183,15 +226,19 @@ export default function SalesTransactionScreen() {
     if (!permission?.granted) {
       const res = await requestPermission();
       if (!res.granted) {
-        Alert.alert("Izin Kamera", "Akses kamera dibutuhkan untuk scan barcode");
+        Alert.alert("Izin Kamera", "Akses kamera dibutuhkan untuk scan barcode. Silakan aktifkan di pengaturan.");
         return;
       }
     }
     setIsScanning(true);
   };
 
-  const updateCartItemQty = (id: number, qty: number) => {
-    setCart((prev) => prev.map((i) => (i.product.id === id ? { ...i, qty } : i)).filter(i => i.qty > 0));
+  const updateCartItemQty = (id: number, newQty: number) => {
+    if (newQty <= 0) {
+      handleRemoveFromCart(id);
+      return;
+    }
+    setCart((prev) => prev.map((i) => (i.product.id === id ? { ...i, qty: newQty } : i)));
   };
 
   const decreaseCartItemQty = (id: number) => {
@@ -200,18 +247,25 @@ export default function SalesTransactionScreen() {
 
   const handleRemoveFromCart = (id: number) => {
     setCart((prev) => prev.filter((i) => i.product.id !== id));
+    // Optionally show snackbar for removal
+    // showSnackbar("Item dihapus dari keranjang.", "success");
   };
 
+  // Calculate total amount based on cart items and their prices
   const total = cart.reduce((sum, item) => sum + getPriceBreakdown(item).totalPrice, 0);
 
   // Loyalty Points Logic
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
   const availablePoints = selectedCustomer?.points || 0;
+  // Redeem points only if enabled and customer has enough points
   const pointsToRedeem = redeemPoints ? Math.min(availablePoints, total) : 0;
-  const finalTotal = total - pointsToRedeem;
-  const earnedPoints = Math.floor(finalTotal / 1000); // 1 point per 1000 IDR
+  const finalTotal = total - pointsToRedeem; // Total after points redemption
 
+  // Calculate change based on paid amount and final total
   const change = Number(paidAmount) - finalTotal;
+
+  // Calculate points earned based on final total (after redemption)
+  const earnedPoints = Math.floor(finalTotal / 1000); // Example: 1 point per 1000 IDR
 
   const resetForm = () => {
     setCart([]);
@@ -221,71 +275,123 @@ export default function SalesTransactionScreen() {
     setCustomerName("");
     setRedeemPoints(false);
     setTransactionDate(new Date().toISOString().split('T')[0]);
+    // Reset validation errors
+    setPaidAmountError(null);
+    setCustomerNameError(null);
+    setTransactionDateError(null);
+    setSelectedPaymentMethodError(null);
+    // Reset payment method to default if available
     if (paymentMethods.length > 0) {
       setSelectedPaymentMethodId(paymentMethods[0].id!);
+    } else {
+      setSelectedPaymentMethodId(null);
     }
   };
 
   const handleReload = () => {
     loadInitialData();
-    resetForm();
-    Alert.alert("Refreshed", "Data dan keranjang berhasil dimuat ulang");
+    resetForm(); // Reset cart and other states too
+    showSnackbar("Data dan keranjang berhasil dimuat ulang", "success");
+  };
+
+  const showSnackbar = (message: string, type: 'success' | 'error' = 'success') => {
+    setSnackbarMessage(message);
+    setSnackbarType(type);
+    setSnackbarVisible(true);
   };
 
   const handleFinishTransaction = async () => {
+    // --- Basic Validation ---
+    let isValid = true;
+
+    // Cart validation
     if (cart.length === 0) {
-      Alert.alert("Error", "Keranjang kosong");
+      showSnackbar("Keranjang kosong. Tambahkan produk terlebih dahulu.", "error");
       return;
     }
 
-    // Stock Validation
+    // Stock Validation - handled visually and with Alert for blocking issue
     for (const item of cart) {
       if (item.qty > (item.product.stock || 0)) {
+        // Use Alert for critical stock issue as it's blocking
         Alert.alert(
           "Stok Tidak Cukup",
-          `Produk "${item.product.name}" hanya memiliki stok ${item.product.stock || 0}, tapi di keranjang ada ${item.qty}.`
+          `Produk "${item.product.name}" hanya memiliki stok ${item.product.stock || 0}, tapi di keranjang ada ${item.qty}. Harap sesuaikan jumlahnya.`
         );
         return;
       }
     }
+
+    // Date Validation
+    if (!transactionDate) {
+      setTransactionDateError("Tanggal transaksi wajib diisi.");
+      isValid = false;
+    }
+
+    // Payment Method Validation
+    if (!selectedPaymentMethodId) {
+      setSelectedPaymentMethodError("Metode pembayaran wajib dipilih.");
+      isValid = false;
+    }
+
     const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethodId);
     const isDebt = selectedMethod?.name.toLowerCase().includes("hutang");
 
-    if (Number(paidAmount) < finalTotal && !isDebt) {
-      Alert.alert("Error", "Pembayaran kurang");
-      return;
+    // Paid Amount Validation
+    if (!isDebt) {
+      if (!paidAmount.trim()) {
+        setPaidAmountError("Jumlah pembayaran wajib diisi.");
+        isValid = false;
+      } else {
+        const paidValue = parseFloat(paidAmount);
+        if (isNaN(paidValue) || paidValue < 0) {
+          setPaidAmountError("Jumlah pembayaran harus berupa angka positif.");
+          isValid = false;
+        } else if (paidValue < finalTotal) {
+          setPaidAmountError("Pembayaran kurang.");
+          isValid = false;
+        }
+      }
     }
 
+    // Customer Name Validation for Debt
     if (isDebt && !selectedCustomerId && !customerName.trim()) {
-      Alert.alert("Error", "Nama pelanggan harus diisi untuk transaksi hutang");
-      return;
+      setCustomerNameError("Nama pelanggan wajib diisi untuk transaksi hutang.");
+      isValid = false;
     }
+
+    if (!isValid) {
+      return; // Stop if validation fails
+    }
+    // --- End Validation ---
 
     try {
       let finalCustomerId = selectedCustomerId;
 
-      // If manual name is entered, create customer
-      if (!finalCustomerId && customerName.trim()) {
+      // If manual name is entered and it's a debt transaction, create a new customer
+      if (isDebt && !finalCustomerId && customerName.trim()) {
         const newCustomerId = await addCustomer({
           name: customerName.trim(),
-          phone: "",
+          phone: "", // Phone is optional for now
           address: ""
         });
         finalCustomerId = newCustomerId;
+        showSnackbar("Pelanggan baru ditambahkan.", "success");
       }
 
+      // Prepare items for sale, handling package vs. single units
       const finalSalesItems: any[] = [];
       for (const item of cart) {
         const p = item.product;
-        if (p.package_qty && p.package_price) {
+        if (p.package_qty && p.package_price && p.package_qty > 0) {
           const numPacks = Math.floor(item.qty / p.package_qty);
           const remainder = item.qty % p.package_qty;
 
           if (numPacks > 0) {
             finalSalesItems.push({
               product_id: p.id!,
-              qty: numPacks * p.package_qty,
-              price: p.package_price / p.package_qty,
+              qty: numPacks * p.package_qty, // Store total units in this entry
+              price: p.package_price / p.package_qty, // Unit price from package
               subtotal: numPacks * p.package_price,
             });
           }
@@ -293,11 +399,12 @@ export default function SalesTransactionScreen() {
             finalSalesItems.push({
               product_id: p.id!,
               qty: remainder,
-              price: p.selling_price || 0,
+              price: p.selling_price || 0, // Unit price for single item
               subtotal: remainder * (p.selling_price || 0),
             });
           }
         } else {
+          // Default to single unit if no package price defined
           finalSalesItems.push({
             product_id: p.id!,
             qty: item.qty,
@@ -307,46 +414,63 @@ export default function SalesTransactionScreen() {
         }
       }
 
+      // Construct the timestamp for created_at. Use the selected date and current time.
+      const currentTime = new Date().toLocaleTimeString('en-GB'); // e.g., "14:30:00"
+      const createdAtTimestamp = `${transactionDate} ${currentTime}`;
+
       const saleId = await addSale(
         {
           customer_id: finalCustomerId,
           payment_method_id: selectedPaymentMethodId,
-          total: finalTotal,
-          paid: Number(paidAmount),
-          change: isDebt ? 0 : change,
+          total: finalTotal, // Total after points redemption
+          paid: isDebt ? finalTotal : Number(paidAmount), // Paid amount is final total for debt
+          change: isDebt ? 0 : change, // Change is 0 for debt
           points_earned: earnedPoints,
           points_redeemed: pointsToRedeem,
-          created_at: transactionDate + " " + new Date().toLocaleTimeString('en-GB')
+          created_at: createdAtTimestamp
         },
         finalSalesItems
       );
 
-      Alert.alert("Sukses", "Transaksi berhasil disimpan", [
-        {
-          text: "OK",
-          onPress: () => {
-            resetForm();
-            navigation.navigate("SaleDetail", { saleId });
-          }
-        },
-      ]);
+      // Success feedback and navigation
+      showSnackbar("Transaksi berhasil disimpan", "success");
+      resetForm(); // Clear form after successful transaction
+      navigation.navigate("SaleDetail", { saleId }); // Navigate to sale detail screen
+
     } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Gagal menyimpan transaksi");
+      console.error("Transaction saving error:", error);
+      showSnackbar("Gagal menyimpan transaksi. Coba lagi.", "error");
     }
   };
+
+  // Helper function to clear specific error states
+  const clearErrorOnInput = (setErrorFn: (err: null) => void) => {
+    setErrorFn(null);
+  };
+
+  // Determine if the final checkout button should be disabled
+  const isCheckoutButtonDisabled =
+    cart.length === 0 || // Empty cart
+    cart.some(i => i.qty > (i.product.stock || 0)) || // Stock issue
+    !transactionDate || // Missing date
+    !selectedPaymentMethodId || // Missing payment method
+    (change < 0 && !isDebt) || // Payment less than total, not debt
+    (isDebt && !selectedCustomerId && !customerName.trim()) || // Debt requires customer
+    (paidAmountError !== null && !isDebt) || // Paid amount validation failed, not debt
+    (customerNameError !== null && isDebt); // Customer name validation failed for debt
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20} // Adjust if needed
     >
       <View style={{ flex: 1, backgroundColor: "#F3F4F6", paddingTop: 0 }}>
         {/* Top: Search Bar & Quick Actions */}
         <Surface elevation={2} style={styles.topSearchSurface}>
           <View style={styles.searchRow}>
             <TextInput
+              label="Cari Produk" // Added label
               placeholder="Cari produk atau barcode..."
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -364,6 +488,7 @@ export default function SalesTransactionScreen() {
             <IconButton icon="refresh" size={24} onPress={handleReload} style={styles.headerIconBtn} />
           </View>
 
+          {/* Search Results Overlay */}
           {searchQuery.length > 0 && (
             <Surface elevation={4} style={styles.searchResultOverlayPaper}>
               <FlatList
@@ -385,11 +510,11 @@ export default function SalesTransactionScreen() {
                             onPress={() => handleAddToCart(item, false)}
                             size={24}
                           />
-                          {item.package_price ? (
+                          {item.package_price && item.package_qty ? ( // Only show package add if package details exist
                             <IconButton
                               icon="package-variant-plus"
                               onPress={() => handleAddToCart(item, true)}
-                              iconColor="#8B5CF6"
+                              iconColor="#8B5CF6" // Indigo color
                               size={24}
                             />
                           ) : null}
@@ -416,20 +541,21 @@ export default function SalesTransactionScreen() {
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
             renderItem={({ item }) => {
               const info = getPriceBreakdown(item);
-              const isInvalid = item.qty > (item.product.stock || 0);
+              // Check for stock validity directly in render
+              const isStockLow = item.qty > (item.product.stock || 0);
               return (
                 <Surface elevation={1} style={styles.cartItemSurface}>
                   <List.Item
                     title={item.product.name}
-                    titleStyle={isInvalid ? { color: '#DC2626', fontWeight: 'bold' } : { fontWeight: '600' }}
-                    description={`${info.label} • Rp ${Math.round(info.unitPrice).toLocaleString("id-ID")}${isInvalid ? `\n⚠️ Stok kurang (Sisa: ${item.product.stock})` : ''}`}
-                    descriptionStyle={isInvalid ? { color: '#DC2626' } : undefined}
+                    titleStyle={isStockLow ? { color: '#E11D48', fontWeight: 'bold' } : { fontWeight: '600' }}
+                    description={`${info.label} • Rp ${Math.round(info.unitPrice).toLocaleString("id-ID")}${isStockLow ? `\n⚠️ Stok kurang (Sisa: ${item.product.stock})` : ''}`}
+                    descriptionStyle={isStockLow ? { color: '#E11D48' } : undefined}
                     right={() => (
                       <View style={styles.cartQtyActions}>
-                        <IconButton icon="minus-circle-outline" size={22} onPress={() => decreaseCartItemQty(item.product.id!)} />
+                        <IconButton icon="minus-circle-outline" size={22} onPress={() => decreaseCartItemQty(item.product.id!)} disabled={item.qty <= 1 && !item.product.package_qty} />
                         <Text style={styles.cartQtyText}>{item.qty}</Text>
                         <IconButton icon="plus-circle-outline" size={22} onPress={() => handleAddToCart(item.product, false)} />
-                        <IconButton icon="delete-outline" size={22} iconColor="#EF4444" onPress={() => handleRemoveFromCart(item.product.id!)} />
+                        <IconButton icon="delete-outline" size={22} iconColor="#E11D48" onPress={() => handleRemoveFromCart(item.product.id!)} />
                       </View>
                     )}
                   />
@@ -453,14 +579,16 @@ export default function SalesTransactionScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>Detail Transaksi</Text>
               <TextInput
+                label="Tanggal" // Added label for clarity
                 value={transactionDate}
-                onChangeText={setTransactionDate}
+                onChangeText={(text) => { setTransactionDate(text); clearErrorOnInput(setTransactionDateError); }} // Clear error on input
                 mode="flat"
                 placeholder="YYYY-MM-DD"
-                style={{ backgroundColor: 'transparent', height: 40, fontSize: 13, width: 150 }}
+                style={styles.dateInputFlat} // Custom style for flat input
                 contentStyle={{ paddingHorizontal: 0 }}
                 underlineColor="transparent"
                 activeUnderlineColor="transparent"
+                error={!!transactionDateError}
                 right={<TextInput.Icon
                   icon="calendar"
                   size={24}
@@ -469,6 +597,9 @@ export default function SalesTransactionScreen() {
                 />}
               />
             </View>
+            <HelperText type="error" visible={!!transactionDateError}>
+              {transactionDateError}
+            </HelperText>
 
             {showDatePicker && (
               <DateTimePicker
@@ -479,6 +610,7 @@ export default function SalesTransactionScreen() {
                   setShowDatePicker(false);
                   if (selectedDate) {
                     setTransactionDate(selectedDate.toISOString().split('T')[0]);
+                    clearErrorOnInput(setTransactionDateError); // Clear error on selection
                   }
                 }}
               />
@@ -486,14 +618,17 @@ export default function SalesTransactionScreen() {
 
             {/* Customer & Payment Options Row */}
             <View style={styles.bottomSelectorsRow}>
+              {/* Customer Selection */}
               <View style={{ flex: 1, marginRight: 8 }}>
                 <Text variant="labelSmall" style={styles.bottomLabel}>Pelanggan:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScrollView}>
+                  {/* "Umum" chip */}
                   <Chip
-                    selected={!selectedCustomerId && !customerName}
+                    selected={!selectedCustomerId && !customerName.trim()}
                     onPress={() => {
                       setSelectedCustomerId(null);
                       setCustomerName("");
+                      clearErrorOnInput(setCustomerNameError);
                     }}
                     style={styles.bottomChip}
                     selectedColor="#6366F1"
@@ -501,13 +636,15 @@ export default function SalesTransactionScreen() {
                   >
                     Umum
                   </Chip>
+                  {/* Map up to 5 customers */}
                   {customers.slice(0, 5).map(c => (
                     <Chip
                       key={c.id}
                       selected={selectedCustomerId === c.id}
                       onPress={() => {
                         setSelectedCustomerId(c.id!);
-                        setCustomerName("");
+                        setCustomerName(""); // Clear manual name when selecting existing customer
+                        clearErrorOnInput(setCustomerNameError);
                       }}
                       style={styles.bottomChip}
                       selectedColor="#6366F1"
@@ -516,29 +653,54 @@ export default function SalesTransactionScreen() {
                       {c.name}
                     </Chip>
                   ))}
+                  {/* Add button to navigate to customer list if more than 5 */}
+                  {customers.length > 5 && (
+                    <Chip
+                      icon="account-plus"
+                      onPress={() => navigation.navigate("Customers")} // Assuming a Customers screen exists
+                      style={styles.bottomChip}
+                      selectedColor="#6366F1"
+                      compact
+                    >
+                      Lainnya
+                    </Chip>
+                  )}
                 </ScrollView>
+                {/* Manual Customer Name Input */}
                 <TextInput
-                  placeholder="Nama pelanggan..."
+                  placeholder="Nama pelanggan baru..."
                   value={customerName}
                   onChangeText={(t) => {
                     setCustomerName(t);
-                    if (t) setSelectedCustomerId(null);
+                    if (t.trim()) { // If name is entered, deselect existing customer
+                      setSelectedCustomerId(null);
+                    }
+                    clearErrorOnInput(setCustomerNameError);
                   }}
                   mode="outlined"
                   dense
                   style={styles.bottomInput}
                   outlineStyle={{ borderRadius: 8 }}
+                  selectTextOnFocus
+                  error={!!customerNameError}
                 />
+                <HelperText type="error" visible={!!customerNameError}>
+                  {customerNameError}
+                </HelperText>
               </View>
 
+              {/* Payment Method Selection */}
               <View style={{ flex: 1 }}>
                 <Text variant="labelSmall" style={styles.bottomLabel}>Metode Bayar:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScrollView}>
                   {paymentMethods.map(m => (
                     <Chip
                       key={m.id}
                       selected={selectedPaymentMethodId === m.id}
-                      onPress={() => setSelectedPaymentMethodId(m.id!)}
+                      onPress={() => {
+                        setSelectedPaymentMethodId(m.id!);
+                        clearErrorOnInput(setSelectedPaymentMethodError);
+                      }}
                       style={styles.bottomChip}
                       selectedColor="#6366F1"
                       compact
@@ -547,9 +709,16 @@ export default function SalesTransactionScreen() {
                     </Chip>
                   ))}
                 </ScrollView>
+                <HelperText type="error" visible={!!selectedPaymentMethodError}>
+                  {selectedPaymentMethodError}
+                </HelperText>
                 <TextInput
+                  label="Jumlah Bayar" // Added label
                   value={paidAmount}
-                  onChangeText={setPaidAmount}
+                  onChangeText={(text) => {
+                    setPaidAmount(text);
+                    clearErrorOnInput(setPaidAmountError);
+                  }}
                   keyboardType="numeric"
                   mode="outlined"
                   dense
@@ -557,7 +726,12 @@ export default function SalesTransactionScreen() {
                   outlineStyle={{ borderRadius: 8 }}
                   selectTextOnFocus
                   left={<TextInput.Affix text="Rp " />}
+                  error={!!paidAmountError}
+                  disabled={isDebt} // Disable paid amount input for debt
                 />
+                <HelperText type="error" visible={!!paidAmountError}>
+                  {paidAmountError}
+                </HelperText>
               </View>
             </View>
 
@@ -570,7 +744,11 @@ export default function SalesTransactionScreen() {
                 </View>
                 <Button
                   mode={redeemPoints ? "contained" : "text"}
-                  onPress={() => setRedeemPoints(!redeemPoints)}
+                  onPress={() => {
+                    setRedeemPoints(!redeemPoints);
+                    // Clear paid amount error if redeeming/unredeeming points affects it
+                    if (!isDebt) setPaidAmountError(null);
+                  }}
                   compact
                   labelStyle={{ fontSize: 10 }}
                   buttonColor={redeemPoints ? "#FB7185" : undefined}
@@ -586,7 +764,7 @@ export default function SalesTransactionScreen() {
             {/* Summary Row */}
             <View style={styles.summaryRow}>
               <View style={{ flex: 1 }}>
-                <Text variant="labelSmall" style={{ color: '#6B7280' }}>Total Yang Harus Dibayar</Text>
+                <Text variant="labelSmall" style={{ color: '#64748B' }}>Total Yang Harus Dibayar</Text>
                 <Text variant="headlineSmall" style={styles.finalTotalText}>
                   Rp {finalTotal.toLocaleString("id-ID")}
                 </Text>
@@ -598,8 +776,8 @@ export default function SalesTransactionScreen() {
                 )}
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text variant="labelSmall" style={{ color: '#6B7280' }}>
-                  {paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang")
+                <Text variant="labelSmall" style={{ color: '#64748B' }}>
+                  {isDebt
                     ? "Sisa Hutang"
                     : "Kembalian"}
                 </Text>
@@ -609,24 +787,43 @@ export default function SalesTransactionScreen() {
               </View>
             </View>
 
+            {/* Final Checkout Button */}
             <Button
               mode="contained"
               onPress={handleFinishTransaction}
+              // Dynamically determine if checkout button should be disabled
               disabled={
-                cart.length === 0 ||
-                cart.some(i => i.qty > (i.product.stock || 0)) ||
-                (change < 0 && !paymentMethods.find(m => m.id === selectedPaymentMethodId)?.name.toLowerCase().includes("hutang"))
+                cart.length === 0 || // Empty cart
+                cart.some(i => i.qty > (i.product.stock || 0)) || // Stock issue
+                !transactionDate || // Missing date
+                !selectedPaymentMethodId || // Missing payment method
+                (change < 0 && !isDebt) || // Payment less than total, not debt
+                (isDebt && !selectedCustomerId && !customerName.trim()) || // Debt requires customer
+                (paidAmountError !== null && !isDebt) || // Paid amount validation failed, not debt
+                (customerNameError !== null && isDebt) // Customer name validation failed for debt
               }
               style={styles.finalCheckoutBtn}
               contentStyle={{ height: 50 }}
               labelStyle={{ fontSize: 16, fontWeight: 'bold' }}
               icon="cart-check"
             >
-              {cart.some(i => i.qty > (i.product.stock || 0)) ? "Stok Kurang" : "Selesaikan & Print"}
+              {cart.some(i => i.qty > (i.product.stock || 0)) ? "Stok Kurang" :
+               isDebt ? "Simpan Hutang" : "Selesaikan & Bayar"}
             </Button>
           </ScrollView>
         </Surface>
 
+        {/* Snackbar for feedback */}
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={3000} // Standard duration
+          style={{ backgroundColor: snackbarType === 'success' ? '#10B981' : '#EF4444' }}
+        >
+          {snackbarMessage}
+        </Snackbar>
+
+        {/* Barcode Scanner Modal */}
         <BarcodeScannerModal
           visible={isScanning}
           onScanned={handleBarcodeScanned}
@@ -667,7 +864,7 @@ const styles = StyleSheet.create({
   },
   searchResultOverlayPaper: {
     position: "absolute",
-    top: 70,
+    top: 70, // Position below the search bar
     left: 12,
     right: 12,
     backgroundColor: "white",
@@ -677,7 +874,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    elevation: 8,
+    elevation: 8, // Shadow for overlay
   },
   productActionsPaper: {
     flexDirection: 'row',
@@ -717,12 +914,19 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     backgroundColor: '#FFF',
-    elevation: 10,
+    elevation: 10, // Shadow for the checkout area
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     maxHeight: '55%',
+  },
+  dateInputFlat: {
+    backgroundColor: 'transparent',
+    height: 40,
+    fontSize: 13,
+    width: 150,
+    marginLeft: 'auto', // Push to the right
   },
   bottomSelectorsRow: {
     flexDirection: 'row',
@@ -730,13 +934,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   bottomLabel: {
-    color: '#6B7280',
+    color: '#64748B',
     marginBottom: 4,
     fontWeight: '700',
+  },
+  chipScrollView: {
+    marginBottom: 4, // Space between scroll view and text input
   },
   bottomChip: {
     marginRight: 6,
     height: 32,
+    justifyContent: 'center', // Center content vertically
   },
   bottomInput: {
     backgroundColor: '#FFF',
@@ -745,12 +953,13 @@ const styles = StyleSheet.create({
   loyaltyInline: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5F7',
+    backgroundColor: '#FFF5F7', // Light red background for loyalty points
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     justifyContent: 'space-between',
     marginTop: 4,
+    marginBottom: 12, // Space before divider
   },
   summaryRow: {
     flexDirection: "row",
@@ -760,7 +969,7 @@ const styles = StyleSheet.create({
   },
   finalTotalText: {
     fontWeight: "900",
-    color: "#6366F1",
+    color: "#6366F1", // Indigo color for emphasis
     lineHeight: 32,
   },
   changeText: {

@@ -11,12 +11,14 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import { getShopProfile, updateShopProfile } from "../database/settings";
+import { getShopProfile, updateShopProfile, ShopProfile } from "../database/settings"; // Assuming ShopProfile type has phone_number and address
 
 export default function SettingsScreen() {
   const [name, setName] = useState("");
   const [footerNote, setFooterNote] = useState("");
   const [cashierName, setCashierName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState(""); // New state for phone number
+  const [address, setAddress] = useState("");       // New state for address
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,9 +33,12 @@ export default function SettingsScreen() {
         setName(profile.name || "");
         setFooterNote(profile.footer_note || "");
         setCashierName(profile.cashier_name || "");
+        setPhoneNumber(profile.phone_number || ""); // Load phone number
+        setAddress(profile.address || "");         // Load address
       }
     } catch (e) {
       console.error(e);
+      Alert.alert("Error", "Gagal memuat profil toko");
     } finally {
       setLoading(false);
     }
@@ -45,7 +50,15 @@ export default function SettingsScreen() {
         Alert.alert("Error", "Nama toko harus diisi");
         return;
       }
-      await updateShopProfile({ name, footer_note: footerNote, cashier_name: cashierName });
+      // Prepare data for update, including new fields
+      const updatedProfile: Partial<ShopProfile> = {
+        name,
+        footer_note: footerNote,
+        cashier_name: cashierName,
+        phone_number: phoneNumber, // Include phone number
+        address: address,         // Include address
+      };
+      await updateShopProfile(updatedProfile);
       Alert.alert("Sukses", "Profil toko berhasil diperbarui");
     } catch (e) {
       console.error(e);
@@ -62,12 +75,12 @@ export default function SettingsScreen() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <ScrollView 
+      <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
@@ -81,6 +94,7 @@ export default function SettingsScreen() {
             value={name}
             onChangeText={setName}
             placeholder="Contoh: Toko Berkah"
+            autoCapitalize="words"
           />
 
           <Text style={styles.label}>Nama Kasir</Text>
@@ -89,6 +103,29 @@ export default function SettingsScreen() {
             value={cashierName}
             onChangeText={setCashierName}
             placeholder="Contoh: Budi Santoso"
+            autoCapitalize="words"
+          />
+
+          {/* New Phone Number Input */}
+          <Text style={styles.label}>Nomor Telepon</Text>
+          <TextInput
+            style={styles.input}
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            placeholder="Contoh: 081234567890"
+            keyboardType="phone-pad"
+          />
+
+          {/* New Address Input */}
+          <Text style={styles.label}>Alamat Toko</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={address}
+            onChangeText={setAddress}
+            placeholder="Contoh: Jl. Merdeka No. 10, Jakarta Pusat"
+            multiline
+            numberOfLines={3}
+            autoCapitalize="sentences"
           />
 
           <Text style={styles.label}>Catatan Kaki Struk (Footnote)</Text>
@@ -136,6 +173,10 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   label: {
     fontSize: 14,
@@ -148,7 +189,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 12,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10, // Adjusted padding for better vertical spacing
     fontSize: 16,
     marginBottom: 16,
   },
@@ -187,12 +229,15 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: "top",
+    paddingTop: 12, // Adjust padding for multiline inputs
   },
   saveButton: {
     backgroundColor: "#111827",
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: "center",
+    marginTop: 8, // Added some margin top
   },
   saveButtonText: {
     color: "#FFF",

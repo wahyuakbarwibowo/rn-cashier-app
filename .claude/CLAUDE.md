@@ -4,72 +4,78 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Point of Sale (POS) cashier app for small businesses built with React Native (Expo) and SQLite. The app is designed for fully offline operation.
+**Aminmart Cashier** — A Point of Sale (POS) + PPOB app for small retail businesses built with React Native (Expo) and SQLite. Fully offline operation. UI in Indonesian.
+
+### Key Features
+- **Retail POS**: Barcode scanner, package/unit dual pricing, stock validation, receipt printing (58mm thermal)
+- **Digital Services (PPOB)**: Pulsa, PLN, E-Wallet, BPJS, Transfer Bank, Game — with dynamic categories
+- **Financial**: Profit & loss reports, expense tracking, receivables/payables with WhatsApp collection
+- **Stock Management**: Low stock alerts, purchase entry, top products analytics
+- **Customer & Supplier**: Master data, loyalty points, debt tracking with due dates
+- **Reports**: Sales reports, digital reports, date range filters, interactive drill-down
+- **Backup/Restore**: Full JSON export/import with transaction safety
 
 ## Development Commands
 
 ```bash
-# Install dependencies (uses bun)
-bun install
-
-# Start development server
-bun start
-
-# Run on platforms
-bun android        # expo run:android
-bun ios            # expo run:ios
-bun web            # expo start --web
+bun install          # Install dependencies
+bun start            # Start dev server
+bun android          # expo run:android
+bun ios              # expo run:ios
+bun web              # expo start --web
 ```
 
-For EAS builds, use the standard `eas build` commands with profiles defined in `eas.json` (development, preview, production).
+For EAS builds, use `eas build` with profiles in `eas.json` (development, preview, production).
 
 ## Architecture
 
 ### Code Structure
 
-- `src/database/` - SQLite data layer with CRUD operations
-- `src/screens/` - Feature screens (14 total)
-- `src/navigation/` - Drawer navigator config and types
-- `src/types/` - TypeScript interfaces
+- `src/screens/` - 26 feature screens (see `.claude/docs/screens.md`)
+- `src/database/` - 12 SQLite data layer files (see `.claude/docs/database.md`)
+- `src/navigation/` - Drawer navigator config and route types
+- `src/types/` - TypeScript interfaces (`database.ts`, `product.ts`, `purchase.ts`, `supplier.ts`)
 - `App.tsx` - Root component with DB initialization
 - `index.ts` - Entry point
 
-### Database Layer (`src/database/`)
+### Database Layer
 
-**Critical**: `initDB.ts` implements singleton pattern with Promise locking to prevent race conditions on Android. Always use `getDB()` to access the database instance.
+**Critical**: `initDB.ts` uses singleton pattern with Promise locking (prevents race conditions on Android). Always use `getDB()` to access the database instance. Schema migrations are inline via try/catch `ALTER TABLE`.
 
-Tables: products, customers, payment_methods, sales, sales_items, purchases, purchase_items, receivables, payables, phone_history, shop_profile
-
-Schema migrations are handled inline via try/catch `ALTER TABLE` calls in `initDB.ts`.
+Full table reference in `.claude/docs/database.md`.
 
 ### State Management
 
-No Redux/Context - all state is component-local with `useState`. Database operations are direct async calls:
-
-```typescript
-const [products, setProducts] = useState<Product[]>([]);
-useEffect(() => { loadProducts(); }, []);
-const loadProducts = async () => setProducts(await getProducts());
-```
-
-Screens use `useFocusEffect` to reload data when navigating back.
+No Redux/Context — all state is component-local `useState`. Database operations are direct async calls. Screens use `useFocusEffect` to reload data on focus.
 
 ### Navigation
 
-Flat drawer navigation only (no nested stacks). All routes defined in `DrawerNavigator.tsx`. Hidden screens (SaleDetail, ProductDetail) are drawer items with `drawerItemStyle: { display: 'none' }`.
+Flat drawer navigation only (no nested stacks). All routes in `DrawerNavigator.tsx`. Hidden screens use `drawerItemStyle: { display: 'none' }`. Custom drawer content with memoized `MenuItem` and `SectionHeader` components.
 
 ### Key Business Logic
 
-- **Package Pricing**: Products support dual unit/package pricing (`selling_price` vs `package_price`/`package_qty`). See `getPriceBreakdown()` in `SalesTransactionScreen.tsx`.
-- **Auto-Receivables**: When payment < total, a receivable is automatically created (`sales.ts:addSale`).
+- **Package Pricing**: Dual unit/package pricing (`selling_price` vs `package_price`/`package_qty`). See `getPriceBreakdown()` in `SalesTransactionScreen.tsx`.
+- **Auto-Receivables**: When payment < total, a receivable is auto-created (`sales.ts:addSale`).
 - **Debt Payment Method**: Payment method containing "hutang" enables partial/zero payments creating receivables.
-- **Backup/Restore**: Full JSON export/import with transaction safety (`backup.ts`).
+- **Stock Validation**: Prevents transactions when stock is insufficient, with visual warnings in cart.
+- **Backdate Transactions**: Sales and digital transactions support custom date input.
+- **Thermal Printing**: Optimized receipt layout for 58mm thermal bluetooth printers via `expo-print`.
+- **Digital Categories**: Dynamic CRUD for digital service categories (PULSA, PLN, PDAM, VOUCHER, etc.).
+- **Profit & Loss**: Integrated report combining sales revenue, COGS, expenses, and receivables/payables.
 
-### Type Definitions
+## Detailed Documentation
 
-Core types in `src/types/database.ts`: Product, Customer, PaymentMethod, ShopProfile, Sale, SaleItem.
+- `.claude/docs/screens.md` - All 26 screens organized by module with route names
+- `.claude/docs/database.md` - All 12 database files and table schemas
 
-Extended types in `src/types/product.ts` and `src/types/purchase.ts`.
+## Skills
+
+Custom skills available via slash commands:
+
+- `/commit` - Create a git commit with Conventional Commits format
+- `/pr` - Create a GitHub Pull Request from current branch to master
+
+Skill definitions in `.claude/skills/`.
 
 ## Language
 
