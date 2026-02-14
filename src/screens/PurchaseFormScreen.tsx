@@ -192,7 +192,7 @@ export default function PurchaseFormScreen() {
           { text: "Tutup", style: "cancel" },
           {
             text: "Tambah Produk",
-            onPress: () => navigation.navigate("Product", { initialCode: data })
+            onPress: () => navigation.navigate("ProductForm", { initialCode: data })
           }
         ]
       );

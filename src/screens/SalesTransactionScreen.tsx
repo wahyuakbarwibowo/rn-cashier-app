@@ -34,10 +34,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import BarcodeScannerModal from "../components/BarcodeScannerModal";
 import { getProducts } from "../database/products";
-import { addSale, getSaleDetail } from "../database/sales"; // Import getSaleDetail for navigation
+import { addSale, getSaleDetail, updateSale, SaleItemPayload } from "../database/sales";
 import { getCustomers, addCustomer } from "../database/customers";
 import { getPaymentMethods } from "../database/payment_methods";
-import { Product, Customer, PaymentMethod } from "../types/database";
+import { Product, Customer, PaymentMethod, Sale } from "../types/database";
 
 type CartItem = {
   product: Product;
@@ -106,6 +106,9 @@ export default function SalesTransactionScreen() {
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [redeemPoints, setRedeemPoints] = useState(false);
+  const [editSaleId, setEditSaleId] = useState<number | null>(null);
+  const [loadingEditSale, setLoadingEditSale] = useState(false);
+  const lastLoadedEditSaleId = useRef<number | null>(null);
 
   // Barcode Scanner & Date Picker State
   const [permission, requestPermission] = useCameraPermissions();
@@ -125,6 +128,21 @@ export default function SalesTransactionScreen() {
 
   // Ref for accessing navigation params safely
   const navigationRef = useRef(navigation);
+  useEffect(() => {
+    navigationRef.current = navigation;
+  }, [navigation]);
+  const exitEditMode = () => {
+    setEditSaleId(null);
+    lastLoadedEditSaleId.current = null;
+    navigationRef.current.setParams({ editSaleId: undefined });
+    setLoadingEditSale(false);
+  };
+
+  const cancelEdit = () => {
+    resetForm();
+    exitEditMode();
+    showSnackbar("Edit transaksi dibatalkan", "success");
+  };
 
   // Calculate isDebt here so it's available in the component's render scope
   const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethodId);
@@ -134,7 +152,7 @@ export default function SalesTransactionScreen() {
     React.useCallback(() => {
       loadInitialData();
 
-      const params = route.params as { addProductId?: number };
+      const params = route.params as { addProductId?: number; editSaleId?: number };
       if (params?.addProductId) {
         const productId = params.addProductId;
         // Search in fresh products
@@ -144,6 +162,9 @@ export default function SalesTransactionScreen() {
           // Clear the param after using it
           navigationRef.current.setParams({ addProductId: undefined });
         });
+      }
+      if (params?.editSaleId) {
+        setEditSaleId(params.editSaleId);
       }
       // Clear customer/payment selections if they were made on a previous screen that's not the current one.
       // This might be too aggressive, consider if this reset is always desired.
@@ -172,11 +193,76 @@ export default function SalesTransactionScreen() {
     }
   };
 
+  const loadSaleForEdit = async (saleId: number) => {
+    setLoadingEditSale(true);
+    try {
+      const detail = await getSaleDetail(saleId);
+      if (!detail) {
+        showSnackbar("Transaksi tidak ditemukan.", "error");
+        exitEditMode();
+        return;
+      }
+      const sale = detail.sale;
+      setSelectedCustomerId(sale.customer_id || null);
+      setSelectedPaymentMethodId(sale.payment_method_id || null);
+      setPaidAmount(typeof sale.paid === "number" ? sale.paid.toString() : "0");
+      setTransactionDate(sale.created_at ? sale.created_at.split(' ')[0] : new Date().toISOString().split('T')[0]);
+      setRedeemPoints((sale.points_redeemed || 0) > 0);
+      setCustomerName("");
+      setPaidAmountError(null);
+      setCustomerNameError(null);
+      setSelectedPaymentMethodError(null);
+      setTransactionDateError(null);
+      setSearchQuery("");
+
+      const aggregatedCart = new Map<number, CartItem>();
+      const productMap = new Map<number, Product>(
+        products.filter(p => p.id).map(p => [p.id!, p])
+      );
+
+      for (const item of detail.items) {
+        const storedProduct = productMap.get(item.product_id);
+        const fallbackProduct: Product = {
+          id: item.product_id,
+          name: storedProduct?.name || "Produk Terhapus",
+          selling_price: storedProduct?.selling_price ?? item.price,
+          stock: storedProduct?.stock ?? 0,
+        };
+
+        const productForCart = storedProduct ? { ...storedProduct } : fallbackProduct;
+        if (!productForCart.selling_price) {
+          productForCart.selling_price = item.price;
+        }
+
+        if (aggregatedCart.has(item.product_id)) {
+          aggregatedCart.get(item.product_id)!.qty += item.qty;
+        } else {
+          aggregatedCart.set(item.product_id, { product: productForCart, qty: item.qty });
+        }
+      }
+
+      setCart(Array.from(aggregatedCart.values()));
+      lastLoadedEditSaleId.current = saleId;
+    } catch (error) {
+      console.error("Load sale for edit error:", error);
+      showSnackbar("Gagal memuat transaksi untuk diedit.", "error");
+      exitEditMode();
+    } finally {
+      setLoadingEditSale(false);
+    }
+  };
+
 
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  useEffect(() => {
+    if (editSaleId && lastLoadedEditSaleId.current !== editSaleId) {
+      loadSaleForEdit(editSaleId);
+    }
+  }, [editSaleId]);
 
   const handleAddToCart = (product: Product, asPackage: boolean = false) => {
     const unitsToAdd = asPackage ? (product.package_qty || 1) : 1;
@@ -215,7 +301,7 @@ export default function SalesTransactionScreen() {
           { text: "Tutup", style: "cancel" },
           {
             text: "Tambah Produk",
-            onPress: () => navigation.navigate("Product", { initialCode: data }) // Navigate to add product screen with scanned code
+            onPress: () => navigation.navigate("ProductForm", { initialCode: data }) // Navigate to add product screen with scanned code
           }
         ]
       );
@@ -380,7 +466,7 @@ export default function SalesTransactionScreen() {
       }
 
       // Prepare items for sale, handling package vs. single units
-      const finalSalesItems: any[] = [];
+      const finalSalesItems: SaleItemPayload[] = [];
       for (const item of cart) {
         const p = item.product;
         if (p.package_qty && p.package_price && p.package_qty > 0) {
@@ -417,25 +503,31 @@ export default function SalesTransactionScreen() {
       // Construct the timestamp for created_at. Use the selected date and current time.
       const currentTime = new Date().toLocaleTimeString('en-GB'); // e.g., "14:30:00"
       const createdAtTimestamp = `${transactionDate} ${currentTime}`;
+      const salePayload: Sale = {
+        customer_id: finalCustomerId,
+        payment_method_id: selectedPaymentMethodId,
+        total: finalTotal,
+        paid: isDebt ? finalTotal : Number(paidAmount),
+        change: isDebt ? 0 : change,
+        points_earned: earnedPoints,
+        points_redeemed: pointsToRedeem,
+        created_at: createdAtTimestamp,
+      };
 
-      const saleId = await addSale(
-        {
-          customer_id: finalCustomerId,
-          payment_method_id: selectedPaymentMethodId,
-          total: finalTotal, // Total after points redemption
-          paid: isDebt ? finalTotal : Number(paidAmount), // Paid amount is final total for debt
-          change: isDebt ? 0 : change, // Change is 0 for debt
-          points_earned: earnedPoints,
-          points_redeemed: pointsToRedeem,
-          created_at: createdAtTimestamp
-        },
-        finalSalesItems
-      );
+      if (editSaleId) {
+        await updateSale(editSaleId, salePayload, finalSalesItems);
+        showSnackbar("Transaksi berhasil diperbarui", "success");
+        resetForm();
+        exitEditMode();
+        navigation.navigate("SaleDetail", { saleId: editSaleId, from: "SalesTransaction" });
+        return;
+      }
 
-      // Success feedback and navigation
+      const saleId = await addSale(salePayload, finalSalesItems);
+
       showSnackbar("Transaksi berhasil disimpan", "success");
-      resetForm(); // Clear form after successful transaction
-      navigation.navigate("SaleDetail", { saleId }); // Navigate to sale detail screen
+      resetForm();
+      navigation.navigate("SaleDetail", { saleId });
 
     } catch (error) {
       console.error("Transaction saving error:", error);
@@ -449,15 +541,22 @@ export default function SalesTransactionScreen() {
   };
 
   // Determine if the final checkout button should be disabled
+  const stockIssue = cart.some(i => i.qty > (i.product.stock || 0));
   const isCheckoutButtonDisabled =
     cart.length === 0 || // Empty cart
-    cart.some(i => i.qty > (i.product.stock || 0)) || // Stock issue
+    stockIssue || // Stock issue
     !transactionDate || // Missing date
     !selectedPaymentMethodId || // Missing payment method
     (change < 0 && !isDebt) || // Payment less than total, not debt
     (isDebt && !selectedCustomerId && !customerName.trim()) || // Debt requires customer
     (paidAmountError !== null && !isDebt) || // Paid amount validation failed, not debt
-    (customerNameError !== null && isDebt); // Customer name validation failed for debt
+    (customerNameError !== null && isDebt) || // Customer name validation failed for debt
+    loadingEditSale;
+
+  const baseCheckoutLabel = editSaleId
+    ? (isDebt ? "Perbarui Hutang" : "Perbarui Transaksi")
+    : (isDebt ? "Simpan Hutang" : "Selesaikan & Bayar");
+  const checkoutLabel = stockIssue ? "Stok Kurang" : baseCheckoutLabel;
 
   return (
     <KeyboardAvoidingView
@@ -791,25 +890,27 @@ export default function SalesTransactionScreen() {
             <Button
               mode="contained"
               onPress={handleFinishTransaction}
-              // Dynamically determine if checkout button should be disabled
-              disabled={
-                cart.length === 0 || // Empty cart
-                cart.some(i => i.qty > (i.product.stock || 0)) || // Stock issue
-                !transactionDate || // Missing date
-                !selectedPaymentMethodId || // Missing payment method
-                (change < 0 && !isDebt) || // Payment less than total, not debt
-                (isDebt && !selectedCustomerId && !customerName.trim()) || // Debt requires customer
-                (paidAmountError !== null && !isDebt) || // Paid amount validation failed, not debt
-                (customerNameError !== null && isDebt) // Customer name validation failed for debt
-              }
+              disabled={isCheckoutButtonDisabled}
               style={styles.finalCheckoutBtn}
               contentStyle={{ height: 50 }}
               labelStyle={{ fontSize: 16, fontWeight: 'bold' }}
               icon="cart-check"
             >
-              {cart.some(i => i.qty > (i.product.stock || 0)) ? "Stok Kurang" :
-               isDebt ? "Simpan Hutang" : "Selesaikan & Bayar"}
+              {checkoutLabel}
             </Button>
+            {editSaleId && (
+              <Button
+                mode="outlined"
+                onPress={cancelEdit}
+                disabled={loadingEditSale}
+                style={[styles.finalCheckoutBtn, { marginTop: 8 }]}
+                contentStyle={{ height: 50 }}
+                labelStyle={{ fontSize: 16, fontWeight: 'bold' }}
+                icon="close-circle"
+              >
+                Batal Edit
+              </Button>
+            )}
           </ScrollView>
         </Surface>
 

@@ -1,6 +1,7 @@
 import * as Print from 'expo-print';
 import { DigitalTransaction } from '../database/pulsa';
-import { getShopProfile, ShopProfile } from '../database/settings'; // Import ShopProfile type
+import { getShopProfile, ShopProfile } from '../database/settings';
+import { Sale } from '../types/database';
 
 // Module-level flag to prevent concurrent print requests
 let isPrinting = false;
@@ -138,7 +139,11 @@ export const printDigitalReceipt = async (trx: DigitalTransaction) => {
   }
 };
 
-export const printSaleReceipt = async (sale: any, items: any[]) => {
+type SaleReceipt = Sale & {
+  payment_method_name?: string;
+};
+
+export const printSaleReceipt = async (sale: SaleReceipt, items: any[]) => {
   // Check if another print request is already in progress
   if (isPrinting) {
     console.warn("Gagal mencetak struk: [Error: Another print request is already in progress]");
@@ -220,6 +225,11 @@ export const printSaleReceipt = async (sale: any, items: any[]) => {
         </table>
 
         <div class="divider"></div>
+
+        <div class="row">
+          <span>Metode</span>
+          <span>${sale.payment_method_name || "-"}</span>
+        </div>
 
         <div class="row">
           <span>SUBTOTAL</span>

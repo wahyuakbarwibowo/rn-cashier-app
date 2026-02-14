@@ -170,7 +170,7 @@ export default function DashboardScreen() {
 
           <Surface elevation={4} style={[styles.quickActionSurface, { backgroundColor: '#F59E0B' }]}>
             <TouchableRipple
-              onPress={() => navigation.navigate("Pulsa")}
+              onPress={() => navigation.navigate("DigitalTransaction")}
               style={styles.quickActionRipple}
             >
               <View>
@@ -206,6 +206,12 @@ export default function DashboardScreen() {
               color="#10B981"
               onPress={() => navigation.navigate("Product")}
               badge={stats.lowStockCount}
+            />
+            <MenuCard
+              title="Tambah Produk"
+              icon="➕"
+              color="#0EA5E9"
+              onPress={() => navigation.navigate("ProductForm")}
             />
             <MenuCard
               title="Barang Masuk"

@@ -17,7 +17,7 @@ import ReportsScreen from "../screens/ReportsScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import CustomersScreen from "../screens/CustomersScreen";
 import PaymentMethodsScreen from "../screens/PaymentMethodsScreen";
-import PulsaTransactionScreen from "../screens/PulsaTransactionScreen";
+import DigitalTransactionScreen from "../screens/DigitalTransactionScreen";
 import ReceivablesScreen from "../screens/ReceivablesScreen";
 import PayablesScreen from "../screens/PayablesScreen";
 import BackupScreen from "../screens/BackupScreen";
@@ -34,6 +34,7 @@ import ProfitLossScreen from "../screens/ProfitLossScreen";
 import TopProductsScreen from "../screens/TopProductsScreen";
 import CustomerPointsHistoryScreen from "../screens/CustomerPointsHistoryScreen";
 import { getShopProfile } from "../database/settings";
+import ProductFormScreen from "../screens/ProductFormScreen";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -111,11 +112,12 @@ function CustomDrawerContent(props: any) {
       <SectionHeader title="TRANSAKSI UTAMA" />
       <MenuItem name="SalesTransaction" label="Transaksi Kasir" icon="🛒" focused={currentRouteName === "SalesTransaction"} onNavigate={handleNavigate} />
       <MenuItem name="SalesHistory" label="Riwayat Kasir" icon="🕒" focused={currentRouteName === "SalesHistory"} onNavigate={handleNavigate} />
-      <MenuItem name="Pulsa" label="Transaksi Digital" icon="✨" focused={currentRouteName === "Pulsa"} onNavigate={handleNavigate} />
+      <MenuItem name="DigitalTransaction" label="Transaksi Digital" icon="✨" focused={currentRouteName === "DigitalTransaction"} onNavigate={handleNavigate} />
       <MenuItem name="DigitalHistory" label="Riwayat Digital" icon="📜" focused={currentRouteName === "DigitalHistory"} onNavigate={handleNavigate} />
 
       <SectionHeader title="MANAJEMEN STOK" />
       <MenuItem name="Product" label="Gudang Barang" icon="📦" focused={currentRouteName === "Product"} onNavigate={handleNavigate} />
+      <MenuItem name="ProductForm" label="Tambah Produk" icon="➕" focused={currentRouteName === "ProductForm"} onNavigate={handleNavigate} />
       <MenuItem name="PurchaseForm" label="Barang Masuk" icon="📥" focused={currentRouteName === "PurchaseForm"} onNavigate={handleNavigate} />
       <MenuItem name="LowStock" label="Stok Tipis (Alert)" icon="⚠️" focused={currentRouteName === "LowStock"} onNavigate={handleNavigate} />
       <MenuItem name="DigitalProductsMaster" label="Gudang Digital" icon="✨" focused={currentRouteName === "DigitalProductsMaster"} onNavigate={handleNavigate} />
@@ -160,6 +162,7 @@ export default function DrawerNavigator() {
 
       {/* 1. Produk */}
       <Drawer.Screen name="Product" component={ProductsScreen} options={{ title: '📦 Stok Barang' }} />
+      <Drawer.Screen name="ProductForm" component={ProductFormScreen} options={{ title: '➕ Tambah Produk' }} />
       <Drawer.Screen name="TopProducts" component={TopProductsScreen} options={{ title: '🏆 Produk Terlaris' }} />
       <Drawer.Screen name="LowStock" component={LowStockScreen} options={{ title: '⚠️ Stok Tipis' }} />
       <Drawer.Screen name="PurchaseForm" component={PurchaseFormScreen} options={{ title: '📥 Tambah Stok (Beli)' }} />
@@ -171,7 +174,7 @@ export default function DrawerNavigator() {
       <Drawer.Screen name="SalesHistory" component={SalesHistoryScreen} options={{ title: '🕒 Riwayat Transaksi' }} />
       <Drawer.Screen name="Reports" component={ReportsScreen} options={{ title: '📊 Laporan & Grafik' }} />
       <Drawer.Screen name="ProfitLoss" component={ProfitLossScreen} options={{ title: '📈 Laba Rugi' }} />
-      <Drawer.Screen name="Pulsa" component={PulsaTransactionScreen} options={{ title: '✨ Transaksi Digital' }} />
+      <Drawer.Screen name="DigitalTransaction" component={DigitalTransactionScreen} options={{ title: '✨ Transaksi Digital' }} />
       <Drawer.Screen name="DigitalHistory" component={DigitalTransactionHistoryScreen} options={{ title: '📜 Riwayat Transaksi Digital' }} />
       <Drawer.Screen name="DigitalReports" component={DigitalReportsScreen} options={{ title: '📈 Laporan Laba Digital' }} />
       <Drawer.Screen name="Expenses" component={ExpensesScreen} options={{ title: '💸 Pengeluaran (Operasional)' }} />

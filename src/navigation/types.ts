@@ -2,7 +2,8 @@ import { Product } from '../types/database';
 
 export type DrawerParamList = {
   Dashboard: undefined;
-  Product: { initialCode?: string };
+  Product: undefined;
+  ProductForm: { product?: Product; initialCode?: string };
   PurchaseForm: { addProductId?: number };
   SalesTransaction: { addProductId?: number };
   SalesHistory: undefined;
@@ -12,7 +13,7 @@ export type DrawerParamList = {
   Customers: undefined;
   Suppliers: undefined;
   PaymentMethods: undefined;
-  Pulsa: undefined;
+  DigitalTransaction: undefined;
   Receivables: undefined;
   Payables: undefined;
   Expenses: undefined;
