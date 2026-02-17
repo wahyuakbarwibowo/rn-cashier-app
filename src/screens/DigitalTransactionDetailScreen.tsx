@@ -9,8 +9,7 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import { getDB } from "../database/initDB";
 import { DigitalTransaction } from "../database/pulsa";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { printDigitalReceipt } from "../services/BluetoothPrintService";
-import { getConnectedDevice } from "../services/BluetoothPrintService";
+import { printDigitalReceipt } from "../services/PrintService";
 import {
   ActivityIndicator,
   Card,
@@ -132,33 +131,6 @@ export default function DigitalTransactionDetailScreen() {
           </Card>
         )}
 
-        {/* Printer Connection Status */}
-        <Card style={styles.printerStatusCard} mode="outlined">
-          <Card.Content>
-            <View style={styles.printerStatusRow}>
-              <View
-                style={[
-                  styles.printerStatusDot,
-                  { backgroundColor: getConnectedDevice() ? '#16A34A' : '#EF4444' },
-                ]}
-              />
-              <Text variant="bodyMedium" style={styles.printerStatusText}>
-                {getConnectedDevice() ? 'Printer Terhubung' : 'Printer Tidak Terhubung'}
-              </Text>
-            </View>
-            {!getConnectedDevice() && (
-              <Button
-                mode="outlined"
-                onPress={() => navigation.navigate('PrinterSettings')}
-                style={styles.connectPrinterButton}
-                compact
-              >
-                Connect Printer
-              </Button>
-            )}
-          </Card.Content>
-        </Card>
-
         <Button
           mode="contained"
           icon="printer"
@@ -167,7 +139,6 @@ export default function DigitalTransactionDetailScreen() {
           onPress={() => trx && printDigitalReceipt(trx)}
           style={styles.printButton}
           contentStyle={{ height: 48 }}
-          disabled={!getConnectedDevice()}
         >
           Cetak Struk
         </Button>
@@ -276,27 +247,5 @@ const styles = StyleSheet.create({
   },
   editButton: {
     marginLeft: 12,
-  },
-  printerStatusCard: {
-    borderRadius: 12,
-    marginBottom: 16,
-    backgroundColor: '#F9FAFB',
-  },
-  printerStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  printerStatusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  printerStatusText: {
-    flex: 1,
-  },
-  connectPrinterButton: {
-    marginLeft: -8,
   },
 });

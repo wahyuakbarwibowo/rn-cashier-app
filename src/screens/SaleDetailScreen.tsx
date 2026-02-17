@@ -19,7 +19,7 @@ import { getSaleItems } from "../database/sales";
 import { getDB } from "../database/initDB";
 import { Sale, SaleItem, Product } from "../types/database";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { printSaleReceipt, getConnectedDevice } from "../services/BluetoothPrintService";
+import { printSaleReceipt } from "../services/PrintService";
 
 type SaleWithMeta = Sale & {
   payment_method_name?: string;
@@ -197,33 +197,6 @@ export default function SaleDetailScreen() {
         )}
         ListFooterComponent={
           <>
-            {/* Printer Connection Status */}
-            <Card style={styles.printerStatusCard} mode="outlined">
-              <Card.Content>
-                <View style={styles.printerStatusRow}>
-                  <View
-                    style={[
-                      styles.printerStatusDot,
-                      { backgroundColor: getConnectedDevice() ? '#16A34A' : '#EF4444' },
-                    ]}
-                  />
-                  <Text variant="bodyMedium" style={styles.printerStatusText}>
-                    {getConnectedDevice() ? 'Printer Terhubung' : 'Printer Tidak Terhubung'}
-                  </Text>
-                </View>
-                {!getConnectedDevice() && (
-                  <Button
-                    mode="outlined"
-                    onPress={() => navigation.navigate('PrinterSettings')}
-                    style={styles.connectPrinterButton}
-                    compact
-                  >
-                    Connect Printer
-                  </Button>
-                )}
-              </Card.Content>
-            </Card>
-
             <Button
               mode="contained"
               icon="printer"
@@ -233,7 +206,6 @@ export default function SaleDetailScreen() {
               contentStyle={styles.buttonContent}
               labelStyle={styles.buttonLabel}
               onPress={() => sale && printSaleReceipt(sale, items)}
-              disabled={!getConnectedDevice()}
             >
               Cetak Struk
             </Button>
@@ -368,27 +340,5 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontSize: 16,
     fontWeight: "bold",
-  },
-  printerStatusCard: {
-    borderRadius: 12,
-    marginBottom: 16,
-    backgroundColor: '#F9FAFB',
-  },
-  printerStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  printerStatusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  printerStatusText: {
-    flex: 1,
-  },
-  connectPrinterButton: {
-    marginLeft: -8,
   },
 });

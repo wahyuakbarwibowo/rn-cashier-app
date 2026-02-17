@@ -145,19 +145,6 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Printer Settings Button */}
-        <TouchableOpacity
-          style={styles.printerButton}
-          onPress={() => navigation.navigate('PrinterSettings')}
-        >
-          <Text style={styles.printerButtonIcon}>🖨️</Text>
-          <View style={styles.printerButtonTextContainer}>
-            <Text style={styles.printerButtonTitle}>Settings Printer Bluetooth</Text>
-            <Text style={styles.printerButtonSubtitle}>Connect ke printer thermal 58mm</Text>
-          </View>
-          <Text style={styles.printerButtonArrow}>›</Text>
-        </TouchableOpacity>
-
         <Text style={styles.info}>
           * Pengaturan ini akan muncul pada struk penjualan.
         </Text>
@@ -252,48 +239,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: "center",
-    marginTop: 8, // Added some margin top
+    marginTop: 8,
   },
   saveButtonText: {
     color: "#FFF",
     fontSize: 16,
     fontWeight: "bold",
-  },
-  printerButton: {
-    backgroundColor: "#FFF",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: "center",
-    flexDirection: "row",
-    marginTop: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  printerButtonIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  printerButtonTextContainer: {
-    flex: 1,
-  },
-  printerButtonTitle: {
-    color: "#111827",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  printerButtonSubtitle: {
-    color: "#6B7280",
-    fontSize: 13,
-    marginTop: 2,
-  },
-  printerButtonArrow: {
-    color: "#9CA3AF",
-    fontSize: 24,
-    fontWeight: "300",
   },
   info: {
     marginTop: 16,

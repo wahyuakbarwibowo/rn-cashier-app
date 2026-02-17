@@ -28,5 +28,4 @@ export type DrawerParamList = {
   ProfitLoss: undefined;
   TopProducts: undefined;
   CustomerPointsHistory: { customerId: number; customerName: string };
-  PrinterSettings: undefined;
 }
