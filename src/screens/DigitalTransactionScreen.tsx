@@ -567,7 +567,8 @@ export default function DigitalTransactionScreen() {
                 !sellingPrice ||
                 (costPrice && parseFloat(costPrice) < 0) || // Check cost price negativity
                 (amount && (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0)) ||
-                (sellingPrice && (isNaN(parseFloat(sellingPrice)) || parseFloat(sellingPrice) <= 0))
+                (sellingPrice && (isNaN(parseFloat(sellingPrice)) || parseFloat(sellingPrice) <= 0)) ||
+                false // Force boolean type
               }
             >
               {editTrxId ? "Update Transaksi" : "Proses Transaksi"}

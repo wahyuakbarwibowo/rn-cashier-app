@@ -1,6 +1,6 @@
 import * as Print from 'expo-print';
 import { DigitalTransaction } from '../database/pulsa';
-import { getShopProfile, ShopProfile } from '../database/settings';
+import { getShopProfile } from '../database/settings';
 import { Sale } from '../types/database';
 
 // Module-level flag to prevent concurrent print requests

@@ -145,7 +145,7 @@ export default function ProductsScreen({ navigation }: Props) {
         mode="contained"
         buttonColor="#111827"
         textColor="#FFF"
-        onPress={() => navigation.navigate("ProductForm")}
+        onPress={() => navigation.navigate("ProductForm" as any)}
         style={styles.actionButtonEmpty}
       >
         Tambah Produk
@@ -173,7 +173,7 @@ export default function ProductsScreen({ navigation }: Props) {
           mode="contained"
           buttonColor="#111827"
           textColor="#FFF"
-          onPress={() => navigation.navigate("ProductForm")}
+          onPress={() => navigation.navigate("ProductForm" as any)}
           style={styles.addButton}
         >
           Tambah Produk

@@ -35,6 +35,7 @@ import TopProductsScreen from "../screens/TopProductsScreen";
 import CustomerPointsHistoryScreen from "../screens/CustomerPointsHistoryScreen";
 import { getShopProfile } from "../database/settings";
 import ProductFormScreen from "../screens/ProductFormScreen";
+import PrinterSettingsScreen from "../screens/PrinterSettingsScreen";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -223,6 +224,14 @@ export default function DrawerNavigator() {
         component={CustomerPointsHistoryScreen}
         options={{
           title: "Riwayat Poin",
+          drawerItemStyle: { display: 'none' }
+        }}
+      />
+      <Drawer.Screen
+        name="PrinterSettings"
+        component={PrinterSettingsScreen}
+        options={{
+          title: "Settings Printer",
           drawerItemStyle: { display: 'none' }
         }}
       />

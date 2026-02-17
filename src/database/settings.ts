@@ -1,15 +1,7 @@
 import { getDB } from "./initDB";
-// Assuming ShopProfile type in ../types/database includes phone_number and address
-// For example:
-// export interface ShopProfile {
-//   id?: number;
-//   name?: string;
-//   footer_note?: string;
-//   cashier_name?: string;
-//   phone_number?: string; // Added
-//   address?: string;      // Added
-// }
-import { ShopProfile } from "../types/database"; 
+import type { ShopProfile } from "../types/database";
+
+export { type ShopProfile } from "../types/database"; 
 
 export const getShopProfile = async (): Promise<ShopProfile | null> => {
   const db = await getDB();
