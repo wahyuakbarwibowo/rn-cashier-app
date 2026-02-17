@@ -72,10 +72,13 @@ export const updateDigitalTransaction = async (id: number, trx: Partial<DigitalT
   if (trx.cost_price !== undefined) { sets.push("cost_price = ?"); params.push(trx.cost_price); }
   if (trx.selling_price !== undefined) { sets.push("selling_price = ?"); params.push(trx.selling_price); }
   if (trx.profit !== undefined) { sets.push("profit = ?"); params.push(trx.profit); }
-  if (trx.notes !== undefined) { sets.push("notes = ?"); params.push(trx.notes); }
+  if (trx.notes !== undefined && trx.notes !== null) { sets.push("notes = ?"); params.push(trx.notes); }
   if (trx.created_at) { sets.push("created_at = ?"); params.push(trx.created_at); }
 
-  if (sets.length === 0) return;
+  if (sets.length === 0) {
+    console.warn("updateDigitalTransaction: No fields to update for id", id);
+    return;
+  }
 
   params.push(id);
   await db.runAsync(

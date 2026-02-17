@@ -7,13 +7,12 @@ export interface Product {
   purchase_package_qty?: number;
   selling_price?: number;
   package_price?: number; // selling package price
-  package_qty?: number;   // selling package qty
+  package_qty?: number; // selling package qty
   discount?: number;
   stock?: number;
   created_at?: string;
   updated_at?: string;
 }
-
 
 // Pelanggan
 export interface Customer {
@@ -38,6 +37,8 @@ export interface ShopProfile {
   name: string;
   footer_note?: string;
   cashier_name?: string;
+  phone_number?: string;
+  address?: string;
 }
 
 // Transaksi Penjualan
@@ -58,7 +59,7 @@ export interface CustomerPointsHistory {
   customer_id: number;
   sale_id?: number | null;
   points: number;
-  type: 'EARNED' | 'REDEEMED' | 'ADJUSTMENT';
+  type: "EARNED" | "REDEEMED" | "ADJUSTMENT";
   notes?: string;
   created_at?: string;
 }
