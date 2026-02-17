@@ -48,29 +48,29 @@ export const printDigitalReceipt = async (trx: DigitalTransaction) => {
             margin: 0 auto;
             color: #000;
           }
-          .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 8px; }
-          .shop-name { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-          .cashier-name { font-size: 11px; margin-top: 2px; }
-          .trx-meta { font-size: 11px; margin-top: 2px; }
+          .header { text-align: center; margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+          .shop-name { font-size: 50px; font-weight: bold; text-transform: uppercase; }
+          .cashier-name { font-size: 30px; margin-top: 1px; }
+          .trx-meta { font-size: 26px; margin-top: 1px; }
 
-          .info-table { width: 100%; font-size: 12px; border-collapse: collapse; margin: 10px 0; }
-          .info-table td { padding: 2px 0; vertical-align: top; }
+          .info-table { width: 100%; font-size: 30px; border-collapse: collapse; margin: 5px 0; }
+          .info-table td { padding: 4px 0; vertical-align: top; }
           .label { width: 40%; color: #333; }
 
-          .divider { border-top: 1px dashed #000; margin: 8px 0; }
+          .divider { border-top: 1px dashed #000; margin: 5px 0; }
 
-          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; padding: 5px 0; }
+          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 38px; padding: 3px 0; }
 
           .notes-box {
-            margin-top: 10px;
-            padding: 8px;
+            margin-top: 5px;
+            padding: 5px;
             border: 1px solid #000;
             text-align: center;
           }
-          .notes-title { font-size: 10px; font-weight: bold; margin-bottom: 3px; }
-          .notes-content { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+          .notes-title { font-size: 26px; font-weight: bold; margin-bottom: 2px; }
+          .notes-content { font-size: 36px; font-weight: bold; letter-spacing: 1px; }
 
-          .footer { text-align: center; margin-top: 20px; font-size: 10px; line-height: 1.4; }
+          .footer { text-align: center; margin-top: 10px; font-size: 22px; line-height: 1.3; }
         </style>
       </head>
       <body>
@@ -80,8 +80,8 @@ export const printDigitalReceipt = async (trx: DigitalTransaction) => {
           <div class="trx-meta">TRX #${trx.id} | ${formatDate(trx.created_at)}</div>
         </div>
 
-        ${shopPhoneNumber ? `<div style="text-align: center; font-size: 11px; margin-bottom: 2px;">Telp: ${shopPhoneNumber}</div>` : ''}
-        ${shopAddress ? `<div style="text-align: center; font-size: 11px; margin-bottom: 4px; word-wrap: break-word;">${shopAddress}</div>` : ''}
+        ${shopPhoneNumber ? `<div style="text-align: center; font-size: 26px; margin-bottom: 1px;">Telp: ${shopPhoneNumber}</div>` : ''}
+        ${shopAddress ? `<div style="text-align: center; font-size: 26px; margin-bottom: 2px; word-wrap: break-word;">${shopAddress}</div>` : ''}
 
         <table class="info-table">
           <tr>
@@ -177,8 +177,8 @@ export const printSaleReceipt = async (sale: SaleReceipt, items: any[]) => {
       <td colspan="2" style="font-weight: bold;">${item.product_name || 'Produk'}</td>
     </tr>
     <tr>
-      <td style="padding-bottom: 5px;">${item.qty} x Rp ${item.price.toLocaleString("id-ID")}</td>
-      <td style="text-align: right; vertical-align: bottom; padding-bottom: 5px;">Rp ${item.subtotal.toLocaleString("id-ID")}</td>
+      <td style="padding-bottom: 2px;">${item.qty} x Rp ${item.price.toLocaleString("id-ID")}</td>
+      <td style="text-align: right; vertical-align: bottom; padding-bottom: 2px;">Rp ${item.subtotal.toLocaleString("id-ID")}</td>
     </tr>
   `).join('');
 
@@ -195,19 +195,19 @@ export const printSaleReceipt = async (sale: SaleReceipt, items: any[]) => {
             margin: 0 auto;
             color: #000;
           }
-          .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 8px; }
-          .shop-name { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-          .cashier-name { font-size: 11px; margin-top: 2px; }
-          .trx-meta { font-size: 11px; margin-top: 2px; }
+          .header { text-align: center; margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+          .shop-name { font-size: 50px; font-weight: bold; text-transform: uppercase; }
+          .cashier-name { font-size: 30px; margin-top: 1px; }
+          .trx-meta { font-size: 26px; margin-top: 1px; }
 
-          .items-table { width: 100%; font-size: 12px; border-collapse: collapse; margin: 10px 0; }
+          .items-table { width: 100%; font-size: 30px; border-collapse: collapse; margin: 5px 0; }
 
-          .divider { border-top: 1px dashed #000; margin: 8px 0; }
+          .divider { border-top: 1px dashed #000; margin: 5px 0; }
 
-          .row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
-          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; margin-top: 5px; }
+          .row { display: flex; justify-content: space-between; font-size: 30px; margin-bottom: 2px; }
+          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 38px; margin-top: 3px; }
 
-          .footer { text-align: center; margin-top: 20px; font-size: 10px; line-height: 1.4; }
+          .footer { text-align: center; margin-top: 10px; font-size: 22px; line-height: 1.3; }
         </style>
       </head>
       <body>
@@ -217,8 +217,8 @@ export const printSaleReceipt = async (sale: SaleReceipt, items: any[]) => {
           <div class="trx-meta">TRX #${sale.id} | ${formatDate(sale.created_at)}</div>
         </div>
 
-        ${shopPhoneNumber ? `<div style="text-align: center; font-size: 11px; margin-bottom: 2px;">Telp: ${shopPhoneNumber}</div>` : ''}
-        ${shopAddress ? `<div style="text-align: center; font-size: 11px; margin-bottom: 4px; word-wrap: break-word;">${shopAddress}</div>` : ''}
+        ${shopPhoneNumber ? `<div style="text-align: center; font-size: 26px; margin-bottom: 1px;">Telp: ${shopPhoneNumber}</div>` : ''}
+        ${shopAddress ? `<div style="text-align: center; font-size: 26px; margin-bottom: 2px; word-wrap: break-word;">${shopAddress}</div>` : ''}
 
         <table class="items-table">
           ${itemsHtml}

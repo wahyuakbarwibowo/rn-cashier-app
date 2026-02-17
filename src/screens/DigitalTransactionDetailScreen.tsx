@@ -32,6 +32,14 @@ export default function DigitalTransactionDetailScreen() {
     loadDetail();
   }, [trxId]);
 
+  // Refresh detail when screen gains focus (after edit)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadDetail();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   const loadDetail = async () => {
     try {
       setLoading(true);

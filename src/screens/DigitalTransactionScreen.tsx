@@ -70,10 +70,49 @@ export default function DigitalTransactionScreen() {
   // Profit state
   const [profit, setProfit] = useState<number>(0);
 
+  const resetForm = () => {
+    setEditTrxId(null);
+    setCategory("PULSA");
+    setPhoneNumber("");
+    setCustomerName("");
+    setProvider("");
+    setAmount("");
+    setCostPrice("");
+    setSellingPrice("");
+    setNotes("");
+    setTransactionDate(new Date().toISOString().split('T')[0]);
+    setPhoneNumberError(null);
+    setTransactionDateError(null);
+    setProviderError(null);
+    setAmountError(null);
+    setSellingPriceError(null);
+    setCostPriceError(null);
+    setTemplates([]);
+    setProviders([]);
+    setProfit(0);
+  };
+
   useEffect(() => {
     loadCategories();
     loadHistory();
 
+    // Reset form when screen is opened without editTrx param
+    if (!route.params?.editTrx) {
+      resetForm();
+    }
+  }, []);
+
+  // Reset form when screen gains focus (when navigating back)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (!route.params?.editTrx) {
+        resetForm();
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
     if (route.params?.editTrx) {
       const etrx = route.params.editTrx;
       setEditTrxId(etrx.id);
@@ -240,6 +279,7 @@ export default function DigitalTransactionScreen() {
       const createdAtTimestamp = `${transactionDate} ${currentTime}`;
 
       if (editTrxId) {
+        console.log("Updating transaction:", editTrxId, "notes:", notes);
         await updateDigitalTransaction(editTrxId, {
           category,
           phone_number: phoneNumber.trim(),
@@ -252,6 +292,7 @@ export default function DigitalTransactionScreen() {
           notes: notes.trim(),
           created_at: createdAtTimestamp
         });
+        console.log("Update completed");
         Alert.alert("Sukses", "Transaksi berhasil diperbarui");
       } else {
         await addDigitalTransaction({
@@ -267,25 +308,15 @@ export default function DigitalTransactionScreen() {
           created_at: createdAtTimestamp
         });
         Alert.alert("Sukses", "Transaksi berhasil disimpan");
-        // Clear fields only if not editing and transaction is successful
-        setPhoneNumber("");
-        setCustomerName("");
-        setAmount("");
-        setCostPrice("");
-        setSellingPrice("");
-        setNotes("");
-        // Reset errors after successful save when not editing
-        setPhoneNumberError(null);
-        setTransactionDateError(null);
-        setProviderError(null);
-        setAmountError(null);
-        setSellingPriceError(null);
-        setCostPriceError(null);
       }
 
       loadHistory(); // Always load history after transaction
       if (editTrxId) {
-        navigation.goBack(); // Go back after successful update
+        navigation.setParams({ editTrx: undefined }); // Clear edit param
+        resetForm(); // Reset form after update
+        navigation.navigate("DigitalTransactionDetail", { trxId: editTrxId }); // Navigate to detail screen
+      } else {
+        resetForm(); // Reset form after new transaction
       }
 
     } catch (e) {
