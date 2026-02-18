@@ -9,7 +9,8 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import { getDB } from "../database/initDB";
 import { DigitalTransaction } from "../database/pulsa";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { printDigitalReceipt } from "../services/PrintService";
+import { printDigitalReceipt, setConnectedDevice, connectToPrinter } from "../services/PrintService";
+import BluetoothPrinterModal from "../components/BluetoothPrinterModal";
 import {
   ActivityIndicator,
   Card,
@@ -27,6 +28,7 @@ export default function DigitalTransactionDetailScreen() {
 
   const [trx, setTrx] = useState<DigitalTransaction | null>(null);
   const [loading, setLoading] = useState(true);
+  const [printerModalVisible, setPrinterModalVisible] = useState(false);
 
   useEffect(() => {
     loadDetail();
@@ -54,6 +56,28 @@ export default function DigitalTransactionDetailScreen() {
       Alert.alert("Error", "Gagal memuat detail transaksi");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!trx) return;
+    const result = await printDigitalReceipt(trx);
+    if (result === "NO_PRINTER") {
+      setPrinterModalVisible(true);
+    }
+  };
+
+  const onSelectPrinter = async (device: any) => {
+    setPrinterModalVisible(false);
+    const success = await connectToPrinter(device.address);
+    if (success) {
+      setConnectedDevice(device);
+      // Automatically retry print after connection
+      if (trx) {
+        setTimeout(() => printDigitalReceipt(trx), 500);
+      }
+    } else {
+      Alert.alert("Gagal Terhubung", `Gagal menghubungkan ke ${device.name || device.address}`);
     }
   };
 
@@ -136,7 +160,7 @@ export default function DigitalTransactionDetailScreen() {
           icon="printer"
           buttonColor="#16A34A"
           textColor="#FFF"
-          onPress={() => trx && printDigitalReceipt(trx)}
+          onPress={handlePrint}
           style={styles.printButton}
           contentStyle={{ height: 48 }}
         >
@@ -152,6 +176,12 @@ export default function DigitalTransactionDetailScreen() {
           Kembali
         </Button>
       </ScrollView>
+
+      <BluetoothPrinterModal
+        visible={printerModalVisible}
+        onClose={() => setPrinterModalVisible(false)}
+        onSelect={onSelectPrinter}
+      />
     </Surface>
   );
 }

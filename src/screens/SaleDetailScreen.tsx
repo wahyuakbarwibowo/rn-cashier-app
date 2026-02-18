@@ -19,7 +19,8 @@ import { getSaleItems } from "../database/sales";
 import { getDB } from "../database/initDB";
 import { Sale, SaleItem, Product } from "../types/database";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { printSaleReceipt } from "../services/PrintService";
+import { printSaleReceipt, setConnectedDevice, connectToPrinter } from "../services/PrintService";
+import BluetoothPrinterModal from "../components/BluetoothPrinterModal";
 
 type SaleWithMeta = Sale & {
   payment_method_name?: string;
@@ -35,6 +36,7 @@ export default function SaleDetailScreen() {
   const [sale, setSale] = useState<SaleWithMeta | null>(null);
   const [items, setItems] = useState<(SaleItem & { product_name?: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [printerModalVisible, setPrinterModalVisible] = useState(false);
 
   useEffect(() => {
     loadSaleDetail();
@@ -67,6 +69,28 @@ export default function SaleDetailScreen() {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!sale) return;
+    const result = await printSaleReceipt(sale, items);
+    if (result === "NO_PRINTER") {
+      setPrinterModalVisible(true);
+    }
+  };
+
+  const onSelectPrinter = async (device: any) => {
+    setPrinterModalVisible(false);
+    const success = await connectToPrinter(device.address);
+    if (success) {
+      setConnectedDevice(device);
+      // Automatically retry print after connection
+      if (sale) {
+        setTimeout(() => printSaleReceipt(sale, items), 500);
+      }
+    } else {
+      Alert.alert("Gagal Terhubung", `Gagal menghubungkan ke ${device.name || device.address}`);
     }
   };
 
@@ -205,7 +229,7 @@ export default function SaleDetailScreen() {
               style={styles.printButton}
               contentStyle={styles.buttonContent}
               labelStyle={styles.buttonLabel}
-              onPress={() => sale && printSaleReceipt(sale, items)}
+              onPress={handlePrint}
             >
               Cetak Struk
             </Button>
@@ -231,6 +255,12 @@ export default function SaleDetailScreen() {
             </Button>
           </>
         }
+      />
+      
+      <BluetoothPrinterModal
+        visible={printerModalVisible}
+        onClose={() => setPrinterModalVisible(false)}
+        onSelect={onSelectPrinter}
       />
     </View>
   );

@@ -1,39 +1,42 @@
 import { DrawerScreenProps } from "@react-navigation/drawer";
 import { DrawerParamList } from "../navigation/types";
 import { StyleSheet, Text, TouchableOpacity, View, Image, Alert, ScrollView } from "react-native";
-import * as Print from 'expo-print';
+import { printBarcode, setConnectedDevice, connectToPrinter } from "../services/PrintService";
+import BluetoothPrinterModal from "../components/BluetoothPrinterModal";
+import React, { useState } from "react";
 
 type Props = DrawerScreenProps<DrawerParamList, "ProductDetail">;
 
 export default function ProductDetailScreen({ route, navigation }: Props) {
   const { product } = route.params;
+  const [printerModalVisible, setPrinterModalVisible] = useState(false);
 
   const formatPrice = (value?: number) =>
     value ? `Rp ${value.toLocaleString("id-ID")}` : "-";
 
   const barcodeUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=${product.code}&scale=3&rotate=N&includetext`;
 
-  const printBarcode = async () => {
+  const handlePrint = async () => {
     if (!product.code) {
       Alert.alert("Error", "Produk tidak memiliki kode barcode");
       return;
     }
 
-    const html = `
-      <html>
-        <body style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;">
-          <h2 style="margin-bottom: 5px;">${product.name}</h2>
-          <img src="${barcodeUrl}" style="width: 250px; height: auto;" />
-          <h3 style="margin-top: 5px;">${formatPrice(product.selling_price)}</h3>
-        </body>
-      </html>
-    `;
+    const result = await printBarcode(product.name, product.code, product.selling_price || 0);
+    if (result === "NO_PRINTER") {
+      setPrinterModalVisible(true);
+    }
+  };
 
-    try {
-      await Print.printAsync({ html });
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Error", "Gagal mencetak barcode");
+  const onSelectPrinter = async (device: any) => {
+    setPrinterModalVisible(false);
+    const success = await connectToPrinter(device.address);
+    if (success) {
+      setConnectedDevice(device);
+      // Automatically retry print after connection
+      setTimeout(() => printBarcode(product.name, product.code || "", product.selling_price || 0), 500);
+    } else {
+      Alert.alert("Gagal Terhubung", `Gagal menghubungkan ke ${device.name || device.address}`);
     }
   };
 
@@ -99,7 +102,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.button, styles.printButton]}
-            onPress={printBarcode}
+            onPress={handlePrint}
           >
             <Text style={styles.buttonText}>🖨️ Cetak Barcode</Text>
           </TouchableOpacity>
@@ -113,6 +116,12 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         </View>
 
       </View>
+
+      <BluetoothPrinterModal
+        visible={printerModalVisible}
+        onClose={() => setPrinterModalVisible(false)}
+        onSelect={onSelectPrinter}
+      />
     </ScrollView>
   )
 }

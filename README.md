@@ -31,7 +31,7 @@
 *   **Framework**: React Native (Expo SDK 52)
 *   **Database**: SQLite via `expo-sqlite` (Offline)
 *   **Navigation**: React Navigation (Drawer & Stack)
-*   **Printing**: `expo-print` (Formatted for 58mm Thermal Bluetooth Printer)
+*   **Printing**: `react-native-bluetooth-escpos-printer` (Direct Bluetooth ESC/POS Printing for 58mm Thermal Printers)
 *   **UI Components**: React Native Paper & Custom Design Systems
 
 ---

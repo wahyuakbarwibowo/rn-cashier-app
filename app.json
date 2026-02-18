@@ -22,7 +22,14 @@
         "backgroundColor": "#FFC0CB"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.wahyuakbarwibowo.aminmartkasir"
+      "package": "com.wahyuakbarwibowo.aminmartkasir",
+      "permissions": [
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
