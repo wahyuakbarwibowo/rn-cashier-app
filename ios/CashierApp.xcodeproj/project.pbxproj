@@ -259,8 +259,8 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.anonymous.CashierApp";
-				PRODUCT_NAME = "CashierApp";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.wahyuakbarwibowo.aminmartkasir";
+				PRODUCT_NAME = "AminmartCashier";
 				SWIFT_OBJC_BRIDGING_HEADER = "CashierApp/CashierApp-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -288,8 +288,8 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.anonymous.CashierApp";
-				PRODUCT_NAME = "CashierApp";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.wahyuakbarwibowo.aminmartkasir";
+				PRODUCT_NAME = "AminmartCashier";
 				SWIFT_OBJC_BRIDGING_HEADER = "CashierApp/CashierApp-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
