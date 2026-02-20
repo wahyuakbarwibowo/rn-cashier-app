@@ -16,8 +16,23 @@ type RawBTCommand =
 // ============================================
 // RawBT HTTP Client
 // ============================================
-const RAWBT_URL = 'http://127.0.0.1:8080/print';
-const RAWBT_TIMEOUT = 3000; // 3 seconds
+// Network configuration for RawBT HTTP server
+// 
+// For Physical Device (RawBT on same device):
+const RAWBT_HOST = '127.0.0.1'; // localhost on the same device
+//
+// For Physical Device (RawBT on computer):
+// const RAWBT_HOST = '192.168.8.102'; // Your computer's IP
+//
+// For Android Emulator (RawBT on host machine):
+// const RAWBT_HOST = '10.0.2.2'; // Emulator -> host machine
+//
+// For iOS Simulator (RawBT on host machine):
+// const RAWBT_HOST = 'host.docker.internal'; // Simulator -> host machine
+
+const RAWBT_PORT = '8080';
+const RAWBT_URL = `http://${RAWBT_HOST}:${RAWBT_PORT}/print`;
+const RAWBT_TIMEOUT = 5000; // 5 seconds
 
 /**
  * Send print commands to RawBT via HTTP POST
@@ -29,7 +44,9 @@ const sendToRawBT = async (commands: RawBTCommand[]): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), RAWBT_TIMEOUT);
 
-    console.log('📡 Sending to RawBT (JSON):', JSON.stringify(commands.slice(0, 3)) + '...');
+    console.log('📡 [RawBT] Sending request to:', RAWBT_URL);
+    console.log('📡 [RawBT] Commands count:', commands.length);
+    console.log('📡 [RawBT] First 3 commands:', JSON.stringify(commands.slice(0, 3), null, 2));
 
     const response = await fetch(RAWBT_URL, {
       method: 'POST',
@@ -40,25 +57,46 @@ const sendToRawBT = async (commands: RawBTCommand[]): Promise<boolean> => {
 
     clearTimeout(timeoutId);
 
+    console.log('📬 [RawBT] HTTP Status:', response.status, response.ok ? '(OK)' : '(ERROR)');
+    console.log('📬 [RawBT] Headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
+
+    // Read response as text first to handle non-JSON responses
+    const responseText = await response.text();
+    console.log('📬 [RawBT] Raw response:', responseText);
+
     if (!response.ok) {
-      throw new Error(`RawBT HTTP error: ${response.status}`);
+      console.error('❌ [RawBT] HTTP error:', response.status, responseText);
+      throw new Error(`RawBT HTTP error: ${response.status} - ${responseText}`);
     }
 
-    // Parse JSON response as per RawBT docs
-    const result = await response.json();
-    console.log('📬 RawBT response:', result);
+    // Try to parse JSON response
+    let result;
+    try {
+      result = JSON.parse(responseText);
+      console.log('📬 [RawBT] Parsed JSON response:', result);
+    } catch (parseError) {
+      console.warn('⚠️ [RawBT] Response is not JSON, but HTTP 200 - considering success');
+      console.log('✅ [RawBT] Printed successfully (non-JSON response)');
+      return true;
+    }
 
     // Check for success status
     if (result.status === 'success') {
-      console.log('✅ Printed via RawBT');
+      console.log('✅ [RawBT] Printed successfully (status: success)');
       return true;
     }
 
     // If response doesn't have status field but HTTP 200, consider it success
-    console.log('✅ Printed via RawBT (HTTP 200)');
+    console.log('✅ [RawBT] Printed successfully (HTTP 200, status field:', result.status || 'not present', ')');
     return true;
   } catch (error) {
-    console.warn('⚠️ RawBT not available:', error instanceof Error ? error.message : error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('❌ [RawBT] Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: errorMsg,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    console.warn('⚠️ [RawBT] Fallback to expo-print');
     return false;
   }
 };
@@ -154,7 +192,7 @@ const buildSaleReceiptCommands = (
 
   commands.push({
     type: 'text',
-    text: '────────────────────────────────',
+    text: '--------------------------------',
     align: 'center',
     newline: true,
   });
@@ -184,7 +222,7 @@ const buildSaleReceiptCommands = (
 
   commands.push({
     type: 'text',
-    text: '────────────────────────────────',
+    text: '--------------------------------',
     align: 'center',
     newline: true,
   });
@@ -249,7 +287,7 @@ const buildSaleReceiptCommands = (
   // === FOOTER ===
   commands.push({
     type: 'text',
-    text: '────────────────────────────────',
+    text: '--------------------------------',
     align: 'center',
     newline: true,
   });
@@ -335,7 +373,7 @@ const buildDigitalReceiptCommands = (
 
   commands.push({
     type: 'text',
-    text: '────────────────────────────────',
+    text: '--------------------------------',
     align: 'center',
     newline: true,
   });
@@ -379,7 +417,7 @@ const buildDigitalReceiptCommands = (
 
   commands.push({
     type: 'text',
-    text: '────────────────────────────────',
+    text: '--------------------------------',
     align: 'center',
     newline: true,
   });
@@ -410,7 +448,7 @@ const buildDigitalReceiptCommands = (
 
   commands.push({
     type: 'text',
-    text: '────────────────────────────────',
+    text: '--------------------------------',
     align: 'center',
     newline: true,
   });
@@ -428,7 +466,7 @@ const buildDigitalReceiptCommands = (
   if (trx.notes) {
     commands.push({
       type: 'text',
-      text: '────────────────────────────────',
+      text: '--------------------------------',
       align: 'center',
       newline: true,
     });
@@ -450,7 +488,7 @@ const buildDigitalReceiptCommands = (
   // === FOOTER ===
   commands.push({
     type: 'text',
-    text: '────────────────────────────────',
+    text: '--------------------------------',
     align: 'center',
     newline: true,
   });
