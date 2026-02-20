@@ -44,10 +44,6 @@ const sendToRawBT = async (commands: RawBTCommand[]): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), RAWBT_TIMEOUT);
 
-    console.log('📡 [RawBT] Sending request to:', RAWBT_URL);
-    console.log('📡 [RawBT] Commands count:', commands.length);
-    console.log('📡 [RawBT] First 3 commands:', JSON.stringify(commands.slice(0, 3), null, 2));
-
     const response = await fetch(RAWBT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -57,15 +53,11 @@ const sendToRawBT = async (commands: RawBTCommand[]): Promise<boolean> => {
 
     clearTimeout(timeoutId);
 
-    console.log('📬 [RawBT] HTTP Status:', response.status, response.ok ? '(OK)' : '(ERROR)');
-    console.log('📬 [RawBT] Headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
-
     // Read response as text first to handle non-JSON responses
     const responseText = await response.text();
-    console.log('📬 [RawBT] Raw response:', responseText);
 
     if (!response.ok) {
-      console.error('❌ [RawBT] HTTP error:', response.status, responseText);
+      console.error('[RawBT] HTTP error:', response.status, responseText);
       throw new Error(`RawBT HTTP error: ${response.status} - ${responseText}`);
     }
 
@@ -73,30 +65,24 @@ const sendToRawBT = async (commands: RawBTCommand[]): Promise<boolean> => {
     let result;
     try {
       result = JSON.parse(responseText);
-      console.log('📬 [RawBT] Parsed JSON response:', result);
-    } catch (parseError) {
-      console.warn('⚠️ [RawBT] Response is not JSON, but HTTP 200 - considering success');
-      console.log('✅ [RawBT] Printed successfully (non-JSON response)');
+    } catch {
+      console.log('[RawBT] Printed successfully');
       return true;
     }
 
     // Check for success status
     if (result.status === 'success') {
-      console.log('✅ [RawBT] Printed successfully (status: success)');
+      console.log('[RawBT] Printed successfully');
       return true;
     }
 
     // If response doesn't have status field but HTTP 200, consider it success
-    console.log('✅ [RawBT] Printed successfully (HTTP 200, status field:', result.status || 'not present', ')');
+    console.log('[RawBT] Printed successfully');
     return true;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error('❌ [RawBT] Error details:', {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: errorMsg,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    console.warn('⚠️ [RawBT] Fallback to expo-print');
+    console.error('[RawBT] Error:', errorMsg);
+    console.warn('[RawBT] Fallback to expo-print');
     return false;
   }
 };
