@@ -229,7 +229,7 @@ export default function DashboardScreen() {
               title="Riwayat Digital"
               icon="📜"
               color="#F59E0B" // Using orange to differentiate from sales history
-              onPress={() => navigation.navigate("DigitalTransactionHistory")}
+              onPress={() => navigation.navigate("DigitalHistory")}
             />
             <MenuCard
               title="Laporan Penjualan"
