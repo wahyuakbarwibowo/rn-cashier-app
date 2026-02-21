@@ -1,88 +1,54 @@
-import * as Print from 'expo-print';
-import { DigitalTransaction } from '../database/pulsa';
-import { getShopProfile } from '../database/settings';
-import { Sale } from '../types/database';
+import * as Print from "expo-print";
+import { DigitalTransaction } from "../database/pulsa";
+import { getShopProfile } from "../database/settings";
+import { Sale, ShopProfile } from "../types/database";
 
 // ============================================
 // RawBT Command Types
 // ============================================
 type RawBTCommand =
-  | { type: 'text'; text: string; align?: 'left' | 'center' | 'right'; bold?: boolean; size?: 'normal' | 'double'; newline?: boolean }
-  | { type: 'qr'; text: string; align?: 'left' | 'center' | 'right'; newline?: boolean }
-  | { type: 'barcode'; text: string; align?: 'left' | 'center' | 'right'; newline?: boolean }
-  | { type: 'cut' }
-  | { type: 'feed'; lines?: number };
+  | { type: "text"; text: string; align?: "left" | "center" | "right"; bold?: boolean; size?: "normal" | "double" | "double-height" | "double-width"; newline?: boolean }
+  | { type: "qr"; text: string; align?: "left" | "center" | "right"; newline?: boolean }
+  | { type: "barcode"; text: string; align?: "left" | "center" | "right"; newline?: boolean }
+  | { type: "cut" }
+  | { type: "feed"; lines?: number };
 
 // ============================================
 // RawBT HTTP Client
 // ============================================
-// Network configuration for RawBT HTTP server
-// 
-// For Physical Device (RawBT on same device):
-const RAWBT_HOST = '127.0.0.1'; // localhost on the same device
-//
-// For Physical Device (RawBT on computer):
-// const RAWBT_HOST = '192.168.8.102'; // Your computer's IP
-//
-// For Android Emulator (RawBT on host machine):
-// const RAWBT_HOST = '10.0.2.2'; // Emulator -> host machine
-//
-// For iOS Simulator (RawBT on host machine):
-// const RAWBT_HOST = 'host.docker.internal'; // Simulator -> host machine
-
-const RAWBT_PORT = '8080';
+const RAWBT_HOST = "127.0.0.1";
+const RAWBT_PORT = "8080";
 const RAWBT_URL = `http://${RAWBT_HOST}:${RAWBT_PORT}/print`;
-const RAWBT_TIMEOUT = 5000; // 5 seconds
+const RAWBT_TIMEOUT = 5000;
 
-/**
- * Send print commands to RawBT via HTTP POST
- * Expects JSON format and returns JSON response
- * @returns true if successful, false if RawBT is not available
- */
 const sendToRawBT = async (commands: RawBTCommand[]): Promise<boolean> => {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), RAWBT_TIMEOUT);
 
     const response = await fetch(RAWBT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(commands),
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
-
-    // Read response as text first to handle non-JSON responses
     const responseText = await response.text();
 
     if (!response.ok) {
-      console.error('[RawBT] HTTP error:', response.status, responseText);
+      console.error("[RawBT] HTTP error:", response.status, responseText);
       throw new Error(`RawBT HTTP error: ${response.status} - ${responseText}`);
     }
 
-    // Try to parse JSON response
-    let result;
-    try {
-      result = JSON.parse(responseText);
-    } catch {
-      console.log('[RawBT] Printed successfully');
-      return true;
-    }
-
-    // Check for success status
-    if (result.status === 'success') {
-      console.log('[RawBT] Printed successfully');
-      return true;
-    }
-
-    // If response doesn't have status field but HTTP 200, consider it success
-    console.log('[RawBT] Printed successfully');
+    console.log("[RawBT] Printed successfully");
     return true;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error('[RawBT] Error:', errorMsg);
-    console.warn('[RawBT] Fallback to expo-print');
+    if (!errorMsg.includes('Aborted')) { // Don't warn on user-intended abort
+      console.error("[RawBT] Error:", errorMsg);
+      console.warn("[RawBT] Fallback to expo-print");
+    }
     return false;
   }
 };
@@ -91,391 +57,161 @@ const sendToRawBT = async (commands: RawBTCommand[]): Promise<boolean> => {
 // Utility Functions
 // ============================================
 const formatDate = (dateStr?: string) => {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString('id-ID', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${day}-${month}-${year} ${hours}:${minutes}`;
 };
 
 const formatCurrency = (amount: number) => {
-  return `Rp ${amount.toLocaleString('id-ID')}`;
+  return Math.round(amount).toString();
 };
+
+const padRight = (str: string, length: number) => {
+  return str.padEnd(length, " ");
+};
+
+const padLeft = (str: string, length: number) => {
+  return str.padStart(length, " ");
+};
+
+const LINE_WIDTH = 32; // Standard for 58mm thermal printers
+const DIVIDER = "-".repeat(LINE_WIDTH);
 
 // ============================================
 // RawBT Command Builders
 // ============================================
 
-/**
- * Build RawBT commands for sale receipt
- */
 const buildSaleReceiptCommands = (
   sale: Sale & { payment_method_name?: string },
   items: any[],
-  profile: {
-    name: string;
-    cashier_name: string;
-    footer_note: string;
-    phone_number: string;
-    address: string;
-  }
+  profile: ShopProfile
 ): RawBTCommand[] => {
   const commands: RawBTCommand[] = [];
 
   // === HEADER ===
-  commands.push({
-    type: 'text',
-    text: profile.name || 'AMINMART',
-    align: 'center',
-    bold: true,
-    size: 'double',
-    newline: true,
-  });
+  commands.push({ type: "text", text: profile.name.toUpperCase() || "TOKO", align: "center", bold: true, size: "double-width", newline: true });
+  if (profile.address) commands.push({ type: "text", text: profile.address, align: "center", newline: true });
+  if (profile.phone_number) commands.push({ type: "text", text: `Telp: ${profile.phone_number}`, align: "center", newline: true });
 
-  if (profile.cashier_name) {
-    commands.push({
-      type: 'text',
-      text: `Kasir: ${profile.cashier_name}`,
-      align: 'center',
-      newline: true,
-    });
-  }
-
-  commands.push({
-    type: 'text',
-    text: `TRX #${sale.id}`,
-    align: 'center',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: formatDate(sale.created_at),
-    align: 'center',
-    newline: true,
-  });
-
-  if (profile.phone_number) {
-    commands.push({
-      type: 'text',
-      text: `Telp: ${profile.phone_number}`,
-      align: 'center',
-      newline: true,
-    });
-  }
-
-  if (profile.address) {
-    commands.push({
-      type: 'text',
-      text: profile.address,
-      align: 'center',
-      newline: true,
-    });
-  }
-
-  commands.push({
-    type: 'text',
-    text: '--------------------------------',
-    align: 'center',
-    newline: true,
-  });
+  const cashierLine = `Kasir: ${profile.cashier_name || 'Admin'}`;
+  commands.push({ type: "text", text: cashierLine, align: "center", newline: true });
+  const trxCodeLine = `TRX-${sale.id?.toString().padStart(5, '0')}`;
+  commands.push({ type: "text", text: trxCodeLine, align: "center", bold: true, newline: true });
+  commands.push({ type: "text", text: formatDate(sale.created_at), align: "center", newline: true });
+  commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
 
   // === ITEMS ===
   items.forEach((item) => {
-    commands.push({
-      type: 'text',
-      text: item.product_name || 'Produk',
-      align: 'left',
-      bold: true,
-      newline: true,
-    });
-    commands.push({
-      type: 'text',
-      text: `${item.qty} x ${formatCurrency(item.price)}`,
-      align: 'left',
-      newline: false,
-    });
-    commands.push({
-      type: 'text',
-      text: formatCurrency(item.subtotal),
-      align: 'right',
-      newline: true,
-    });
+    commands.push({ type: "text", text: item.product_name || "Produk", align: "left", bold: true, newline: true });
+    const qtyPrice = `${item.qty} x ${formatCurrency(item.price)}`;
+    const subtotal = formatCurrency(item.subtotal);
+    const itemLine = `${padRight(qtyPrice, LINE_WIDTH - subtotal.length)}${subtotal}`;
+    commands.push({ type: "text", text: itemLine, align: "left", newline: true });
   });
 
-  commands.push({
-    type: 'text',
-    text: '--------------------------------',
-    align: 'center',
-    newline: true,
-  });
+  commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
 
   // === PAYMENT & TOTALS ===
-  commands.push({
-    type: 'text',
-    text: `Metode: ${sale.payment_method_name || '-'}`,
-    align: 'left',
-    newline: true,
-  });
+  const totalStr = formatCurrency(sale.total);
+  const paidStr = formatCurrency(sale.paid);
+  const changeStr = formatCurrency(sale.change);
+  const paymentMethodStr = sale.payment_method_name || "-";
 
-  commands.push({
-    type: 'text',
-    text: `SUBTOTAL: ${formatCurrency(sale.total)}`,
-    align: 'left',
-    newline: true,
-  });
+  commands.push({ type: "text", text: `${padRight("Total", LINE_WIDTH - totalStr.length)}${totalStr}`, newline: true });
+  commands.push({ type: "text", text: `${padRight("Bayar", LINE_WIDTH - paidStr.length)}${paidStr}`, newline: true });
+  commands.push({ type: "text", text: `${padRight("Kembali", LINE_WIDTH - changeStr.length)}${changeStr}`, newline: true });
+  commands.push({ type: "text", text: `${padRight("Metode", LINE_WIDTH - paymentMethodStr.length)}${paymentMethodStr}`, newline: true, });
 
-  commands.push({
-    type: 'text',
-    text: `TOTAL: ${formatCurrency(sale.total)}`,
-    align: 'center',
-    bold: true,
-    size: 'double',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: `BAYAR: ${formatCurrency(sale.paid)}`,
-    align: 'left',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: `KEMBALI: ${formatCurrency(sale.change)}`,
-    align: 'left',
-    newline: true,
-  });
-
-  // === POINTS (if any) ===
-  if (sale.points_earned && sale.points_earned > 0) {
-    commands.push({
-      type: 'text',
-      text: `POIN: +${sale.points_earned} pts`,
-      align: 'center',
-      newline: true,
-    });
+  // === POINTS (if enabled and applicable) ===
+  if (profile.poin_enabled !== 0) {
+    if ((sale.points_earned && sale.points_earned > 0) || (sale.points_redeemed && sale.points_redeemed > 0)) {
+      commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
+    }
+    if (sale.points_earned && sale.points_earned > 0) {
+      const poinStr = `+${sale.points_earned} Poin`;
+      commands.push({ type: "text", text: `${padRight("Poin Diperoleh", LINE_WIDTH - poinStr.length)}${poinStr}`, newline: true });
+    }
+    if (sale.points_redeemed && sale.points_redeemed > 0) {
+      const poinStr = `-${sale.points_redeemed} Poin`;
+      commands.push({ type: "text", text: `${padRight("Poin Ditukar", LINE_WIDTH - poinStr.length)}${poinStr}`, newline: true });
+    }
   }
-
-  if (sale.points_redeemed && sale.points_redeemed > 0) {
-    commands.push({
-      type: 'text',
-      text: `POIN DITUKAR: -${sale.points_redeemed} pts`,
-      align: 'center',
-      newline: true,
-    });
-  }
-
+  
   // === FOOTER ===
-  commands.push({
-    type: 'text',
-    text: '--------------------------------',
-    align: 'center',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: profile.footer_note || 'Terima Kasih',
-    align: 'center',
-    newline: true,
-  });
-
-  // Cut paper
-  commands.push({ type: 'cut' });
+  commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
+  if (profile.footer_note) {
+    commands.push({ type: "text", text: profile.footer_note, align: "center", newline: true });
+  }
+  commands.push({ type: "text", text: "Terima kasih!", align: "center", newline: true });
+  commands.push({ type: "cut" });
 
   return commands;
 };
-
-/**
- * Build RawBT commands for digital transaction receipt
- */
 const buildDigitalReceiptCommands = (
   trx: DigitalTransaction,
-  profile: {
-    name: string;
-    cashier_name: string;
-    footer_note: string;
-    phone_number: string;
-    address: string;
-  }
+  profile: ShopProfile
 ): RawBTCommand[] => {
   const commands: RawBTCommand[] = [];
 
   // === HEADER ===
-  commands.push({
-    type: 'text',
-    text: profile.name || 'AMINMART',
-    align: 'center',
-    bold: true,
-    size: 'double',
-    newline: true,
-  });
+  commands.push({ type: "text", text: profile.name.toUpperCase() || "TOKO", align: "center", bold: true, size: "double-width", newline: true });
+  if (profile.address) commands.push({ type: "text", text: profile.address, align: "center", newline: true });
+  if (profile.phone_number) commands.push({ type: "text", text: `Telp: ${profile.phone_number}`, align: "center", newline: true });
 
-  if (profile.cashier_name) {
-    commands.push({
-      type: 'text',
-      text: `Kasir: ${profile.cashier_name}`,
-      align: 'center',
-      newline: true,
-    });
-  }
-
-  commands.push({
-    type: 'text',
-    text: `TRX #${trx.id}`,
-    align: 'center',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: formatDate(trx.created_at),
-    align: 'center',
-    newline: true,
-  });
-
-  if (profile.phone_number) {
-    commands.push({
-      type: 'text',
-      text: `Telp: ${profile.phone_number}`,
-      align: 'center',
-      newline: true,
-    });
-  }
-
-  if (profile.address) {
-    commands.push({
-      type: 'text',
-      text: profile.address,
-      align: 'center',
-      newline: true,
-    });
-  }
-
-  commands.push({
-    type: 'text',
-    text: '--------------------------------',
-    align: 'center',
-    newline: true,
-  });
+  const cashierLine = `Kasir: ${profile.cashier_name || "Admin"}`;
+  commands.push({ type: "text", text: cashierLine, align: "center", newline: true });
+  const trxCodeLine = `#TRX-DIG-${trx.id}`;
+  commands.push({ type: "text", text: trxCodeLine, align: "center", bold: true, newline: true });
+  commands.push({ type: "text", text: formatDate(trx.created_at), align: "center", newline: true });
+  commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
 
   // === TRANSACTION INFO ===
-  commands.push({
-    type: 'text',
-    text: `Pelanggan: ${trx.customer_name || '-'}`,
-    align: 'left',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: `No/ID: ${trx.phone_number}`,
-    align: 'left',
-    bold: true,
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: `Layanan: ${trx.category}`,
-    align: 'left',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: `Produk: ${trx.provider}`,
-    align: 'left',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: `Nominal: ${formatCurrency(trx.amount)}`,
-    align: 'left',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: '--------------------------------',
-    align: 'center',
-    newline: true,
-  });
+  const layananStr = trx.category;
+  commands.push({ type: "text", text: `${padRight("Layanan:", LINE_WIDTH - layananStr.length)}${layananStr}`, newline: true });
+  const produkStr = trx.provider;
+  commands.push({ type: "text", text: `${padRight("Produk:", LINE_WIDTH - produkStr.length)}${produkStr}`, newline: true });
+  const noIdStr = trx.phone_number;
+  commands.push({ type: "text", text: `${padRight("No/ID:", LINE_WIDTH - noIdStr.length)}${noIdStr}`, bold: true, newline: true });
+  if (trx.customer_name) {
+    const customerStr = trx.customer_name;
+    commands.push({ type: "text", text: `${padRight("Pelanggan:", LINE_WIDTH - customerStr.length)}${customerStr}`, newline: true });
+  }
 
   // === PRICING ===
-  commands.push({
-    type: 'text',
-    text: `Harga: ${formatCurrency(trx.selling_price)}`,
-    align: 'left',
-    bold: true,
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: '--------------------------------',
-    align: 'center',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: `TOTAL: ${formatCurrency(trx.selling_price)}`,
-    align: 'center',
-    bold: true,
-    size: 'double',
-    newline: true,
-  });
+  commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
+  const priceStr = formatCurrency(trx.selling_price);
+  commands.push({ type: "text", text: `${padRight("Total", LINE_WIDTH - priceStr.length)}${priceStr}`, bold: true, newline: true });
+  const paidStr = formatCurrency(trx.paid || trx.selling_price);
+  commands.push({ type: "text", text: `${padRight("Dibayar", LINE_WIDTH - paidStr.length)}${paidStr}`, newline: true });
+  const changeAmount = (trx.paid || trx.selling_price) - trx.selling_price;
+  if (changeAmount > 0) {
+    const changeStr = formatCurrency(changeAmount);
+    commands.push({ type: "text", text: `${padRight("Kembali", LINE_WIDTH - changeStr.length)}${changeStr}`, newline: true });
+  }
 
   // === NOTES / TOKEN ===
   if (trx.notes) {
-    commands.push({
-      type: 'text',
-      text: '--------------------------------',
-      align: 'center',
-      newline: true,
-    });
-    commands.push({
-      type: 'text',
-      text: 'TOKEN / KETERANGAN:',
-      align: 'center',
-      bold: true,
-      newline: true,
-    });
-    commands.push({
-      type: 'text',
-      text: trx.notes,
-      align: 'center',
-      newline: true,
-    });
+    commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
+    commands.push({ type: "text", text: "TOKEN/KETERANGAN:", align: "center", bold: true, newline: true });
+    commands.push({ type: "text", text: trx.notes, align: "center", size: 'double-width', bold: true, newline: true });
   }
 
   // === FOOTER ===
-  commands.push({
-    type: 'text',
-    text: '--------------------------------',
-    align: 'center',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: profile.footer_note || 'Terima Kasih',
-    align: 'center',
-    newline: true,
-  });
-
-  // Cut paper
-  commands.push({ type: 'cut' });
+  commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
+  if (profile.footer_note) {
+    commands.push({ type: "text", text: profile.footer_note, align: "center", newline: true });
+  }
+  commands.push({ type: "text", text: "Terima kasih!", align: "center", newline: true });
+  commands.push({ type: "cut" });
 
   return commands;
 };
+
 
 // ============================================
 // HTML Generators (for expo-print fallback)
@@ -484,27 +220,27 @@ const buildDigitalReceiptCommands = (
 const generateSaleReceiptHTML = (
   sale: Sale & { payment_method_name?: string },
   items: any[],
-  profile: {
-    name: string;
-    cashier_name: string;
-    footer_note: string;
-    phone_number: string;
-    address: string;
-  }
+  profile: ShopProfile
 ) => {
   const itemsHtml = items
     .map(
       (item) => `
-    <tr>
-      <td colspan="2" style="font-weight: bold;">${item.product_name || 'Produk'}</td>
-    </tr>
-    <tr>
-      <td style="padding-bottom: 2px;">${item.qty} x ${formatCurrency(item.price)}</td>
-      <td style="text-align: right; vertical-align: bottom; padding-bottom: 2px;">${formatCurrency(item.subtotal)}</td>
-    </tr>
+    <div class="item">
+      <div class="item-name">${item.product_name || "Produk"}</div>
+      <div class="item-details">
+        <span>${item.qty} x ${formatCurrency(item.price)}</span>
+        <span>${formatCurrency(item.subtotal)}</span>
+      </div>
+    </div>
   `
     )
-    .join('');
+    .join("");
+  
+  const pointsHtml = `
+    ${((sale.points_earned && sale.points_earned > 0) || (sale.points_redeemed && sale.points_redeemed > 0)) && profile.poin_enabled !== 0 ? '<div class="divider"></div>' : ''}
+    ${(sale.points_earned && sale.points_earned > 0) && profile.poin_enabled !== 0 ? `<div class="row"><span>Poin Diperoleh</span><span>+${sale.points_earned} Poin</span></div>` : ""}
+    ${(sale.points_redeemed && sale.points_redeemed > 0) && profile.poin_enabled !== 0 ? `<div class="row"><span>Poin Ditukar</span><span>-${sale.points_redeemed} Poin</span></div>` : ""}
+  `;
 
   return `
     <html>
@@ -512,58 +248,54 @@ const generateSaleReceiptHTML = (
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
         <style>
           @page { margin: 0; }
-          body {
-            font-family: 'monospace';
-            padding: 5px;
-            width: 300px;
-            margin: 0 auto;
-            color: #000;
-          }
-          .header { text-align: center; margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
-          .shop-name { font-size: 50px; font-weight: bold; text-transform: uppercase; }
-          .cashier-name { font-size: 30px; margin-top: 1px; }
-          .trx-meta { font-size: 26px; margin-top: 1px; }
-          .items-table { width: 100%; font-size: 30px; border-collapse: collapse; margin: 5px 0; }
-          .divider { border-top: 1px dashed #000; margin: 5px 0; }
-          .row { display: flex; justify-content: space-between; font-size: 30px; margin-bottom: 2px; }
-          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 38px; margin-top: 3px; }
-          .footer { text-align: center; margin-top: 10px; font-size: 22px; line-height: 1.3; }
+          body { font-family: 'monospace'; font-size: 10px; color: #000; width: 58mm; padding: 5px; box-sizing: border-box; }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .uppercase { text-transform: uppercase; }
+          .divider { border-top: 1px dashed #000; margin: 8px 0; }
+          
+          .header { text-align: center; margin-bottom: 8px; }
+          .header .shop-name { font-size: 16px; font-weight: bold; }
+          .header p { margin: 1px 0; font-size: 10px; }
+
+          .meta-info { font-size: 10px; margin-bottom: 8px;}
+          .meta-info p { margin: 1px 0; }
+          
+          .item { margin-bottom: 4px; }
+          .item-name { font-weight: bold; }
+          .item-details { display: flex; justify-content: space-between; }
+
+          .totals .row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+          .totals .row.total { font-weight: bold; font-size: 12px; margin-top: 4px; }
+          
+          .footer { text-align: center; margin-top: 10px; font-size: 10px; }
+          .footer p { margin: 2px 0; }
         </style>
       </head>
       <body>
         <div class="header">
-          <div class="shop-name">${profile.name}</div>
-          ${profile.cashier_name ? `<div class="cashier-name">Kasir: ${profile.cashier_name}</div>` : ''}
-          <div class="trx-meta">TRX #${sale.id} | ${formatDate(sale.created_at)}</div>
+          <div class="shop-name uppercase">${profile.name || "TOKO"}</div>
+          ${profile.address ? `<p>${profile.address}</p>` : ""}
+          ${profile.phone_number ? `<p>Telp: ${profile.phone_number}</p>` : ""}
+          <p>Kasir: ${profile.cashier_name || "Admin"}</p>
+          <p><strong>TRX-${sale.id?.toString().padStart(5, '0')}</strong></p>
+          <p>${formatDate(sale.created_at)}</p>
         </div>
-        ${profile.phone_number ? `<div style="text-align: center; font-size: 26px; margin-bottom: 1px;">Telp: ${profile.phone_number}</div>` : ''}
-        ${profile.address ? `<div style="text-align: center; font-size: 26px; margin-bottom: 2px; word-wrap: break-word;">${profile.address}</div>` : ''}
-        <table class="items-table">${itemsHtml}</table>
         <div class="divider"></div>
-        <div class="row">
-          <span>Metode</span>
-          <span>${sale.payment_method_name || '-'}</span>
-        </div>
-        <div class="row">
-          <span>SUBTOTAL</span>
-          <span>${formatCurrency(sale.total)}</span>
-        </div>
-        <div class="total-row">
-          <span>TOTAL</span>
-          <span>${formatCurrency(sale.total)}</span>
-        </div>
-        <div class="row" style="margin-top: 8px;">
-          <span>BAYAR</span>
-          <span>${formatCurrency(sale.paid)}</span>
-        </div>
-        <div class="row">
-          <span>KEMBALI</span>
-          <span>${formatCurrency(sale.change)}</span>
-        </div>
-        ${sale.points_earned && sale.points_earned > 0 ? `<div class="row"><span>POIN</span><span>+${sale.points_earned} pts</span></div>` : ''}
-        ${sale.points_redeemed && sale.points_redeemed > 0 ? `<div class="row"><span>POIN DITUKAR</span><span>-${sale.points_redeemed} pts</span></div>` : ''}
+        ${itemsHtml}
         <div class="divider"></div>
-        <div class="footer">${profile.footer_note.replace(/\n/g, '<br>')}</div>
+        <div class="totals">
+          <div class="row total"><span>Total</span><span>${formatCurrency(sale.total)}</span></div>
+          <div class="row"><span>Bayar</span><span>${formatCurrency(sale.paid)}</span></div>
+          <div class="row"><span>Kembali</span><span>${formatCurrency(sale.change)}</span></div>
+          <div class="row"><span>Metode</span><span>${sale.payment_method_name || "-"}</span></div>
+        </div>
+        ${pointsHtml}
+        <div class="divider"></div>
+        <div class="footer">
+          ${profile.footer_note ? `<p>${profile.footer_note.replace(/\n/g, "<br>")}</p>` : ""}
+          <p>Terima kasih!</p>
+        </div>
       </body>
     </html>
   `;
@@ -571,74 +303,71 @@ const generateSaleReceiptHTML = (
 
 const generateDigitalReceiptHTML = (
   trx: DigitalTransaction,
-  profile: {
-    name: string;
-    cashier_name: string;
-    footer_note: string;
-    phone_number: string;
-    address: string;
-  }
+  profile: ShopProfile
 ) => {
+  const notesHtml = trx.notes ? `
+    <div class="divider"></div>
+    <div class="notes-box">
+      <div class="bold center">TOKEN/KETERANGAN:</div>
+      <div class="bold center" style="font-size: 14px; margin-top: 4px;">${trx.notes}</div>
+    </div>
+  ` : '';
+
   return `
     <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
         <style>
           @page { margin: 0; }
-          body {
-            font-family: 'monospace';
-            padding: 5px;
-            width: 300px;
-            margin: 0 auto;
-            color: #000;
-          }
-          .header { text-align: center; margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
-          .shop-name { font-size: 50px; font-weight: bold; text-transform: uppercase; }
-          .cashier-name { font-size: 30px; margin-top: 1px; }
-          .trx-meta { font-size: 26px; margin-top: 1px; }
-          .info-table { width: 100%; font-size: 30px; border-collapse: collapse; margin: 5px 0; }
-          .info-table td { padding: 4px 0; vertical-align: top; }
-          .label { width: 40%; color: #333; }
-          .divider { border-top: 1px dashed #000; margin: 5px 0; }
-          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 38px; padding: 3px 0; }
-          .notes-box {
-            margin-top: 5px;
-            padding: 5px;
-            border: 1px solid #000;
-            text-align: center;
-          }
-          .notes-title { font-size: 26px; font-weight: bold; margin-bottom: 2px; }
-          .notes-content { font-size: 36px; font-weight: bold; letter-spacing: 1px; }
-          .footer { text-align: center; margin-top: 10px; font-size: 22px; line-height: 1.3; }
+          body { font-family: 'monospace'; font-size: 10px; color: #000; width: 58mm; padding: 5px; box-sizing: border-box; }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .uppercase { text-transform: uppercase; }
+          .divider { border-top: 1px dashed #000; margin: 8px 0; }
+
+          .header { text-align: center; margin-bottom: 8px; }
+          .header .shop-name { font-size: 16px; font-weight: bold; }
+          .header p { margin: 1px 0; font-size: 10px; }
+
+          .meta-info { font-size: 10px; margin-bottom: 8px;}
+          .meta-info p { margin: 1px 0; }
+          
+          .info-table .row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+          .info-table .row span:first-child { min-width: 80px; padding-right: 8px; }
+
+          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; margin-top: 4px; }
+          .notes-box { margin-top: 8px; }
+          
+          .footer { text-align: center; margin-top: 10px; font-size: 10px; }
+          .footer p { margin: 2px 0; }
         </style>
       </head>
       <body>
         <div class="header">
-          <div class="shop-name">${profile.name}</div>
-          ${profile.cashier_name ? `<div class="cashier-name">Kasir: ${profile.cashier_name}</div>` : ''}
-          <div class="trx-meta">TRX #${trx.id} | ${formatDate(trx.created_at)}</div>
+          <div class="shop-name uppercase">${profile.name || "TOKO"}</div>
+          ${profile.address ? `<p>${profile.address}</p>` : ""}
+          ${profile.phone_number ? `<p>Telp: ${profile.phone_number}</p>` : ""}
+          <p>Kasir: ${profile.cashier_name || "Admin"}</p>
+          <p><strong>#TRX-DIG-${trx.id}</strong></p>
+          <p>${formatDate(trx.created_at)}</p>
         </div>
-        ${profile.phone_number ? `<div style="text-align: center; font-size: 26px; margin-bottom: 1px;">Telp: ${profile.phone_number}</div>` : ''}
-        ${profile.address ? `<div style="text-align: center; font-size: 26px; margin-bottom: 2px; word-wrap: break-word;">${profile.address}</div>` : ''}
-        <table class="info-table">
-          <tr><td class="label">Pelanggan:</td><td>${trx.customer_name || '-'}</td></tr>
-          <tr><td class="label">No/ID:</td><td style="font-weight: bold;">${trx.phone_number}</td></tr>
-          <tr><td class="label">Layanan:</td><td>${trx.category}</td></tr>
-          <tr><td class="label">Produk:</td><td>${trx.provider}</td></tr>
-          <tr><td class="label">Nominal:</td><td>${formatCurrency(trx.amount)}</td></tr>
-        </table>
         <div class="divider"></div>
-        <div class="total-row"><span>Harga</span><span>${formatCurrency(trx.selling_price)}</span></div>
+        <div class="info-table">
+          <div class="row"><span>Layanan</span><span>${trx.category}</span></div>
+          <div class="row"><span>Produk</span><span>${trx.provider}</span></div>
+          <div class="row"><span>No/ID</span><span class="bold">${trx.phone_number}</span></div>
+          ${trx.customer_name ? `<div class="row"><span>Pelanggan</span><span>${trx.customer_name}</span></div>` : ''}
+        </div>
         <div class="divider"></div>
-        <div class="total-row"><span>TOTAL</span><span>${formatCurrency(trx.selling_price)}</span></div>
-        ${trx.notes ? `
-          <div class="notes-box">
-            <div class="notes-title">TOKEN / KETERANGAN:</div>
-            <div class="notes-content">${trx.notes}</div>
-          </div>
-          <div class="divider"></div>
-        ` : ''}
-        <div class="footer">${profile.footer_note.replace(/\n/g, '<br>')}</div>
+        <div class="total-row" style="font-weight: bold;"><span>Total</span><span>${formatCurrency(trx.selling_price)}</span></div>
+        <div class="total-row"><span>Dibayar</span><span>${formatCurrency(trx.paid || trx.selling_price)}</span></div>
+        ${(trx.paid || trx.selling_price) - trx.selling_price > 0 ? `<div class="total-row"><span>Kembali</span><span>${formatCurrency((trx.paid || trx.selling_price) - trx.selling_price)}</span></div>` : ''}
+        ${notesHtml}
+        <div class="divider"></div>
+        <div class="footer">
+          ${profile.footer_note ? `<p>${profile.footer_note.replace(/\n/g, "<br>")}</p>` : ""}
+          <p>Terima kasih!</p>
+        </div>
       </body>
     </html>
   `;
@@ -648,98 +377,69 @@ const generateDigitalReceiptHTML = (
 // Main Print Functions (Public API)
 // ============================================
 
-// Module-level flag to prevent concurrent print requests
 let isPrinting = false;
 
-/**
- * Print sale receipt with RawBT priority and expo-print fallback
- */
 export const printSaleReceipt = async (
   sale: Sale & { payment_method_name?: string },
   items: any[]
 ) => {
-  // Check if another print request is already in progress
   if (isPrinting) {
-    console.warn('Gagal mencetak struk: [Error: Another print request is already in progress]');
-    throw new Error('Another print request is already in progress');
+    console.warn("Gagal mencetak struk: [Error: Another print request is already in progress]");
+    throw new Error("Another print request is already in progress");
   }
 
   isPrinting = true;
 
   try {
     const profile = await getShopProfile();
-    const shopProfile = {
-      name: profile?.name || 'AMINMART',
-      cashier_name: profile?.cashier_name || '',
-      footer_note: profile?.footer_note || 'Terima Kasih Atas Kepercayaan Anda',
-      phone_number: profile?.phone_number || '',
-      address: profile?.address || '',
-    };
-
-    // Build RawBT commands
-    const commands = buildSaleReceiptCommands(sale, items, shopProfile);
-
-    // Try RawBT first
-    const rawbtSuccess = await sendToRawBT(commands);
-    if (rawbtSuccess) {
-      return;
+    if (!profile) {
+      throw new Error("Shop profile not found.");
     }
+    
+    // Try RawBT first
+    const commands = buildSaleReceiptCommands(sale, items, profile);
+    const rawbtSuccess = await sendToRawBT(commands);
+    if (rawbtSuccess) return;
 
     // Fallback to expo-print
-    console.log('📄 Printing with expo-print...');
-    const htmlContent = generateSaleReceiptHTML(sale, items, shopProfile);
-    await Print.printAsync({
-      html: htmlContent,
-      width: 302,
-    });
+    console.log("📄 Printing with expo-print...");
+    const htmlContent = generateSaleReceiptHTML(sale, items, profile);
+    await Print.printAsync({ html: htmlContent });
+
   } catch (error) {
-    console.error('Gagal mencetak struk:', error);
+    console.error("Gagal mencetak struk:", error);
     throw error;
   } finally {
     isPrinting = false;
   }
 };
 
-/**
- * Print digital transaction receipt with RawBT priority and expo-print fallback
- */
 export const printDigitalReceipt = async (trx: DigitalTransaction) => {
-  // Check if another print request is already in progress
   if (isPrinting) {
-    console.warn('Gagal mencetak struk: [Error: Another print request is already in progress]');
-    throw new Error('Another print request is already in progress');
+    console.warn("Gagal mencetak struk: [Error: Another print request is already in progress]");
+    throw new Error("Another print request is already in progress");
   }
 
   isPrinting = true;
 
   try {
     const profile = await getShopProfile();
-    const shopProfile = {
-      name: profile?.name || 'AMINMART',
-      cashier_name: profile?.cashier_name || '',
-      footer_note: profile?.footer_note || 'Terima Kasih Atas Kepercayaan Anda',
-      phone_number: profile?.phone_number || '',
-      address: profile?.address || '',
-    };
-
-    // Build RawBT commands
-    const commands = buildDigitalReceiptCommands(trx, shopProfile);
-
-    // Try RawBT first
-    const rawbtSuccess = await sendToRawBT(commands);
-    if (rawbtSuccess) {
-      return;
+    if (!profile) {
+      throw new Error("Shop profile not found.");
     }
 
+    // Try RawBT first
+    const commands = buildDigitalReceiptCommands(trx, profile);
+    const rawbtSuccess = await sendToRawBT(commands);
+    if (rawbtSuccess) return;
+
     // Fallback to expo-print
-    console.log('📄 Printing with expo-print...');
-    const htmlContent = generateDigitalReceiptHTML(trx, shopProfile);
-    await Print.printAsync({
-      html: htmlContent,
-      width: 302,
-    });
+    console.log("📄 Printing with expo-print...");
+    const htmlContent = generateDigitalReceiptHTML(trx, profile);
+    await Print.printAsync({ html: htmlContent });
+
   } catch (error) {
-    console.error('Gagal mencetak struk:', error);
+    console.error("Gagal mencetak struk:", error);
     throw error;
   } finally {
     isPrinting = false;

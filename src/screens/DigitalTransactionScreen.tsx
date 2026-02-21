@@ -50,6 +50,7 @@ export default function DigitalTransactionScreen() {
   const [amount, setAmount] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
+  const [paid, setPaid] = useState("");
   const [notes, setNotes] = useState("");
   const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
   const [history, setHistory] = useState<{ phone_number: string, customer_name: string }[]>([]);
@@ -79,6 +80,7 @@ export default function DigitalTransactionScreen() {
     setAmount("");
     setCostPrice("");
     setSellingPrice("");
+    setPaid("");
     setNotes("");
     setTransactionDate(new Date().toISOString().split('T')[0]);
     setPhoneNumberError(null);
@@ -110,7 +112,7 @@ export default function DigitalTransactionScreen() {
       }
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, route.params?.editTrx]);
 
   useEffect(() => {
     if (route.params?.editTrx) {
@@ -123,6 +125,7 @@ export default function DigitalTransactionScreen() {
       setAmount(etrx.amount.toString());
       setCostPrice(etrx.cost_price.toString());
       setSellingPrice(etrx.selling_price.toString());
+      setPaid((etrx.paid || etrx.selling_price).toString());
       setNotes(etrx.notes || "");
       if (etrx.created_at) {
         // Attempt to parse date from ISO or T-split format
@@ -278,6 +281,9 @@ export default function DigitalTransactionScreen() {
       const currentTime = new Date().toLocaleTimeString('en-GB'); // e.g., "14:30:00"
       const createdAtTimestamp = `${transactionDate} ${currentTime}`;
 
+      const paidValue = parseFloat(paid) || finalSellValue;
+
+      let trxId: number;
       if (editTrxId) {
         console.log("Updating transaction:", editTrxId, "notes:", notes);
         await updateDigitalTransaction(editTrxId, {
@@ -288,14 +294,16 @@ export default function DigitalTransactionScreen() {
           amount: parseFloat(amount),
           cost_price: finalCostValue,
           selling_price: finalSellValue,
+          paid: paidValue,
           profit: profitValue,
           notes: notes.trim(),
           created_at: createdAtTimestamp
         });
         console.log("Update completed");
         Alert.alert("Sukses", "Transaksi berhasil diperbarui");
+        trxId = editTrxId;
       } else {
-        await addDigitalTransaction({
+        trxId = await addDigitalTransaction({
           category,
           phone_number: phoneNumber.trim(),
           customer_name: customerName.trim(),
@@ -303,6 +311,7 @@ export default function DigitalTransactionScreen() {
           amount: parseFloat(amount),
           cost_price: finalCostValue,
           selling_price: finalSellValue,
+          paid: paidValue,
           profit: profitValue,
           notes: notes.trim(),
           created_at: createdAtTimestamp
@@ -311,13 +320,9 @@ export default function DigitalTransactionScreen() {
       }
 
       loadHistory(); // Always load history after transaction
-      if (editTrxId) {
-        navigation.setParams({ editTrx: undefined }); // Clear edit param
-        resetForm(); // Reset form after update
-        navigation.navigate("DigitalTransactionDetail", { trxId: editTrxId }); // Navigate to detail screen
-      } else {
-        resetForm(); // Reset form after new transaction
-      }
+      navigation.setParams({ editTrx: undefined }); // Clear edit param
+      resetForm(); // Reset form after transaction
+      navigation.navigate("DigitalDetail", { trxId }); // Navigate to detail screen
 
     } catch (e) {
       console.error("Transaction error:", e);
@@ -541,6 +546,17 @@ export default function DigitalTransactionScreen() {
                 Rp {profit.toLocaleString("id-ID")}
               </Text>
             </View>
+
+            {/* Paid Amount Input */}
+            <TextInput
+              label="Jumlah Dibayar"
+              placeholder="0"
+              value={paid}
+              onChangeText={(text) => { setPaid(text); }}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.fieldMargin}
+            />
 
             {/* Notes Input */}
             <TextInput

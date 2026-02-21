@@ -9,6 +9,7 @@ export interface DigitalTransaction {
   amount: number;
   cost_price: number;
   selling_price: number;
+  paid: number; // Jumlah yang dibayar pelanggan
   profit: number;
   notes?: string;
   created_at?: string;
@@ -41,8 +42,8 @@ export const getDigitalTransactions = async (startDate?: string, endDate?: strin
 export const addDigitalTransaction = async (trx: Omit<DigitalTransaction, "id">): Promise<number> => {
   const db = await getDB();
   const result = await db.runAsync(
-    `INSERT INTO phone_history (category, phone_number, customer_name, provider, amount, cost_price, selling_price, profit, notes, created_at) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO phone_history (category, phone_number, customer_name, provider, amount, cost_price, selling_price, paid, profit, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       trx.category,
       trx.phone_number,
@@ -51,6 +52,7 @@ export const addDigitalTransaction = async (trx: Omit<DigitalTransaction, "id">)
       trx.amount,
       trx.cost_price,
       trx.selling_price,
+      trx.paid || trx.selling_price,
       trx.profit,
       trx.notes || null,
       trx.created_at || new Date().toISOString()
@@ -71,6 +73,7 @@ export const updateDigitalTransaction = async (id: number, trx: Partial<DigitalT
   if (trx.amount !== undefined) { sets.push("amount = ?"); params.push(trx.amount); }
   if (trx.cost_price !== undefined) { sets.push("cost_price = ?"); params.push(trx.cost_price); }
   if (trx.selling_price !== undefined) { sets.push("selling_price = ?"); params.push(trx.selling_price); }
+  if (trx.paid !== undefined) { sets.push("paid = ?"); params.push(trx.paid); }
   if (trx.profit !== undefined) { sets.push("profit = ?"); params.push(trx.profit); }
   if (trx.notes !== undefined && trx.notes !== null) { sets.push("notes = ?"); params.push(trx.notes); }
   if (trx.created_at) { sets.push("created_at = ?"); params.push(trx.created_at); }

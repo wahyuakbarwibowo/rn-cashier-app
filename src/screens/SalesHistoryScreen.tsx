@@ -111,6 +111,7 @@ export default function SalesHistoryScreen() {
           <TouchableOpacity
             style={styles.saleCard}
             onPress={() => navigation.navigate("SaleDetail", { saleId: item.id, from: "SalesHistory" })}
+            activeOpacity={0.7}
           >
             <View style={styles.saleHeader}>
               <Text style={styles.saleId}>TRX-{item.id?.toString().padStart(5, '0')}</Text>
@@ -127,21 +128,33 @@ export default function SalesHistoryScreen() {
                 </Text>
               </View>
 
-              <View style={styles.paymentInfo}>
-                <Text style={styles.paymentText}>Dibayar: Rp {(item.paid || 0).toLocaleString("id-ID")}</Text>
-                <Text style={styles.paymentText}>Kembali: Rp {(item.change || 0).toLocaleString("id-ID")}</Text>
-                <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-                  {(item.points_earned || 0) > 0 && (
-                    <View style={styles.historyPointBadge}>
-                      <Text style={styles.historyPointText}>+{item.points_earned} Pts</Text>
-                    </View>
-                  )}
-                  {(item.points_redeemed || 0) > 0 && (
-                    <View style={[styles.historyPointBadge, { backgroundColor: '#FEF2F2', borderColor: '#FECDD3' }]}>
-                      <Text style={[styles.historyPointText, { color: '#E11D48' }]}>-{item.points_redeemed} Pts</Text>
-                    </View>
-                  )}
+              <View style={styles.paymentSection}>
+                <View style={styles.paymentInfo}>
+                  <Text style={styles.paymentText}>Dibayar: Rp {(item.paid || 0).toLocaleString("id-ID")}</Text>
+                  <Text style={styles.paymentText}>Kembali: Rp {(item.change || 0).toLocaleString("id-ID")}</Text>
+                  <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+                    {(item.points_earned || 0) > 0 && (
+                      <View style={styles.historyPointBadge}>
+                        <Text style={styles.historyPointText}>+{item.points_earned} Pts</Text>
+                      </View>
+                    )}
+                    {(item.points_redeemed || 0) > 0 && (
+                      <View style={[styles.historyPointBadge, { backgroundColor: '#FEF2F2', borderColor: '#FECDD3' }]}>
+                        <Text style={[styles.historyPointText, { color: '#E11D48' }]}>-{item.points_redeemed} Pts</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
+                <TouchableOpacity
+                  style={styles.editBtnSmall}
+                  activeOpacity={0.6}
+                  onPress={() => {
+                    navigation.navigate("SalesTransaction", { editSaleId: item.id });
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.editBtnSmallText}>Edit</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </TouchableOpacity>
@@ -288,12 +301,31 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#111827",
   },
+  paymentSection: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+  },
   paymentInfo: {
+    flex: 1,
     alignItems: "flex-end",
   },
   paymentText: {
     fontSize: 12,
     color: "#374151",
+  },
+  editBtnSmall: {
+    backgroundColor: "#EFF6FF",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  editBtnSmallText: {
+    color: "#3B82F6",
+    fontSize: 11,
+    fontWeight: "bold",
   },
   emptyContainer: {
     alignItems: "center",

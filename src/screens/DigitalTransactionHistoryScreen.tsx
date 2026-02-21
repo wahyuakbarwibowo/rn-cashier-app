@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ export default function DigitalTransactionHistoryScreen() {
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const data = showFilter
@@ -33,15 +33,18 @@ export default function DigitalTransactionHistoryScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showFilter, startDate, endDate, initialCategory]);
 
   useEffect(() => {
-    loadData();
     const unsubscribe = navigation.addListener('focus', () => {
       loadData();
     });
+    
+    // Initial load
+    loadData();
+
     return unsubscribe;
-  }, [showFilter, navigation, initialCategory]);
+  }, [navigation, loadData]);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
@@ -126,6 +129,7 @@ export default function DigitalTransactionHistoryScreen() {
           <TouchableOpacity
             style={styles.card}
             onPress={() => navigation.navigate("DigitalDetail", { trxId: item.id })}
+            activeOpacity={0.7}
           >
             <View style={styles.cardHeader}>
               <View style={[styles.badge, { backgroundColor: getCategoryColor(item.category) }]}>
@@ -147,7 +151,11 @@ export default function DigitalTransactionHistoryScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.editBtnSmall}
-                  onPress={() => navigation.navigate("DigitalTransaction", { editTrx: item })}
+                  activeOpacity={0.6}
+                  onPress={() => {
+                    navigation.navigate("DigitalTransaction", { editTrx: item });
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                   <Text style={styles.editBtnSmallText}>Edit</Text>
                 </TouchableOpacity>

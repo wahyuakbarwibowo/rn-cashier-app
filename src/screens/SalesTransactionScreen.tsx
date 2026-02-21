@@ -397,14 +397,17 @@ export default function SalesTransactionScreen() {
     }
 
     // Stock Validation - handled visually and with Alert for blocking issue
-    for (const item of cart) {
-      if (item.qty > (item.product.stock || 0)) {
-        // Use Alert for critical stock issue as it's blocking
-        Alert.alert(
-          "Stok Tidak Cukup",
-          `Produk "${item.product.name}" hanya memiliki stok ${item.product.stock || 0}, tapi di keranjang ada ${item.qty}. Harap sesuaikan jumlahnya.`
-        );
-        return;
+    // Skip stock validation when editing existing transaction
+    if (!editSaleId) {
+      for (const item of cart) {
+        if (item.qty > (item.product.stock || 0)) {
+          // Use Alert for critical stock issue as it's blocking
+          Alert.alert(
+            "Stok Tidak Cukup",
+            `Produk "${item.product.name}" hanya memiliki stok ${item.product.stock || 0}, tapi di keranjang ada ${item.qty}. Harap sesuaikan jumlahnya.`
+          );
+          return;
+        }
       }
     }
 
@@ -541,7 +544,8 @@ export default function SalesTransactionScreen() {
   };
 
   // Determine if the final checkout button should be disabled
-  const stockIssue = cart.some(i => i.qty > (i.product.stock || 0));
+  // Skip stock validation when editing existing transaction
+  const stockIssue = editSaleId ? false : cart.some(i => i.qty > (i.product.stock || 0));
   const isCheckoutButtonDisabled =
     cart.length === 0 || // Empty cart
     stockIssue || // Stock issue
@@ -640,8 +644,8 @@ export default function SalesTransactionScreen() {
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
             renderItem={({ item }) => {
               const info = getPriceBreakdown(item);
-              // Check for stock validity directly in render
-              const isStockLow = item.qty > (item.product.stock || 0);
+              // Check for stock validity directly in render (skip when editing)
+              const isStockLow = editSaleId ? false : item.qty > (item.product.stock || 0);
               return (
                 <Surface elevation={1} style={styles.cartItemSurface}>
                   <List.Item

@@ -82,6 +82,9 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       try {
         await database.execAsync("ALTER TABLE shop_profile ADD COLUMN address TEXT;");
       } catch (e) { }
+      try {
+        await database.execAsync("ALTER TABLE shop_profile ADD COLUMN poin_enabled INTEGER DEFAULT 0;");
+      } catch (e) { }
 
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS sales (
@@ -271,6 +274,9 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       } catch (e) { }
       try {
         await database.execAsync("ALTER TABLE phone_history ADD COLUMN notes TEXT;");
+      } catch (e) { }
+      try {
+        await database.execAsync("ALTER TABLE phone_history ADD COLUMN paid REAL DEFAULT 0;");
       } catch (e) { }
 
       db = database;
