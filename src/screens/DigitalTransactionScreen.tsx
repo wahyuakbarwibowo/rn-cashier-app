@@ -27,6 +27,7 @@ import {
   HelperText, // Imported HelperText
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getDB } from "../database/initDB";
 import { addDigitalTransaction, updateDigitalTransaction, getRecentNumbers, DigitalTransaction } from "../database/pulsa";
 import {
   getDigitalProducts,
@@ -103,8 +104,8 @@ export default function DigitalTransactionScreen() {
     loadCategories();
     loadHistory();
 
-    // Reset form when screen is opened without editTrx param
-    if (!route.params?.editTrx) {
+    // Reset form when screen is opened without editTrxId param
+    if (!route.params?.editTrxId) {
       resetForm();
     }
   }, []);
@@ -112,29 +113,46 @@ export default function DigitalTransactionScreen() {
   // Reset form when screen gains focus (when navigating back)
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      if (!route.params?.editTrx) {
+      if (!route.params?.editTrxId) {
         resetForm();
       }
     });
     return unsubscribe;
-  }, [navigation, route.params?.editTrx]);
+  }, [navigation, route.params?.editTrxId]);
 
   useEffect(() => {
-    if (route.params?.editTrx) {
-      const etrx = route.params.editTrx;
-      setEditTrxId(etrx.id);
-      setCategory(etrx.category);
-      setPhoneNumber(etrx.phone_number);
-      setCustomerName(etrx.customer_name || "");
-      setProvider(etrx.provider);
-      setAmount((etrx.amount ?? 0).toString());
-      setCostPrice((etrx.cost_price ?? 0).toString());
-      setSellingPrice((etrx.selling_price ?? 0).toString());
-      setPaid((etrx.paid ?? etrx.selling_price ?? 0).toString());
-      setNotes(etrx.notes || "");
-      setTransactionDate(parseISODate(etrx.created_at));
-    }
-  }, [route.params?.editTrx]);
+    const loadEditTransaction = async () => {
+      const editTrxId = route.params?.editTrxId;
+      if (!editTrxId) return;
+
+      try {
+        const db = await getDB();
+        const etrx = await db.getFirstAsync<DigitalTransaction>(
+          "SELECT * FROM phone_history WHERE id = ?",
+          [editTrxId]
+        );
+
+        if (etrx) {
+          setEditTrxId(etrx.id);
+          setCategory(etrx.category);
+          setPhoneNumber(etrx.phone_number);
+          setCustomerName(etrx.customer_name || "");
+          setProvider(etrx.provider);
+          setAmount((etrx.amount ?? 0).toString());
+          setCostPrice((etrx.cost_price ?? 0).toString());
+          setSellingPrice((etrx.selling_price ?? 0).toString());
+          setPaid((etrx.paid ?? etrx.selling_price ?? 0).toString());
+          setNotes(etrx.notes || "");
+          setTransactionDate(parseISODate(etrx.created_at));
+        }
+      } catch (error) {
+        console.error("Error loading transaction for edit:", error);
+        Alert.alert("Error", "Gagal memuat transaksi untuk diedit");
+      }
+    };
+
+    loadEditTransaction();
+  }, [route.params?.editTrxId]);
 
   useEffect(() => {
     if (category) {
@@ -302,7 +320,7 @@ export default function DigitalTransactionScreen() {
       }
 
       loadHistory(); // Always load history after transaction
-      navigation.setParams({ editTrx: undefined }); // Clear edit param
+      navigation.setParams({ editTrxId: undefined }); // Clear edit param
       resetForm(); // Reset form after transaction
       navigation.navigate(ROUTES.DIGITAL_DETAIL, { trxId }); // Navigate to detail screen
 
