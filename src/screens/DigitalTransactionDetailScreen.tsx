@@ -99,7 +99,7 @@ export default function DigitalTransactionDetailScreen() {
           </View>
           <Button
             mode="contained"
-            onPress={() => navigation.navigate("DigitalTransaction", { editTrxId: trx.id })}
+            onPress={() => navigation.navigate("Main", { screen: "DigitalTransaction", params: { editTrxId: trx.id } })}
             style={styles.editButton}
             contentStyle={{ height: 40 }}
           >
