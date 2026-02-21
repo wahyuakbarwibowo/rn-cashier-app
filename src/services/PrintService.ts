@@ -411,22 +411,7 @@ const buildDigitalReceiptCommands = (
   // === PRICING ===
   commands.push({
     type: 'text',
-    text: `Harga Modal: ${formatCurrency(trx.cost_price)}`,
-    align: 'left',
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: `Harga Jual: ${formatCurrency(trx.selling_price)}`,
-    align: 'left',
-    bold: true,
-    newline: true,
-  });
-
-  commands.push({
-    type: 'text',
-    text: `Keuntungan: ${formatCurrency(trx.profit)}`,
+    text: `Harga: ${formatCurrency(trx.selling_price)}`,
     align: 'left',
     bold: true,
     newline: true,
@@ -643,9 +628,7 @@ const generateDigitalReceiptHTML = (
           <tr><td class="label">Nominal:</td><td>${formatCurrency(trx.amount)}</td></tr>
         </table>
         <div class="divider"></div>
-        <div class="total-row"><span>Harga Modal</span><span>${formatCurrency(trx.cost_price)}</span></div>
-        <div class="total-row"><span>Harga Jual</span><span>${formatCurrency(trx.selling_price)}</span></div>
-        <div class="total-row"><span>Keuntungan</span><span>${formatCurrency(trx.profit)}</span></div>
+        <div class="total-row"><span>Harga</span><span>${formatCurrency(trx.selling_price)}</span></div>
         <div class="divider"></div>
         <div class="total-row"><span>TOTAL</span><span>${formatCurrency(trx.selling_price)}</span></div>
         ${trx.notes ? `
