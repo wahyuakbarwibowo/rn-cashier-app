@@ -494,8 +494,8 @@ export default function SalesTransactionScreen() {
     try {
       let finalCustomerId = selectedCustomerId;
 
-      // If manual name is entered and it's a debt transaction, create a new customer
-      if (isDebt && !finalCustomerId && customerName.trim()) {
+      // If manual name is entered, create a new customer (for any transaction type)
+      if (!finalCustomerId && customerName.trim()) {
         const newCustomerId = await addCustomer({
           name: customerName.trim(),
           phone: "", // Phone is optional for now

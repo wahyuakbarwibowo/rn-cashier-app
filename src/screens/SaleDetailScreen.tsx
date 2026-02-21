@@ -129,9 +129,7 @@ export default function SaleDetailScreen() {
                 textColor="#FFF"
                 style={styles.editButton}
                 onPress={() => {
-                  if (sale.id) {
-                    navigation.navigate("SalesTransaction", { editSaleId: sale.id });
-                  }
+                  navigation.navigate("SalesTransaction", { editSaleId: sale.id });
                 }}
               >
                 Edit
