@@ -129,6 +129,7 @@ export default function DigitalTransactionHistoryScreen() {
           <TouchableOpacity
             style={styles.card}
             onPress={() => navigation.navigate("DigitalDetail", { trxId: item.id })}
+            activeOpacity={0.7}
           >
             <View style={styles.cardHeader}>
               <View style={[styles.badge, { backgroundColor: getCategoryColor(item.category) }]}>
@@ -150,7 +151,11 @@ export default function DigitalTransactionHistoryScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.editBtnSmall}
-                  onPress={() => navigation.navigate("DigitalTransaction", { editTrx: item })}
+                  activeOpacity={0.6}
+                  onPress={() => {
+                    navigation.navigate("DigitalTransaction", { editTrx: item });
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                   <Text style={styles.editBtnSmallText}>Edit</Text>
                 </TouchableOpacity>

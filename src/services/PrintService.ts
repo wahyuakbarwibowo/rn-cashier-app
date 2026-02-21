@@ -68,7 +68,7 @@ const formatDate = (dateStr?: string) => {
 };
 
 const formatCurrency = (amount: number) => {
-  return amount.toLocaleString("id-ID");
+  return Math.round(amount).toString();
 };
 
 const padRight = (str: string, length: number) => {
@@ -97,10 +97,12 @@ const buildSaleReceiptCommands = (
   commands.push({ type: "text", text: profile.name.toUpperCase() || "TOKO", align: "center", bold: true, size: "double-width", newline: true });
   if (profile.address) commands.push({ type: "text", text: profile.address, align: "center", newline: true });
   if (profile.phone_number) commands.push({ type: "text", text: `Telp: ${profile.phone_number}`, align: "center", newline: true });
-  
-  const trxLine = `No: ${sale.id} Kasir: ${profile.cashier_name || 'Admin'}`;
-  commands.push({ type: "text", text: trxLine, align: "left", newline: true });
-  commands.push({ type: "text", text: formatDate(sale.created_at), align: "left", newline: true });
+
+  const cashierLine = `Kasir: ${profile.cashier_name || 'Admin'}`;
+  commands.push({ type: "text", text: cashierLine, align: "center", newline: true });
+  const trxCodeLine = `TRX-${sale.id?.toString().padStart(5, '0')}`;
+  commands.push({ type: "text", text: trxCodeLine, align: "center", bold: true, newline: true });
+  commands.push({ type: "text", text: formatDate(sale.created_at), align: "center", newline: true });
   commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
 
   // === ITEMS ===
@@ -146,12 +148,10 @@ const buildSaleReceiptCommands = (
     commands.push({ type: "text", text: profile.footer_note, align: "center", newline: true });
   }
   commands.push({ type: "text", text: "Terima kasih!", align: "center", newline: true });
-  commands.push({ type: "feed", lines: 2 });
   commands.push({ type: "cut" });
 
   return commands;
 };
-
 const buildDigitalReceiptCommands = (
   trx: DigitalTransaction,
   profile: ShopProfile
@@ -162,10 +162,12 @@ const buildDigitalReceiptCommands = (
   commands.push({ type: "text", text: profile.name.toUpperCase() || "TOKO", align: "center", bold: true, size: "double-width", newline: true });
   if (profile.address) commands.push({ type: "text", text: profile.address, align: "center", newline: true });
   if (profile.phone_number) commands.push({ type: "text", text: `Telp: ${profile.phone_number}`, align: "center", newline: true });
-  
-  const trxLine = `No: ${trx.id} Kasir: ${profile.cashier_name || "Admin"}`;
-  commands.push({ type: "text", text: trxLine, align: "left", newline: true });
-  commands.push({ type: "text", text: formatDate(trx.created_at), align: "left", newline: true });
+
+  const cashierLine = `Kasir: ${profile.cashier_name || "Admin"}`;
+  commands.push({ type: "text", text: cashierLine, align: "center", newline: true });
+  const trxCodeLine = `#TRX-DIG-${trx.id}`;
+  commands.push({ type: "text", text: trxCodeLine, align: "center", bold: true, newline: true });
+  commands.push({ type: "text", text: formatDate(trx.created_at), align: "center", newline: true });
   commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
 
   // === TRANSACTION INFO ===
@@ -184,6 +186,13 @@ const buildDigitalReceiptCommands = (
   commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
   const priceStr = formatCurrency(trx.selling_price);
   commands.push({ type: "text", text: `${padRight("Total", LINE_WIDTH - priceStr.length)}${priceStr}`, bold: true, newline: true });
+  const paidStr = formatCurrency(trx.paid || trx.selling_price);
+  commands.push({ type: "text", text: `${padRight("Dibayar", LINE_WIDTH - paidStr.length)}${paidStr}`, newline: true });
+  const changeAmount = (trx.paid || trx.selling_price) - trx.selling_price;
+  if (changeAmount > 0) {
+    const changeStr = formatCurrency(changeAmount);
+    commands.push({ type: "text", text: `${padRight("Kembali", LINE_WIDTH - changeStr.length)}${changeStr}`, newline: true });
+  }
 
   // === NOTES / TOKEN ===
   if (trx.notes) {
@@ -198,7 +207,6 @@ const buildDigitalReceiptCommands = (
     commands.push({ type: "text", text: profile.footer_note, align: "center", newline: true });
   }
   commands.push({ type: "text", text: "Terima kasih!", align: "center", newline: true });
-  commands.push({ type: "feed", lines: 2 });
   commands.push({ type: "cut" });
 
   return commands;
@@ -269,16 +277,15 @@ const generateSaleReceiptHTML = (
           <div class="shop-name uppercase">${profile.name || "TOKO"}</div>
           ${profile.address ? `<p>${profile.address}</p>` : ""}
           ${profile.phone_number ? `<p>Telp: ${profile.phone_number}</p>` : ""}
-        </div>
-        <div class="meta-info">
-          <p>No: ${sale.id} Kasir: ${profile.cashier_name || "Admin"}</p>
+          <p>Kasir: ${profile.cashier_name || "Admin"}</p>
+          <p><strong>TRX-${sale.id?.toString().padStart(5, '0')}</strong></p>
           <p>${formatDate(sale.created_at)}</p>
         </div>
         <div class="divider"></div>
         ${itemsHtml}
         <div class="divider"></div>
         <div class="totals">
-          <div class="row"><span>Total</span><span>${formatCurrency(sale.total)}</span></div>
+          <div class="row total"><span>Total</span><span>${formatCurrency(sale.total)}</span></div>
           <div class="row"><span>Bayar</span><span>${formatCurrency(sale.paid)}</span></div>
           <div class="row"><span>Kembali</span><span>${formatCurrency(sale.change)}</span></div>
           <div class="row"><span>Metode</span><span>${sale.payment_method_name || "-"}</span></div>
@@ -340,9 +347,8 @@ const generateDigitalReceiptHTML = (
           <div class="shop-name uppercase">${profile.name || "TOKO"}</div>
           ${profile.address ? `<p>${profile.address}</p>` : ""}
           ${profile.phone_number ? `<p>Telp: ${profile.phone_number}</p>` : ""}
-        </div>
-        <div class="meta-info">
-          <p>No: ${trx.id} Kasir: ${profile.cashier_name || "Admin"}</p>
+          <p>Kasir: ${profile.cashier_name || "Admin"}</p>
+          <p><strong>#TRX-DIG-${trx.id}</strong></p>
           <p>${formatDate(trx.created_at)}</p>
         </div>
         <div class="divider"></div>
@@ -353,7 +359,9 @@ const generateDigitalReceiptHTML = (
           ${trx.customer_name ? `<div class="row"><span>Pelanggan</span><span>${trx.customer_name}</span></div>` : ''}
         </div>
         <div class="divider"></div>
-        <div class="total-row"><span>Total</span><span>${formatCurrency(trx.selling_price)}</span></div>
+        <div class="total-row" style="font-weight: bold;"><span>Total</span><span>${formatCurrency(trx.selling_price)}</span></div>
+        <div class="total-row"><span>Dibayar</span><span>${formatCurrency(trx.paid || trx.selling_price)}</span></div>
+        ${(trx.paid || trx.selling_price) - trx.selling_price > 0 ? `<div class="total-row"><span>Kembali</span><span>${formatCurrency((trx.paid || trx.selling_price) - trx.selling_price)}</span></div>` : ''}
         ${notesHtml}
         <div class="divider"></div>
         <div class="footer">

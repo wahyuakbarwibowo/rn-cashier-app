@@ -27,6 +27,7 @@ export default function DigitalTransactionDetailScreen() {
 
   const [trx, setTrx] = useState<DigitalTransaction | null>(null);
   const [loading, setLoading] = useState(true);
+  const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     loadDetail();
@@ -118,6 +119,7 @@ export default function DigitalTransactionDetailScreen() {
             <View style={styles.divider} />
             <DetailRow label="Harga Modal" value={`Rp ${trx.cost_price.toLocaleString("id-ID")}`} />
             <DetailRow label="Harga Jual" value={`Rp ${trx.selling_price.toLocaleString("id-ID")}`} color="#1D4ED8" bold />
+            <DetailRow label="Dibayar" value={`Rp ${(trx.paid || trx.selling_price).toLocaleString("id-ID")}`} />
             <DetailRow label="Keuntungan" value={`Rp ${trx.profit.toLocaleString("id-ID")}`} color="#16A34A" bold />
           </Card.Content>
         </Card>
@@ -136,11 +138,24 @@ export default function DigitalTransactionDetailScreen() {
           icon="printer"
           buttonColor="#16A34A"
           textColor="#FFF"
-          onPress={() => trx && printDigitalReceipt(trx)}
+          disabled={printing}
+          loading={printing}
+          onPress={async () => {
+            if (trx && !printing) {
+              setPrinting(true);
+              try {
+                await printDigitalReceipt(trx);
+              } catch (error) {
+                console.error("Error printing receipt:", error);
+              } finally {
+                setPrinting(false);
+              }
+            }
+          }}
           style={styles.printButton}
           contentStyle={{ height: 48 }}
         >
-          Cetak Struk
+          {printing ? "Mencetak..." : "Cetak Struk"}
         </Button>
 
         <Button

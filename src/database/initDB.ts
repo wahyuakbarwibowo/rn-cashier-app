@@ -275,6 +275,9 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
       try {
         await database.execAsync("ALTER TABLE phone_history ADD COLUMN notes TEXT;");
       } catch (e) { }
+      try {
+        await database.execAsync("ALTER TABLE phone_history ADD COLUMN paid REAL DEFAULT 0;");
+      } catch (e) { }
 
       db = database;
       console.log("✅ Database initialized successfully");

@@ -35,6 +35,7 @@ export default function SaleDetailScreen() {
   const [sale, setSale] = useState<SaleWithMeta | null>(null);
   const [items, setItems] = useState<(SaleItem & { product_name?: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     loadSaleDetail();
@@ -205,9 +206,22 @@ export default function SaleDetailScreen() {
               style={styles.printButton}
               contentStyle={styles.buttonContent}
               labelStyle={styles.buttonLabel}
-              onPress={() => sale && printSaleReceipt(sale, items)}
+              disabled={printing}
+              loading={printing}
+              onPress={async () => {
+                if (sale && !printing) {
+                  setPrinting(true);
+                  try {
+                    await printSaleReceipt(sale, items);
+                  } catch (error) {
+                    console.error("Error printing receipt:", error);
+                  } finally {
+                    setPrinting(false);
+                  }
+                }
+              }}
             >
-              Cetak Struk
+              {printing ? "Mencetak..." : "Cetak Struk"}
             </Button>
 
             <Button
