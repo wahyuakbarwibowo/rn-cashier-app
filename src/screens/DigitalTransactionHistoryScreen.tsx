@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ export default function DigitalTransactionHistoryScreen() {
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const data = showFilter
@@ -33,15 +33,18 @@ export default function DigitalTransactionHistoryScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showFilter, startDate, endDate, initialCategory]);
 
   useEffect(() => {
-    loadData();
     const unsubscribe = navigation.addListener('focus', () => {
       loadData();
     });
+    
+    // Initial load
+    loadData();
+
     return unsubscribe;
-  }, [showFilter, navigation, initialCategory]);
+  }, [navigation, loadData]);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";

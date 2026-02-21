@@ -21,7 +21,7 @@ export default function SettingsScreen() {
   const [cashierName, setCashierName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
-  const [poinEnabled, setPoinEnabled] = useState(true); // New state for points
+  const [poinEnabled, setPoinEnabled] = useState(false); // New state for points, default to false
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,8 +38,8 @@ export default function SettingsScreen() {
         setCashierName(profile.cashier_name || "");
         setPhoneNumber(profile.phone_number || "");
         setAddress(profile.address || "");
-        // Default to true if poin_enabled is null/undefined
-        setPoinEnabled(profile.poin_enabled !== 0); 
+        // Explicitly set to false if 0, true if 1. Defaults to false if undefined/null
+        setPoinEnabled(profile.poin_enabled === 1); 
       }
     } catch (e) {
       console.error(e);

@@ -83,7 +83,7 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
         await database.execAsync("ALTER TABLE shop_profile ADD COLUMN address TEXT;");
       } catch (e) { }
       try {
-        await database.execAsync("ALTER TABLE shop_profile ADD COLUMN poin_enabled INTEGER DEFAULT 1;");
+        await database.execAsync("ALTER TABLE shop_profile ADD COLUMN poin_enabled INTEGER DEFAULT 0;");
       } catch (e) { }
 
       await database.execAsync(`

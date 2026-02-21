@@ -22,7 +22,7 @@ export const updateShopProfile = async (profile: Partial<ShopProfile>): Promise<
         updatedProfile.cashier_name ?? "",
         updatedProfile.phone_number ?? "",
         updatedProfile.address ?? "",
-        updatedProfile.poin_enabled ?? 1,
+        updatedProfile.poin_enabled ?? 0,
         existing.id!
       ]
     );
@@ -35,7 +35,7 @@ export const updateShopProfile = async (profile: Partial<ShopProfile>): Promise<
         profile.cashier_name ?? "",
         profile.phone_number ?? "",
         profile.address ?? "",
-        profile.poin_enabled ?? 1
+        profile.poin_enabled ?? 0
       ]
     );
   }

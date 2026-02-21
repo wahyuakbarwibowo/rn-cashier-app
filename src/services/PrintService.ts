@@ -97,7 +97,6 @@ const buildSaleReceiptCommands = (
   commands.push({ type: "text", text: profile.name.toUpperCase() || "TOKO", align: "center", bold: true, size: "double-width", newline: true });
   if (profile.address) commands.push({ type: "text", text: profile.address, align: "center", newline: true });
   if (profile.phone_number) commands.push({ type: "text", text: `Telp: ${profile.phone_number}`, align: "center", newline: true });
-  // Removed commands.push({ type: "feed", lines: 1 });
   
   const trxLine = `No: ${sale.id} Kasir: ${profile.cashier_name || 'Admin'}`;
   commands.push({ type: "text", text: trxLine, align: "left", newline: true });
@@ -143,10 +142,8 @@ const buildSaleReceiptCommands = (
   
   // === FOOTER ===
   commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
-  // Removed commands.push({ type: "feed", lines: 1 });
   if (profile.footer_note) {
     commands.push({ type: "text", text: profile.footer_note, align: "center", newline: true });
-    // Removed commands.push({ type: "feed", lines: 1 });
   }
   commands.push({ type: "text", text: "Terima kasih!", align: "center", newline: true });
   commands.push({ type: "feed", lines: 2 });
@@ -165,7 +162,6 @@ const buildDigitalReceiptCommands = (
   commands.push({ type: "text", text: profile.name.toUpperCase() || "TOKO", align: "center", bold: true, size: "double-width", newline: true });
   if (profile.address) commands.push({ type: "text", text: profile.address, align: "center", newline: true });
   if (profile.phone_number) commands.push({ type: "text", text: `Telp: ${profile.phone_number}`, align: "center", newline: true });
-  // Removed commands.push({ type: "feed", lines: 1 });
   
   const trxLine = `No: ${trx.id} Kasir: ${profile.cashier_name || "Admin"}`;
   commands.push({ type: "text", text: trxLine, align: "left", newline: true });
@@ -173,10 +169,16 @@ const buildDigitalReceiptCommands = (
   commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
 
   // === TRANSACTION INFO ===
-  commands.push({ type: "text", text: `Layanan: ${trx.category}`, newline: true });
-  commands.push({ type: "text", text: `Produk: ${trx.provider}`, newline: true });
-  commands.push({ type: "text", text: `No/ID: ${trx.phone_number}`, bold: true, newline: true });
-  if (trx.customer_name) commands.push({ type: "text", text: `Pelanggan: ${trx.customer_name}`, newline: true });
+  const layananStr = trx.category;
+  commands.push({ type: "text", text: `${padRight("Layanan:", LINE_WIDTH - layananStr.length)}${layananStr}`, newline: true });
+  const produkStr = trx.provider;
+  commands.push({ type: "text", text: `${padRight("Produk:", LINE_WIDTH - produkStr.length)}${produkStr}`, newline: true });
+  const noIdStr = trx.phone_number;
+  commands.push({ type: "text", text: `${padRight("No/ID:", LINE_WIDTH - noIdStr.length)}${noIdStr}`, bold: true, newline: true });
+  if (trx.customer_name) {
+    const customerStr = trx.customer_name;
+    commands.push({ type: "text", text: `${padRight("Pelanggan:", LINE_WIDTH - customerStr.length)}${customerStr}`, newline: true });
+  }
 
   // === PRICING ===
   commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
@@ -192,10 +194,8 @@ const buildDigitalReceiptCommands = (
 
   // === FOOTER ===
   commands.push({ type: "text", text: DIVIDER, align: "center", newline: true });
-  // Removed commands.push({ type: "feed", lines: 1 });
   if (profile.footer_note) {
     commands.push({ type: "text", text: profile.footer_note, align: "center", newline: true });
-    // Removed commands.push({ type: "feed", lines: 1 });
   }
   commands.push({ type: "text", text: "Terima kasih!", align: "center", newline: true });
   commands.push({ type: "feed", lines: 2 });
@@ -326,7 +326,7 @@ const generateDigitalReceiptHTML = (
           .meta-info p { margin: 1px 0; }
           
           .info-table .row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-          .info-table .row span:first-child { min-width: 80px; }
+          .info-table .row span:first-child { min-width: 80px; padding-right: 8px; }
 
           .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; margin-top: 4px; }
           .notes-box { margin-top: 8px; }
