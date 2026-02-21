@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import {
   getDigitalProducts,
@@ -37,13 +38,17 @@ export default function DigitalProductsMasterScreen() {
   const [category, setCategory] = useState("PULSA");
   const [provider, setProvider] = useState("");
   const [name, setName] = useState("");
-  const [nominal, setNominal] = useState("");
-  const [costPrice, setCostPrice] = useState("");
-  const [sellingPrice, setSellingPrice] = useState("");
+  const [nominal, setNominal] = useState("0");
+  const [costPrice, setCostPrice] = useState("0");
+  const [sellingPrice, setSellingPrice] = useState("0");
 
   // New Category State
   const [newCatName, setNewCatName] = useState("");
   const [newCatIcon, setNewCatIcon] = useState("✨");
+
+  // Loading States
+  const [loadingSave, setLoadingSave] = useState(false);
+  const [loadingSaveCat, setLoadingSaveCat] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -65,6 +70,7 @@ export default function DigitalProductsMasterScreen() {
 
   const handleAddCategory = async () => {
     if (!newCatName) return;
+    setLoadingSaveCat(true);
     try {
       if (editingCat) {
         await updateDigitalCategory(editingCat.id, newCatName, newCatIcon);
@@ -77,6 +83,8 @@ export default function DigitalProductsMasterScreen() {
       loadCategories();
     } catch (e) {
       Alert.alert("Error", "Gagal menyimpan kategori");
+    } finally {
+      setLoadingSaveCat(false);
     }
   };
 
@@ -99,7 +107,7 @@ export default function DigitalProductsMasterScreen() {
   };
 
   const handleSave = async () => {
-    if (!provider || !name || !nominal || !sellingPrice) {
+    if (!provider.trim() || !name.trim() || nominal === "" || sellingPrice === "") {
       Alert.alert("Error", "Mohon lengkapi data");
       return;
     }
@@ -113,6 +121,7 @@ export default function DigitalProductsMasterScreen() {
       selling_price: parseFloat(sellingPrice),
     };
 
+    setLoadingSave(true);
     try {
       if (editingProduct) {
         await updateDigitalProduct(editingProduct.id!, payload);
@@ -125,6 +134,8 @@ export default function DigitalProductsMasterScreen() {
     } catch (e) {
       console.error(e);
       Alert.alert("Error", "Gagal menyimpan data");
+    } finally {
+      setLoadingSave(false);
     }
   };
 
@@ -133,9 +144,9 @@ export default function DigitalProductsMasterScreen() {
     setCategory("PULSA");
     setProvider("");
     setName("");
-    setNominal("");
-    setCostPrice("");
-    setSellingPrice("");
+    setNominal("0");
+    setCostPrice("0");
+    setSellingPrice("0");
   };
 
   const openEdit = (product: DigitalProductMaster) => {
@@ -196,11 +207,11 @@ export default function DigitalProductsMasterScreen() {
             <View style={styles.priceRow}>
               <View>
                 <Text style={styles.priceLabel}>Modal</Text>
-                <Text style={styles.priceValue}>Rp {item.cost_price.toLocaleString("id-ID")}</Text>
+                <Text style={styles.priceValue}>Rp {(item.cost_price ?? 0).toLocaleString("id-ID")}</Text>
               </View>
               <View>
                 <Text style={styles.priceLabel}>Jual</Text>
-                <Text style={[styles.priceValue, { color: '#1D4ED8' }]}>Rp {item.selling_price.toLocaleString("id-ID")}</Text>
+                <Text style={[styles.priceValue, { color: '#1D4ED8' }]}>Rp {(item.selling_price ?? 0).toLocaleString("id-ID")}</Text>
               </View>
               <View style={styles.actions}>
                 <TouchableOpacity onPress={() => openEdit(item)} style={styles.iconBtn}>
@@ -217,14 +228,19 @@ export default function DigitalProductsMasterScreen() {
       />
 
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1, justifyContent: 'center' }}
-          >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>{editingProduct ? "Edit Produk" : "Tambah Produk"}</Text>
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={true}
+                bounces={false}
+                keyboardShouldPersistTaps="handled"
+              >
                 <Text style={styles.inputLabel}>Kategori</Text>
                 <View style={styles.pickerRow}>
                   {categories.map(cat => (
@@ -259,83 +275,106 @@ export default function DigitalProductsMasterScreen() {
                 <TextInput style={styles.input} value={sellingPrice} onChangeText={setSellingPrice} keyboardType="numeric" placeholder="0" />
 
                 <View style={styles.modalActions}>
-                  <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={() => setModalVisible(false)}>
+                  <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={() => setModalVisible(false)} disabled={loadingSave}>
                     <Text style={{ color: '#111827', fontWeight: 'bold' }}>Batal</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave}>
-                    <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Simpan</Text>
+                  <TouchableOpacity style={[styles.btn, styles.saveBtn]} onPress={handleSave} disabled={loadingSave}>
+                    {loadingSave ? (
+                      <ActivityIndicator color="#FFF" size="small" />
+                    ) : (
+                      <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Simpan</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
+                <View style={{ height: 20 }} />
               </ScrollView>
             </View>
-          </KeyboardAvoidingView>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Category Management Modal */}
       <Modal visible={catModalVisible} animationType="fade" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Manajemen Kategori</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Manajemen Kategori</Text>
 
-            <View style={styles.addCatForm}>
-              <View style={{ flex: 1 }}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nama Kategori"
-                  value={newCatName}
-                  onChangeText={setNewCatName}
-                />
-              </View>
-              <TextInput
-                style={[styles.input, { width: 45, marginLeft: 5 }]}
-                placeholder="Icon"
-                value={newCatIcon}
-                onChangeText={setNewCatIcon}
-              />
-              <TouchableOpacity style={styles.miniAddBtn} onPress={handleAddCategory}>
-                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>
-                  {editingCat ? "Update" : "Tambah"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <FlatList
-              data={categories}
-              keyExtractor={(item) => item.id.toString()}
-              style={{ maxHeight: 300, marginTop: 10 }}
-              renderItem={({ item }) => (
-                <View style={styles.catItem}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <Text style={{ fontSize: 18, marginRight: 10 }}>{item.icon}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: 'bold' }}>{item.name}</Text>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={true}
+                bounces={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.addCatForm}>
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Nama Kategori"
+                      value={newCatName}
+                      onChangeText={setNewCatName}
+                    />
                   </View>
-                  <View style={{ flexDirection: 'row' }}>
-                    <TouchableOpacity onPress={() => openEditCategory(item)} style={{ padding: 8 }}>
-                      <Text>✏️</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteCategory(item.id)} style={{ padding: 8 }}>
-                      <Text>🗑️</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TextInput
+                    style={[styles.input, { width: 45, marginLeft: 5 }]}
+                    placeholder="Icon"
+                    value={newCatIcon}
+                    onChangeText={setNewCatIcon}
+                  />
+                  <TouchableOpacity style={styles.miniAddBtn} onPress={handleAddCategory} disabled={loadingSaveCat}>
+                    {loadingSaveCat ? (
+                      <ActivityIndicator color="#FFF" size="small" />
+                    ) : (
+                      <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>
+                        {editingCat ? "Update" : "Tambah"}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
-              )}
-            />
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#111827',
-                padding: 16,
-                borderRadius: 12,
-                alignItems: 'center',
-                marginTop: 20
-              }}
-              onPress={() => setCatModalVisible(false)}
-            >
-              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>Tutup</Text>
-            </TouchableOpacity>
+                <FlatList
+                  data={categories}
+                  keyExtractor={(item) => item.id.toString()}
+                  style={{ maxHeight: 300, marginTop: 10 }}
+                  scrollEnabled={false}
+                  renderItem={({ item }) => (
+                    <View style={styles.catItem}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <Text style={{ fontSize: 18, marginRight: 10 }}>{item.icon}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: 'bold' }}>{item.name}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row' }}>
+                        <TouchableOpacity onPress={() => openEditCategory(item)} style={{ padding: 8 }}>
+                          <Text>✏️</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDeleteCategory(item.id)} style={{ padding: 8 }}>
+                          <Text>🗑️</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                />
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#111827',
+                    padding: 16,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    marginTop: 20
+                  }}
+                  onPress={() => setCatModalVisible(false)}
+                >
+                  <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>Tutup</Text>
+                </TouchableOpacity>
+                <View style={{ height: 20 }} />
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -361,7 +400,7 @@ const styles = StyleSheet.create({
   iconBtn: { marginLeft: 12, padding: 4 },
   emptyText: { textAlign: 'center', color: '#9CA3AF', marginTop: 50 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, maxHeight: '90%' },
+  modalContent: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, maxHeight: '85%', flex: 1 },
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
   inputLabel: { fontSize: 13, fontWeight: 'bold', color: '#4B5563', marginBottom: 6, marginTop: 12 },
   input: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, padding: 12 },

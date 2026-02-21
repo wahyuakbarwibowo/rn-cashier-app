@@ -126,6 +126,9 @@ export default function SalesTransactionScreen() {
   const [transactionDateError, setTransactionDateError] = useState<string | null>(null);
   const [selectedPaymentMethodError, setSelectedPaymentMethodError] = useState<string | null>(null);
 
+  // Submitting State
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Ref for accessing navigation params safely
   const navigationRef = useRef(navigation);
   useEffect(() => {
@@ -387,6 +390,9 @@ export default function SalesTransactionScreen() {
   };
 
   const handleFinishTransaction = async () => {
+    // Prevent double submit
+    if (isSubmitting) return;
+
     // --- Basic Validation ---
     let isValid = true;
 
@@ -454,6 +460,7 @@ export default function SalesTransactionScreen() {
     }
     // --- End Validation ---
 
+    setIsSubmitting(true);
     try {
       let finalCustomerId = selectedCustomerId;
 
@@ -535,6 +542,7 @@ export default function SalesTransactionScreen() {
     } catch (error) {
       console.error("Transaction saving error:", error);
       showSnackbar("Gagal menyimpan transaksi. Coba lagi.", "error");
+      setIsSubmitting(false);
     }
   };
 
@@ -547,6 +555,7 @@ export default function SalesTransactionScreen() {
   // Skip stock validation when editing existing transaction
   const stockIssue = editSaleId ? false : cart.some(i => i.qty > (i.product.stock || 0));
   const isCheckoutButtonDisabled =
+    isSubmitting || // Prevent double submit
     cart.length === 0 || // Empty cart
     stockIssue || // Stock issue
     !transactionDate || // Missing date
@@ -771,7 +780,8 @@ export default function SalesTransactionScreen() {
                 </ScrollView>
                 {/* Manual Customer Name Input */}
                 <TextInput
-                  placeholder="Nama pelanggan baru..."
+                  label="Nama Pelanggan"
+                  placeholder="Masukkan nama pelanggan baru..."
                   value={customerName}
                   onChangeText={(t) => {
                     setCustomerName(t);
@@ -895,10 +905,11 @@ export default function SalesTransactionScreen() {
               mode="contained"
               onPress={handleFinishTransaction}
               disabled={isCheckoutButtonDisabled}
+              loading={isSubmitting}
               style={styles.finalCheckoutBtn}
               contentStyle={{ height: 50 }}
               labelStyle={{ fontSize: 16, fontWeight: 'bold' }}
-              icon="cart-check"
+              icon={isSubmitting ? undefined : "cart-check"}
             >
               {checkoutLabel}
             </Button>

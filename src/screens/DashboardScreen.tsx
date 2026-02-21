@@ -214,6 +214,12 @@ export default function DashboardScreen() {
               onPress={() => navigation.navigate("ProductForm")}
             />
             <MenuCard
+              title="Master Produk Digital"
+              icon="📱"
+              color="#06B6D4"
+              onPress={() => navigation.navigate("DigitalProductsMaster")}
+            />
+            <MenuCard
               title="Barang Masuk"
               icon="📥"
               color="#8B5CF6"
@@ -243,12 +249,6 @@ export default function DashboardScreen() {
               color="#EC4899"
               onPress={() => navigation.navigate("ProfitLoss")}
             />
-            <MenuCard
-              title="Daftar Pelanggan"
-              icon="👥"
-              color="#6366F1"
-              onPress={() => navigation.navigate("Customers")}
-            />
           </View>
         </View>
 
@@ -256,9 +256,11 @@ export default function DashboardScreen() {
           <Text variant="titleMedium" style={styles.sectionTitle}>Fitur Lainnya</Text>
           <View style={styles.extraGrid}>
             {[
+              { label: "Daftar Pelanggan", icon: "👥", route: "Customers" },
               { label: "Master Supplier", icon: "🏭", route: "Suppliers" },
               { label: "Piutang Pelanggan", icon: "💰", route: "Receivables" },
               { label: "Pengeluaran", icon: "💸", route: "Expenses" },
+              { label: "Pengaturan", icon: "⚙️", route: "Settings" },
               { label: "Backup & Restore", icon: "💾", route: "Backup" },
             ].map((item, idx) => (
               <TouchableRipple

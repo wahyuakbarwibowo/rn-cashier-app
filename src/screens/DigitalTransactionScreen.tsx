@@ -8,6 +8,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
 } from "react-native";
 import {
   Card,
@@ -35,6 +36,9 @@ import {
   getDistinctProvidersByCategory
 } from "../database/digital_products";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { parseISODate, getCurrentDateISO, createTimestamp } from "../utils/dateUtils";
+import { validateDigitalTransaction } from "../utils/validation";
+import { ROUTES } from "../constants/routes";
 
 export default function DigitalTransactionScreen() {
   const navigation = useNavigation<any>();
@@ -52,13 +56,14 @@ export default function DigitalTransactionScreen() {
   const [sellingPrice, setSellingPrice] = useState("");
   const [paid, setPaid] = useState("");
   const [notes, setNotes] = useState("");
-  const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [transactionDate, setTransactionDate] = useState(getCurrentDateISO());
   const [history, setHistory] = useState<{ phone_number: string, customer_name: string }[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const [templates, setTemplates] = useState<DigitalProductMaster[]>([]);
   const [showProviderModal, setShowProviderModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Validation States
   const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
@@ -82,7 +87,7 @@ export default function DigitalTransactionScreen() {
     setSellingPrice("");
     setPaid("");
     setNotes("");
-    setTransactionDate(new Date().toISOString().split('T')[0]);
+    setTransactionDate(getCurrentDateISO());
     setPhoneNumberError(null);
     setTransactionDateError(null);
     setProviderError(null);
@@ -122,16 +127,12 @@ export default function DigitalTransactionScreen() {
       setPhoneNumber(etrx.phone_number);
       setCustomerName(etrx.customer_name || "");
       setProvider(etrx.provider);
-      setAmount(etrx.amount.toString());
-      setCostPrice(etrx.cost_price.toString());
-      setSellingPrice(etrx.selling_price.toString());
-      setPaid((etrx.paid || etrx.selling_price).toString());
+      setAmount((etrx.amount ?? 0).toString());
+      setCostPrice((etrx.cost_price ?? 0).toString());
+      setSellingPrice((etrx.selling_price ?? 0).toString());
+      setPaid((etrx.paid ?? etrx.selling_price ?? 0).toString());
       setNotes(etrx.notes || "");
-      if (etrx.created_at) {
-        // Attempt to parse date from ISO or T-split format
-        const datePart = etrx.created_at.split('T')[0].split(' ')[0];
-        setTransactionDate(datePart || new Date().toISOString().split('T')[0]);
-      }
+      setTransactionDate(parseISODate(etrx.created_at));
     }
   }, [route.params?.editTrx]);
 
@@ -190,9 +191,9 @@ export default function DigitalTransactionScreen() {
   };
 
   const selectTemplate = (item: DigitalProductMaster) => {
-    setAmount(item.nominal.toString());
-    setCostPrice(item.cost_price.toString());
-    setSellingPrice(item.selling_price.toString());
+    setAmount((item.nominal ?? 0).toString());
+    setCostPrice((item.cost_price ?? 0).toString());
+    setSellingPrice((item.selling_price ?? 0).toString());
     // Clear potential errors if user selects a template after making errors
     setAmountError(null);
     setCostPriceError(null);
@@ -212,7 +213,10 @@ export default function DigitalTransactionScreen() {
   };
 
   const handleTransaction = async () => {
-    // --- Reset previous errors ---
+    // Prevent double submit
+    if (isSubmitting) return;
+
+    // Reset previous errors
     setPhoneNumberError(null);
     setTransactionDateError(null);
     setProviderError(null);
@@ -220,66 +224,37 @@ export default function DigitalTransactionScreen() {
     setSellingPriceError(null);
     setCostPriceError(null);
 
-    // --- Validation ---
-    let isValid = true;
+    // Validate using utility
+    const errors = validateDigitalTransaction({
+      phoneNumber,
+      transactionDate,
+      provider,
+      providers,
+      amount,
+      sellingPrice,
+      costPrice,
+    });
 
-    if (!phoneNumber.trim()) {
-      setPhoneNumberError("Nomor pelanggan wajib diisi.");
-      isValid = false;
-    }
-    if (!transactionDate) {
-      setTransactionDateError("Tanggal transaksi wajib diisi.");
-      isValid = false;
-    }
-    // Provider is required if there are providers listed (and not "Lainnya" which is handled by a separate input)
-    if (providers.length > 0 && !provider && provider !== "Lainnya") {
-      setProviderError("Provider wajib dipilih.");
-      isValid = false;
-    } else if (provider === "Lainnya" && !provider.trim()) {
-        // If user selected "Lainnya" but entered empty text
-        setProviderError("Nama provider manual wajib diisi.");
-        isValid = false;
-    }
+    // Set errors from validation
+    if (errors.phoneNumber) setPhoneNumberError(errors.phoneNumber);
+    if (errors.transactionDate) setTransactionDateError(errors.transactionDate);
+    if (errors.provider) setProviderError(errors.provider);
+    if (errors.amount) setAmountError(errors.amount);
+    if (errors.sellingPrice) setSellingPriceError(errors.sellingPrice);
+    if (errors.costPrice) setCostPriceError(errors.costPrice);
 
-    if (!amount) {
-      setAmountError("Nominal wajib diisi.");
-      isValid = false;
-    } else {
-      const amountValue = parseFloat(amount);
-      if (isNaN(amountValue) || amountValue <= 0) {
-        setAmountError("Nominal harus berupa angka positif.");
-        isValid = false;
-      }
-    }
-    if (!sellingPrice) {
-      setSellingPriceError("Harga Jual wajib diisi.");
-      isValid = false;
-    } else {
-      const sellValue = parseFloat(sellingPrice);
-      if (isNaN(sellValue) || sellValue <= 0) {
-        setSellingPriceError("Harga Jual harus berupa angka positif.");
-        isValid = false;
-      }
-    }
-    const costValue = parseFloat(costPrice) || 0;
-    if (costValue < 0) {
-      setCostPriceError("Harga Modal tidak boleh negatif.");
-      isValid = false;
-    }
-
-    if (!isValid) {
+    if (Object.keys(errors).length > 0) {
       return; // Stop if validation fails
     }
-    // --- End Validation ---
 
     const finalCostValue = parseFloat(costPrice) || 0;
     const finalSellValue = parseFloat(sellingPrice); // Already validated to be a number > 0
     const profitValue = finalSellValue - finalCostValue;
 
+    setIsSubmitting(true);
     try {
       // Construct the timestamp for created_at. Use the selected date and current time.
-      const currentTime = new Date().toLocaleTimeString('en-GB'); // e.g., "14:30:00"
-      const createdAtTimestamp = `${transactionDate} ${currentTime}`;
+      const createdAtTimestamp = createTimestamp(transactionDate);
 
       const paidValue = parseFloat(paid) || finalSellValue;
 
@@ -322,11 +297,12 @@ export default function DigitalTransactionScreen() {
       loadHistory(); // Always load history after transaction
       navigation.setParams({ editTrx: undefined }); // Clear edit param
       resetForm(); // Reset form after transaction
-      navigation.navigate("DigitalDetail", { trxId }); // Navigate to detail screen
+      navigation.navigate(ROUTES.DIGITAL_DETAIL, { trxId }); // Navigate to detail screen
 
     } catch (e) {
       console.error("Transaction error:", e);
       Alert.alert("Error", "Gagal menyimpan transaksi");
+      setIsSubmitting(false);
     }
   };
 
@@ -385,7 +361,7 @@ export default function DigitalTransactionScreen() {
                 right={
                   <TextInput.Icon
                     icon="history"
-                    onPress={() => navigation.navigate("DigitalHistory")} // Navigating to history screen
+                    onPress={() => navigation.navigate(ROUTES.DIGITAL_HISTORY)} // Navigating to history screen
                   />
                 }
                 left={
@@ -443,18 +419,29 @@ export default function DigitalTransactionScreen() {
               style={styles.fieldMargin}
             />
 
-            {/* Provider Input */}
-            <TextInput
-              label="Provider / Bank / Game"
-              value={provider}
-              placeholder="Pilih Provider / Operator"
-              mode="outlined"
-              editable={false}
-              style={[styles.fieldMargin, { backgroundColor: '#f0f0f0' }]} // Indicate non-editable
-              onPressIn={() => setShowProviderModal(true)}
-              right={<TextInput.Icon icon="menu-down" onPress={() => setShowProviderModal(true)} />}
-              error={!!providerError}
-            />
+            {/* Provider List */}
+            <Text style={styles.labelPaper}>Provider / Bank / Game</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.providerScroll}>
+              {[...providers, "Lainnya"].map((prov) => (
+                <Surface
+                  key={prov}
+                  elevation={provider === prov ? 2 : 0}
+                  style={[styles.providerCardPaper, provider === prov && styles.activeProviderCardPaper]}
+                >
+                  <TouchableRipple
+                    onPress={() => {
+                      setProvider(prov);
+                      clearErrorOnInput(setProviderError);
+                    }}
+                    style={styles.providerRipple}
+                  >
+                    <Text style={[styles.providerLabel, provider === prov && styles.activeProviderLabel]}>
+                      {prov}
+                    </Text>
+                  </TouchableRipple>
+                </Surface>
+              ))}
+            </ScrollView>
             <HelperText type="error" visible={!!providerError}>
               {providerError}
             </HelperText>
@@ -464,7 +451,7 @@ export default function DigitalTransactionScreen() {
               <TextInput
                 label="Nama Provider Manual"
                 placeholder="Masukkan Nama Provider/Bank Manual"
-                value={provider} // Bind value to provider state
+                value={provider}
                 onChangeText={(text) => { setProvider(text); clearErrorOnInput(setProviderError); }}
                 mode="outlined"
                 style={styles.fieldMargin}
@@ -479,13 +466,13 @@ export default function DigitalTransactionScreen() {
                   {templates.map((t) => (
                     <Chip
                       key={t.id}
-                      selected={amount === t.nominal.toString()}
+                      selected={amount === (t.nominal ?? 0).toString()}
                       onPress={() => selectTemplate(t)}
                       style={styles.templateChip}
                       showSelectedOverlay
                       mode="outlined"
                     >
-                      {t.name} (Rp {t.selling_price.toLocaleString("id-ID")})
+                      {t.name} (Rp {(t.selling_price ?? 0).toLocaleString("id-ID")})
                     </Chip>
                   ))}
                 </View>
@@ -574,8 +561,9 @@ export default function DigitalTransactionScreen() {
               onPress={handleTransaction}
               style={styles.mainActionBtn}
               contentStyle={{ paddingVertical: 8 }}
-              // Disable button if essential fields are not valid
+              loading={isSubmitting}
               disabled={
+                isSubmitting ||
                 !phoneNumber.trim() ||
                 !transactionDate ||
                 (providers.length > 0 && !provider && provider !== "Lainnya") ||
@@ -778,13 +766,42 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 16,
-    marginBottom: 12, // Adjusted to align with other field margins
-    paddingVertical: 8,
+    marginTop: 6,
+    marginBottom: 8,
+    paddingVertical: 6,
     paddingHorizontal: 4,
   },
   profitValue: {
     fontWeight: "bold",
     color: "#6366F1", // Example color, matching active category
+  },
+  providerScroll: {
+    paddingHorizontal: 0,
+    marginBottom: 0,
+    marginVertical: 4,
+  },
+  providerCardPaper: {
+    borderRadius: 12,
+    marginRight: 8,
+    backgroundColor: "#FFF",
+    overflow: "hidden",
+    minWidth: 80,
+  },
+  activeProviderCardPaper: {
+    backgroundColor: "#6366F1",
+  },
+  providerRipple: {
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  providerLabel: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#334155",
+    textAlign: "center",
+  },
+  activeProviderLabel: {
+    color: "#FFF",
   },
 });
