@@ -39,6 +39,7 @@ export interface ShopProfile {
   cashier_name?: string;
   phone_number?: string;
   address?: string;
+  poin_enabled?: number;
 }
 
 // Transaksi Penjualan

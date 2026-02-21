@@ -10,15 +10,18 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Switch, // Import Switch
 } from "react-native";
-import { getShopProfile, updateShopProfile, ShopProfile } from "../database/settings"; // Assuming ShopProfile type has phone_number and address
+import { getShopProfile, updateShopProfile } from "../database/settings";
+import { ShopProfile } from "../types/database";
 
 export default function SettingsScreen() {
   const [name, setName] = useState("");
   const [footerNote, setFooterNote] = useState("");
   const [cashierName, setCashierName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState(""); // New state for phone number
-  const [address, setAddress] = useState("");       // New state for address
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [address, setAddress] = useState("");
+  const [poinEnabled, setPoinEnabled] = useState(true); // New state for points
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,8 +36,10 @@ export default function SettingsScreen() {
         setName(profile.name || "");
         setFooterNote(profile.footer_note || "");
         setCashierName(profile.cashier_name || "");
-        setPhoneNumber(profile.phone_number || ""); // Load phone number
-        setAddress(profile.address || "");         // Load address
+        setPhoneNumber(profile.phone_number || "");
+        setAddress(profile.address || "");
+        // Default to true if poin_enabled is null/undefined
+        setPoinEnabled(profile.poin_enabled !== 0); 
       }
     } catch (e) {
       console.error(e);
@@ -50,13 +55,13 @@ export default function SettingsScreen() {
         Alert.alert("Error", "Nama toko harus diisi");
         return;
       }
-      // Prepare data for update, including new fields
       const updatedProfile: Partial<ShopProfile> = {
         name,
         footer_note: footerNote,
         cashier_name: cashierName,
-        phone_number: phoneNumber, // Include phone number
-        address: address,         // Include address
+        phone_number: phoneNumber,
+        address: address,
+        poin_enabled: poinEnabled ? 1 : 0, // Convert boolean to number
       };
       await updateShopProfile(updatedProfile);
       Alert.alert("Sukses", "Profil toko berhasil diperbarui");
@@ -106,7 +111,6 @@ export default function SettingsScreen() {
             autoCapitalize="words"
           />
 
-          {/* New Phone Number Input */}
           <Text style={styles.label}>Nomor Telepon</Text>
           <TextInput
             style={styles.input}
@@ -116,7 +120,6 @@ export default function SettingsScreen() {
             keyboardType="phone-pad"
           />
 
-          {/* New Address Input */}
           <Text style={styles.label}>Alamat Toko</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
@@ -127,6 +130,17 @@ export default function SettingsScreen() {
             numberOfLines={3}
             autoCapitalize="sentences"
           />
+
+          {/* New Poin Switch */}
+          <View style={styles.switchRow}>
+            <Text style={styles.label}>Tampilkan Info Poin di Struk</Text>
+            <Switch
+              trackColor={{ false: "#D1D5DB", true: "#60A5FA" }}
+              thumbColor={poinEnabled ? "#1E40AF" : "#F9FAFB"}
+              onValueChange={setPoinEnabled}
+              value={poinEnabled}
+            />
+          </View>
 
           <Text style={styles.label}>Catatan Kaki Struk (Footnote)</Text>
           <TextInput
@@ -183,6 +197,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#374151",
     marginBottom: 8,
+    flexShrink: 1,
   },
   input: {
     backgroundColor: "#F9FAFB",
@@ -190,46 +205,26 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10, // Adjusted padding for better vertical spacing
+    paddingVertical: 10,
     fontSize: 16,
     marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  themeRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  themeOption: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderRadius: 10,
-    borderWidth: 2,
-    position: "relative",
-  },
-  themeText: {
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  checkMark: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    width: 15,
-    height: 15,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#FFF",
   },
   textArea: {
     height: 100,
     textAlignVertical: "top",
-    paddingTop: 12, // Adjust padding for multiline inputs
+    paddingTop: 12,
+  },
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
   },
   saveButton: {
     backgroundColor: "#111827",
@@ -237,7 +232,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: "center",
-    marginTop: 8, // Added some margin top
+    marginTop: 8,
   },
   saveButtonText: {
     color: "#FFF",
