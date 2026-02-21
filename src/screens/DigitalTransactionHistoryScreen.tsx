@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import { getDigitalTransactions, DigitalTransaction } from "../database/pulsa";
 import { TextInput } from "react-native";
 
@@ -17,34 +18,64 @@ export default function DigitalTransactionHistoryScreen() {
   const initialCategory = route.params?.category;
   const [transactions, setTransactions] = useState<DigitalTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (page: number = 0) => {
     try {
-      setLoading(true);
+      const isInitialLoad = page === 0;
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const offset = page * PAGE_SIZE;
       const data = showFilter
-        ? await getDigitalTransactions(startDate, endDate, initialCategory)
-        : await getDigitalTransactions(undefined, undefined, initialCategory);
-      setTransactions(data);
+        ? await getDigitalTransactions(startDate, endDate, initialCategory, PAGE_SIZE, offset)
+        : await getDigitalTransactions(undefined, undefined, initialCategory, PAGE_SIZE, offset);
+
+      if (isInitialLoad) {
+        setTransactions(data);
+        setCurrentPage(0);
+      } else {
+        setTransactions(prev => [...prev, ...data]);
+        setCurrentPage(page);
+      }
+
+      // Check if we have more data
+      setHasMore(data.length === PAGE_SIZE);
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
     }
   }, [showFilter, startDate, endDate, initialCategory]);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadData();
-    });
-    
-    // Initial load
-    loadData();
+  useFocusEffect(
+    useCallback(() => {
+      loadData(0);
+    }, [loadData])
+  );
 
-    return unsubscribe;
-  }, [navigation, loadData]);
+  const handleEndReached = () => {
+    if (!loadingMore && !loading && hasMore) {
+      loadData(currentPage + 1);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData(0);
+  };
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
@@ -56,7 +87,7 @@ export default function DigitalTransactionHistoryScreen() {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    });
+    }) + " WIB";
   };
 
   const getCategoryColor = (cat: string) => {
@@ -113,7 +144,7 @@ export default function DigitalTransactionHistoryScreen() {
               />
             </View>
           </View>
-          <TouchableOpacity style={styles.applyBtn} onPress={loadData}>
+          <TouchableOpacity style={styles.applyBtn} onPress={() => loadData(0)}>
             <Text style={styles.applyBtnText}>Terapkan</Text>
           </TouchableOpacity>
         </View>
@@ -122,9 +153,23 @@ export default function DigitalTransactionHistoryScreen() {
       <FlatList
         data={transactions}
         keyExtractor={(item) => item.id?.toString() ?? ""}
-        onRefresh={loadData}
-        refreshing={loading}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#E11D48']}
+          />
+        }
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
         contentContainerStyle={styles.listContainer}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color="#111827" />
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.card}

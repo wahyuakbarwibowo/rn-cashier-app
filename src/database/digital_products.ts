@@ -11,7 +11,7 @@ export interface DigitalProductMaster {
   created_at?: string;
 }
 
-export const getDigitalProducts = async (category?: string, provider?: string): Promise<DigitalProductMaster[]> => {
+export const getDigitalProducts = async (category?: string, provider?: string, limit?: number, offset?: number): Promise<DigitalProductMaster[]> => {
   const db = await getDB();
   let query = "SELECT * FROM digital_products";
   const params: any[] = [];
@@ -24,7 +24,13 @@ export const getDigitalProducts = async (category?: string, provider?: string): 
     params.push(category);
   }
 
-  query += " ORDER BY category ASC, provider ASC, nominal ASC";
+  query += " ORDER BY created_at DESC";
+
+  const pageSize = limit || 20;
+  const pageOffset = offset || 0;
+  query += " LIMIT ? OFFSET ?";
+  params.push(pageSize, pageOffset);
+
   return await db.getAllAsync<DigitalProductMaster>(query, params);
 };
 

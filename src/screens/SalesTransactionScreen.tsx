@@ -377,10 +377,40 @@ export default function SalesTransactionScreen() {
     }
   };
 
-  const handleReload = () => {
-    loadInitialData();
-    resetForm(); // Reset cart and other states too
-    showSnackbar("Data dan keranjang berhasil dimuat ulang", "success");
+  const handleReload = async () => {
+    try {
+      // Reload all data (products, customers, payment methods)
+      const [p, c, m] = await Promise.all([
+        getProducts(),
+        getCustomers(),
+        getPaymentMethods()
+      ]);
+
+      setProducts(p);
+      setCustomers(c);
+      setPaymentMethods(m);
+      if (m.length > 0) {
+        setSelectedPaymentMethodId(m[0].id!);
+      } else {
+        setSelectedPaymentMethodId(null);
+      }
+
+      // Update cart items with fresh product data to reflect latest stock
+      const productMap = new Map<number, Product>(
+        p.map(prod => [prod.id!, prod])
+      );
+      setCart(prevCart => {
+        return prevCart.map(item => {
+          const freshProduct = productMap.get(item.product.id!);
+          return freshProduct ? { ...item, product: freshProduct } : item;
+        });
+      });
+
+      showSnackbar("Data berhasil dimuat ulang", "success");
+    } catch (error) {
+      console.error("Error reloading data:", error);
+      showSnackbar("Gagal memuat ulang data. Coba lagi.", "error");
+    }
   };
 
   const showSnackbar = (message: string, type: 'success' | 'error' = 'success') => {
@@ -529,7 +559,7 @@ export default function SalesTransactionScreen() {
         showSnackbar("Transaksi berhasil diperbarui", "success");
         resetForm();
         exitEditMode();
-        navigation.navigate("SaleDetail", { saleId: editSaleId, from: "SalesTransaction" });
+        navigation.navigate("SaleDetail", { saleId: editSaleId });
         return;
       }
 
@@ -542,6 +572,7 @@ export default function SalesTransactionScreen() {
     } catch (error) {
       console.error("Transaction saving error:", error);
       showSnackbar("Gagal menyimpan transaksi. Coba lagi.", "error");
+    } finally {
       setIsSubmitting(false);
     }
   };

@@ -1,12 +1,12 @@
-import { DrawerScreenProps } from "@react-navigation/drawer";
-import { DrawerParamList } from "../navigation/types";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { StyleSheet, Text, TouchableOpacity, View, Image, Alert, ScrollView } from "react-native";
 import * as Print from 'expo-print';
+import { Product } from "../types/database";
 
-type Props = DrawerScreenProps<DrawerParamList, "ProductDetail">;
-
-export default function ProductDetailScreen({ route, navigation }: Props) {
-  const { product } = route.params;
+export default function ProductDetailScreen() {
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const { product }: { product: Product } = route.params;
 
   const formatPrice = (value?: number) =>
     value ? `Rp ${value.toLocaleString("id-ID")}` : "-";

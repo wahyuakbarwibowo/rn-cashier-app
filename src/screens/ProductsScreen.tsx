@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Alert, FlatList, StyleSheet, View } from "react-native";
-import { DrawerScreenProps } from "@react-navigation/drawer";
-import { DrawerParamList } from "../navigation/types";
+import React, { useCallback, useState } from "react";
+import { Alert, FlatList, StyleSheet, View, ActivityIndicator, RefreshControl } from "react-native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Product } from "../types/database";
 import { deleteProduct, getProducts } from "../database/products";
 import {
@@ -14,8 +13,6 @@ import {
   Title,
   useTheme,
 } from "react-native-paper";
-
-type Props = DrawerScreenProps<DrawerParamList, "Product">;
 
 interface ProductCardProps {
   item: Product;
@@ -85,20 +82,63 @@ function ProductCard({
   );
 }
 
-export default function ProductsScreen({ navigation }: Props) {
+export default function ProductsScreen() {
+  const navigation = useNavigation<any>();
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
   const theme = useTheme();
 
-  const loadProducts = useCallback(async () => {
-    const items = await getProducts();
-    setProducts(items);
+  const loadProducts = useCallback(async (page: number = 0) => {
+    try {
+      const isInitialLoad = page === 0;
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const offset = page * PAGE_SIZE;
+      const items = await getProducts(PAGE_SIZE, offset);
+
+      if (isInitialLoad) {
+        setProducts(items);
+        setCurrentPage(0);
+      } else {
+        setProducts(prev => [...prev, ...items]);
+        setCurrentPage(page);
+      }
+
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  useEffect(() => {
-    loadProducts();
-    const unsubscribe = navigation.addListener("focus", loadProducts);
-    return unsubscribe;
-  }, [loadProducts, navigation]);
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts(0);
+    }, [loadProducts])
+  );
+
+  const handleEndReached = () => {
+    if (!loadingMore && !loading && hasMore) {
+      loadProducts(currentPage + 1);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadProducts(0);
+  };
 
   const handleDelete = useCallback(
     (id: number) => {
@@ -186,6 +226,22 @@ export default function ProductsScreen({ navigation }: Props) {
         renderItem={renderProductItem}
         ItemSeparatorComponent={() => <Divider style={styles.listDivider} />}
         contentContainerStyle={styles.listContent}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#E11D48']}
+          />
+        }
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color="#111827" />
+            </View>
+          ) : null
+        }
         ListEmptyComponent={listEmptyComponent}
       />
     </View>

@@ -60,7 +60,7 @@ export default function ProfitLossScreen() {
         dateFilter = `created_at LIKE '${today}%'`;
       } else if (period === "week") {
         const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-        dateFilter = `date(created_at) >= date('${lastWeek}')`;
+        dateFilter = `created_at >= '${lastWeek}'`;
       } else if (period === "month") {
         const thisMonth = now.toISOString().slice(0, 7);
         dateFilter = `created_at LIKE '${thisMonth}%'`;

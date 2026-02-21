@@ -21,7 +21,7 @@ import {
 
 export default function DigitalTransactionDetailScreen() {
   const route = useRoute<any>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { trxId } = route.params;
 
@@ -67,7 +67,7 @@ export default function DigitalTransactionDetailScreen() {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    });
+    }) + " WIB";
   };
 
   if (loading) {

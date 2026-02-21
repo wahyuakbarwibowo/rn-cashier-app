@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { getDB } from "../database/initDB";
 import { useFocusEffect } from "@react-navigation/native";
@@ -13,19 +14,14 @@ import { useFocusEffect } from "@react-navigation/native";
 export default function PayablesScreen() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [])
-  );
-
-  const loadData = async () => {
+  const loadData = useCallback(async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (!isRefreshing) setLoading(true);
       const db = await getDB();
       const res = await db.getAllAsync(
-        `SELECT p.*, pur.created_at as purchase_date, s.phone as supplier_phone 
+        `SELECT p.*, pur.created_at as purchase_date, s.phone as supplier_phone
          FROM payables p
          JOIN purchases pur ON p.purchase_id = pur.id
          LEFT JOIN suppliers s ON p.supplier_id = s.id
@@ -36,8 +32,20 @@ export default function PayablesScreen() {
       console.error(e);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData(true);
+  }, [loadData]);
 
   const handleUpdateStatus = async (id: number, currentStatus: string) => {
     try {
@@ -60,6 +68,13 @@ export default function PayablesScreen() {
         <FlatList
           data={data}
           keyExtractor={(item) => item.id.toString()}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#E11D48']}
+            />
+          }
           renderItem={({ item }) => (
             <View style={styles.card}>
               <View style={styles.row}>

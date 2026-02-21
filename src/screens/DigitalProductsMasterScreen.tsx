@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -12,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import {
   getDigitalProducts,
@@ -49,23 +51,69 @@ export default function DigitalProductsMasterScreen() {
   // Loading States
   const [loadingSave, setLoadingSave] = useState(false);
   const [loadingSaveCat, setLoadingSaveCat] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [selectedFilterCategory, setSelectedFilterCategory] = useState<string | null>(null); // null = all
+  const [showCategoryFilter, setShowCategoryFilter] = useState(false);
+  const PAGE_SIZE = 20;
 
-  useEffect(() => {
-    loadProducts();
-    loadCategories();
+  const loadProductsAsync = useCallback(async (page: number = 0) => {
+    try {
+      const isInitialLoad = page === 0;
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const offset = page * PAGE_SIZE;
+      const data = await getDigitalProducts(selectedFilterCategory || undefined, undefined, PAGE_SIZE, offset);
+
+      if (isInitialLoad) {
+        setProducts(data);
+        setCurrentPage(0);
+      } else {
+        setProducts(prev => [...prev, ...data]);
+        setCurrentPage(page);
+      }
+
+      setHasMore(data.length === PAGE_SIZE);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  const loadProducts = async () => {
-    const data = await getDigitalProducts();
-    setProducts(data);
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadProductsAsync(0);
+      loadCategories();
+    }, [loadProductsAsync, selectedFilterCategory])
+  );
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     const data = await getDigitalCategories();
     setCategories(data);
     if (data.length > 0 && !category) {
       setCategory(data[0].name);
     }
+  }, [category]);
+
+  const handleEndReached = () => {
+    if (!loadingMore && !loading && hasMore) {
+      loadProductsAsync(currentPage + 1);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadProductsAsync(0);
   };
 
   const handleAddCategory = async () => {
@@ -80,7 +128,7 @@ export default function DigitalProductsMasterScreen() {
       setNewCatName("");
       setNewCatIcon("✨");
       setEditingCat(null);
-      loadCategories();
+      await loadCategories();
     } catch (e) {
       Alert.alert("Error", "Gagal menyimpan kategori");
     } finally {
@@ -100,7 +148,7 @@ export default function DigitalProductsMasterScreen() {
       {
         text: "Hapus", style: "destructive", onPress: async () => {
           await deleteDigitalCategory(id);
-          loadCategories();
+          await loadCategories();
         }
       }
     ]);
@@ -128,9 +176,9 @@ export default function DigitalProductsMasterScreen() {
       } else {
         await addDigitalProduct(payload);
       }
-      setModalVisible(false);
+      await loadProductsAsync(0);
       resetForm();
-      loadProducts();
+      setModalVisible(false);
     } catch (e) {
       console.error(e);
       Alert.alert("Error", "Gagal menyimpan data");
@@ -154,9 +202,9 @@ export default function DigitalProductsMasterScreen() {
     setCategory(product.category);
     setProvider(product.provider);
     setName(product.name);
-    setNominal(product.nominal.toString());
-    setCostPrice(product.cost_price.toString());
-    setSellingPrice(product.selling_price.toString());
+    setNominal((product.nominal ?? 0).toString());
+    setCostPrice((product.cost_price ?? 0).toString());
+    setSellingPrice((product.selling_price ?? 0).toString());
     setModalVisible(true);
   };
 
@@ -166,7 +214,7 @@ export default function DigitalProductsMasterScreen() {
       {
         text: "Hapus", style: "destructive", onPress: async () => {
           await deleteDigitalProduct(id);
-          loadProducts();
+          await loadProductsAsync(0);
         }
       }
     ]);
@@ -175,7 +223,14 @@ export default function DigitalProductsMasterScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={[styles.title, { marginRight: 10 }]}>📦 Produk Digital</Text>
+        <TouchableOpacity
+          style={[styles.filterBtn, showCategoryFilter && styles.filterBtnActive]}
+          onPress={() => setShowCategoryFilter(!showCategoryFilter)}
+        >
+          <Text style={[styles.filterBtnText, showCategoryFilter && styles.filterBtnTextActive]}>
+            📦 {selectedFilterCategory || 'All'}
+          </Text>
+        </TouchableOpacity>
         <View style={styles.headerBtns}>
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: '#3B82F6', marginRight: 8 }]}
@@ -194,9 +249,51 @@ export default function DigitalProductsMasterScreen() {
         </View>
       </View>
 
+      {showCategoryFilter && (
+        <View style={styles.categoryFilterContainer}>
+          <TouchableOpacity
+            style={[styles.categoryFilterPill, selectedFilterCategory === null && styles.categoryFilterPillActive]}
+            onPress={() => {
+              setSelectedFilterCategory(null);
+              setShowCategoryFilter(false);
+              loadProductsAsync(0);
+            }}
+          >
+            <Text style={[styles.categoryFilterText, selectedFilterCategory === null && styles.categoryFilterTextActive]}>
+              All Kategori
+            </Text>
+          </TouchableOpacity>
+          {categories.map(cat => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.categoryFilterPill, selectedFilterCategory === cat.name && styles.categoryFilterPillActive]}
+              onPress={() => {
+                setSelectedFilterCategory(cat.name);
+                setShowCategoryFilter(false);
+                loadProductsAsync(0);
+              }}
+            >
+              <Text style={[styles.categoryFilterText, selectedFilterCategory === cat.name && styles.categoryFilterTextActive]}>
+                {cat.icon} {cat.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       <FlatList
         data={products}
         keyExtractor={(item) => item.id?.toString() ?? ""}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color="#111827" />
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -382,8 +479,16 @@ export default function DigitalProductsMasterScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F3F4F6", padding: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  filterBtn: { backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#BFDBFE', flex: 1, marginRight: 12 },
+  filterBtnActive: { backgroundColor: '#111827', borderColor: '#111827' },
+  filterBtnText: { fontSize: 14, fontWeight: 'bold', color: '#3B82F6' },
+  filterBtnTextActive: { color: '#FFF' },
+  categoryFilterContainer: { backgroundColor: '#FFF', padding: 12, borderRadius: 12, marginBottom: 16, elevation: 2, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  categoryFilterPill: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  categoryFilterPillActive: { backgroundColor: '#111827', borderColor: '#111827' },
+  categoryFilterText: { fontSize: 12, fontWeight: '600', color: '#4B5563' },
+  categoryFilterTextActive: { color: '#FFF' },
   addBtn: { backgroundColor: '#111827', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
   addBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
   headerBtns: { flexDirection: 'row' },

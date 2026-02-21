@@ -15,7 +15,7 @@ export interface DigitalTransaction {
   created_at?: string;
 }
 
-export const getDigitalTransactions = async (startDate?: string, endDate?: string, category?: string): Promise<DigitalTransaction[]> => {
+export const getDigitalTransactions = async (startDate?: string, endDate?: string, category?: string, limit?: number, offset?: number): Promise<DigitalTransaction[]> => {
   const db = await getDB();
   let query = "SELECT * FROM phone_history";
   let params: any[] = [];
@@ -36,6 +36,12 @@ export const getDigitalTransactions = async (startDate?: string, endDate?: strin
   }
 
   query += " ORDER BY id DESC";
+
+  const pageSize = limit || 20;
+  const pageOffset = offset || 0;
+  query += " LIMIT ? OFFSET ?";
+  params.push(pageSize, pageOffset);
+
   return await db.getAllAsync<DigitalTransaction>(query, params);
 };
 

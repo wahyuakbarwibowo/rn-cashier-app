@@ -74,16 +74,20 @@ export async function addSale(
   return saleId;
 }
 
-export async function getAllSales(startDate?: string, endDate?: string) {
+export async function getAllSales(startDate?: string, endDate?: string, limit?: number, offset?: number) {
   const db = await getDB();
+  const pageSize = limit || 20;
+  const pageOffset = offset || 0;
+
   if (startDate && endDate) {
     return await db.getAllAsync<Sale>(
-      "SELECT * FROM sales WHERE date(created_at) BETWEEN ? AND ? ORDER BY id DESC",
-      [startDate, endDate]
+      "SELECT * FROM sales WHERE date(created_at) BETWEEN ? AND ? ORDER BY id DESC LIMIT ? OFFSET ?",
+      [startDate, endDate, pageSize, pageOffset]
     );
   }
   return await db.getAllAsync<Sale>(
-    "SELECT * FROM sales ORDER BY id DESC"
+    "SELECT * FROM sales ORDER BY id DESC LIMIT ? OFFSET ?",
+    [pageSize, pageOffset]
   );
 }
 

@@ -9,10 +9,8 @@ import { View, Text, StyleSheet } from "react-native";
 import { DrawerParamList } from "./types";
 import ProductsScreen from "../screens/ProductsScreen";
 import PurchaseFormScreen from "../screens/PurchaseFormScreen";
-import ProductDetailScreen from "../screens/ProductDetailScreen";
 import SalesTransactionScreen from "../screens/SalesTransactionScreen";
 import SalesHistoryScreen from "../screens/SalesHistoryScreen";
-import SaleDetailScreen from "../screens/SaleDetailScreen";
 import ReportsScreen from "../screens/ReportsScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import CustomersScreen from "../screens/CustomersScreen";
@@ -24,7 +22,6 @@ import BackupScreen from "../screens/BackupScreen";
 import DashboardScreen from "../screens/DashboardScreen";
 import SuppliersScreen from "../screens/SuppliersScreen";
 import DigitalTransactionHistoryScreen from "../screens/DigitalTransactionHistoryScreen";
-import DigitalTransactionDetailScreen from "../screens/DigitalTransactionDetailScreen";
 import DigitalProductsMasterScreen from "../screens/DigitalProductsMasterScreen";
 import DigitalCategoriesMasterScreen from "../screens/DigitalCategoriesMasterScreen";
 import DigitalReportsScreen from "../screens/DigitalReportsScreen";
@@ -32,7 +29,6 @@ import ExpensesScreen from "../screens/ExpensesScreen";
 import LowStockScreen from "../screens/LowStockScreen";
 import ProfitLossScreen from "../screens/ProfitLossScreen";
 import TopProductsScreen from "../screens/TopProductsScreen";
-import CustomerPointsHistoryScreen from "../screens/CustomerPointsHistoryScreen";
 import { getShopProfile } from "../database/settings";
 import ProductFormScreen from "../screens/ProductFormScreen";
 
@@ -191,41 +187,6 @@ export default function DrawerNavigator() {
       {/* 5. Pengaturan & Backup */}
       <Drawer.Screen name="Settings" component={SettingsScreen} options={{ title: '⚙️ Pengaturan Toko' }} />
       <Drawer.Screen name="Backup" component={BackupScreen} options={{ title: '💾 Backup & Restore' }} />
-
-      {/* Hidden Screens */}
-      <Drawer.Screen
-        name="SaleDetail"
-        component={SaleDetailScreen}
-        options={{
-          title: 'Detail Transaksi',
-          drawerItemStyle: { display: 'none' }
-        }}
-      />
-      <Drawer.Screen
-        name="ProductDetail"
-        component={ProductDetailScreen}
-        options={{
-          title: "Detail Product",
-          drawerItemStyle: { display: 'none' }
-        }}
-      />
-
-      <Drawer.Screen
-        name="DigitalDetail"
-        component={DigitalTransactionDetailScreen}
-        options={{
-          title: "Detail Transaksi Digital",
-          drawerItemStyle: { display: 'none' }
-        }}
-      />
-      <Drawer.Screen
-        name="CustomerPointsHistory"
-        component={CustomerPointsHistoryScreen}
-        options={{
-          title: "Riwayat Poin",
-          drawerItemStyle: { display: 'none' }
-        }}
-      />
     </Drawer.Navigator>
   )
 }

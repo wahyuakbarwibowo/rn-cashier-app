@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { getDB } from "../database/initDB";
 import { getShopProfile } from "../database/settings";
@@ -16,32 +17,16 @@ import { useFocusEffect } from "@react-navigation/native";
 export default function ReceivablesScreen() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [shopName, setShopName] = useState("");
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [])
-  );
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  };
-
-  const loadData = async () => {
+  const loadData = useCallback(async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (!isRefreshing) setLoading(true);
       const db = await getDB();
       const [res, shop] = await Promise.all([
         db.getAllAsync(
-          `SELECT r.*, c.name as customer_name, c.phone as customer_phone, s.created_at as sale_date 
+          `SELECT r.*, c.name as customer_name, c.phone as customer_phone, s.created_at as sale_date
            FROM receivables r
            JOIN customers c ON r.customer_id = c.id
            JOIN sales s ON r.sale_id = s.id
@@ -55,7 +40,30 @@ export default function ReceivablesScreen() {
       console.error(e);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData(true);
+  }, [loadData]);
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }) + " WIB";
   };
 
   const handleUpdateStatus = async (id: number, currentStatus: string) => {
@@ -110,6 +118,13 @@ export default function ReceivablesScreen() {
         <FlatList
           data={data}
           keyExtractor={(item) => item.id.toString()}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#E11D48']}
+            />
+          }
           renderItem={({ item }) => (
             <View style={styles.card}>
               <View style={styles.row}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { getSuppliers, addSupplier, updateSupplier, deleteSupplier } from "../database/suppliers";
 import { Supplier } from "../types/supplier";
 
@@ -21,22 +23,31 @@ export default function SuppliersScreen() {
   const [address, setAddress] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadSuppliers();
-  }, []);
-
-  const loadSuppliers = async () => {
+  const loadSuppliers = useCallback(async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (!isRefreshing) setLoading(true);
       const data = await getSuppliers();
       setSuppliers(data);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSuppliers();
+    }, [loadSuppliers])
+  );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadSuppliers(true);
+  }, [loadSuppliers]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -134,6 +145,13 @@ export default function SuppliersScreen() {
           <FlatList
             data={suppliers}
             keyExtractor={(item) => item.id!.toString()}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#E11D48']}
+              />
+            }
             renderItem={({ item }) => (
               <View style={styles.supplierItem}>
                 <View style={{ flex: 1 }}>

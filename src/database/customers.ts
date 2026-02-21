@@ -1,9 +1,14 @@
 import { getDB } from "./initDB";
 import { Customer } from "../types/database";
 
-export const getCustomers = async (): Promise<Customer[]> => {
+export const getCustomers = async (limit?: number, offset?: number): Promise<Customer[]> => {
   const db = await getDB();
-  return await db.getAllAsync<Customer>("SELECT * FROM customers ORDER BY name ASC");
+  const pageSize = limit || 20;
+  const pageOffset = offset || 0;
+  return await db.getAllAsync<Customer>(
+    "SELECT * FROM customers ORDER BY name ASC LIMIT ? OFFSET ?",
+    [pageSize, pageOffset]
+  );
 };
 
 export const addCustomer = async (customer: Omit<Customer, "id">): Promise<number> => {

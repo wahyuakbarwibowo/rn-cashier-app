@@ -11,6 +11,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { getExpenses, addExpense, deleteExpense, Expense } from "../database/expenses";
@@ -21,17 +23,59 @@ export default function ExpensesScreen() {
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
 
-  const loadExpenses = async () => {
-    const data = await getExpenses();
-    setExpenses(data);
-  };
+  const loadExpenses = useCallback(async (page: number = 0) => {
+    try {
+      const isInitialLoad = page === 0;
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const offset = page * PAGE_SIZE;
+      const data = await getExpenses(PAGE_SIZE, offset);
+
+      if (isInitialLoad) {
+        setExpenses(data);
+        setCurrentPage(0);
+      } else {
+        setExpenses(prev => [...prev, ...data]);
+        setCurrentPage(page);
+      }
+
+      setHasMore(data.length === PAGE_SIZE);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadExpenses();
-    }, [])
+      loadExpenses(0);
+    }, [loadExpenses])
   );
+
+  const handleEndReached = () => {
+    if (!loadingMore && !loading && hasMore) {
+      loadExpenses(currentPage + 1);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadExpenses(0);
+  };
 
   const handleAddExpense = async () => {
     if (!category || !amount) {
@@ -49,7 +93,7 @@ export default function ExpensesScreen() {
       setCategory("");
       setAmount("");
       setNotes("");
-      loadExpenses();
+      await loadExpenses(0);
     } catch (e) {
       console.error(e);
       Alert.alert("Error", "Gagal menyimpan pengeluaran");
@@ -64,7 +108,7 @@ export default function ExpensesScreen() {
         style: "destructive",
         onPress: async () => {
           await deleteExpense(id);
-          loadExpenses();
+          await loadExpenses(0);
         },
       },
     ]);
@@ -87,6 +131,22 @@ export default function ExpensesScreen() {
       <FlatList
         data={expenses}
         keyExtractor={(item) => item.id!.toString()}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#E11D48']}
+          />
+        }
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color="#111827" />
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.row}>

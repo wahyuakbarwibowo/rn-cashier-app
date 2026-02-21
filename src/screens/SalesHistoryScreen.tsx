@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { getAllSales } from "../database/sales";
 import { Sale } from "../types/database";
 import { TextInput } from "react-native";
@@ -16,27 +17,64 @@ export default function SalesHistoryScreen() {
   const navigation = useNavigation<any>();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
 
-  const loadSales = async () => {
+  const loadSales = async (page: number = 0) => {
     try {
-      setLoading(true);
+      const isInitialLoad = page === 0;
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const offset = page * PAGE_SIZE;
       const data = showFilter
-        ? await getAllSales(startDate, endDate)
-        : await getAllSales();
-      setSales(data);
+        ? await getAllSales(startDate, endDate, PAGE_SIZE, offset)
+        : await getAllSales(undefined, undefined, PAGE_SIZE, offset);
+
+      if (isInitialLoad) {
+        setSales(data);
+        setCurrentPage(0);
+      } else {
+        setSales(prev => [...prev, ...data]);
+        setCurrentPage(page);
+      }
+
+      // Check if we have more data
+      setHasMore(data.length === PAGE_SIZE);
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    loadSales();
-  }, [showFilter]);
+  useFocusEffect(
+    useCallback(() => {
+      loadSales(0);
+    }, [showFilter, startDate, endDate])
+  );
+
+  const handleEndReached = () => {
+    if (!loadingMore && !loading && hasMore) {
+      loadSales(currentPage + 1);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadSales(0);
+  };
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
@@ -48,7 +86,7 @@ export default function SalesHistoryScreen() {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    });
+    }) + " WIB";
   };
 
   if (loading) {
@@ -95,7 +133,7 @@ export default function SalesHistoryScreen() {
               />
             </View>
           </View>
-          <TouchableOpacity style={styles.applyBtn} onPress={loadSales}>
+          <TouchableOpacity style={styles.applyBtn} onPress={() => loadSales(0)}>
             <Text style={styles.applyBtnText}>Terapkan</Text>
           </TouchableOpacity>
         </View>
@@ -104,35 +142,50 @@ export default function SalesHistoryScreen() {
       <FlatList
         data={sales}
         keyExtractor={(item) => item.id?.toString() ?? ""}
-        onRefresh={loadSales}
-        refreshing={loading}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#E11D48']}
+          />
+        }
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
         contentContainerStyle={styles.listContainer}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color="#111827" />
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.saleCard}
-            onPress={() => navigation.navigate("SaleDetail", { saleId: item.id, from: "SalesHistory" })}
+            onPress={() => navigation.navigate("SaleDetail", { saleId: item.id })}
             activeOpacity={0.7}
           >
             <View style={styles.saleHeader}>
-              <Text style={styles.saleId}>TRX-{item.id?.toString().padStart(5, '0')}</Text>
+              <View style={styles.idBadge}>
+                <Text style={styles.saleId}>TRX-{item.id?.toString().padStart(5, '0')}</Text>
+              </View>
               <Text style={styles.saleDate}>{formatDate(item.created_at)}</Text>
             </View>
 
-            <View style={styles.divider} />
-
             <View style={styles.saleBody}>
-              <View>
-                <Text style={styles.label}>Total Belanja</Text>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.totalAmount}>
                   Rp {(item.total || 0).toLocaleString("id-ID")}
                 </Text>
+                <Text style={styles.paymentMethodText}>{item.payment_method_name || "Pembayaran"}</Text>
+                {item.customer_name && <Text style={styles.customerNameText}>{item.customer_name}</Text>}
               </View>
 
-              <View style={styles.paymentSection}>
-                <View style={styles.paymentInfo}>
-                  <Text style={styles.paymentText}>Dibayar: Rp {(item.paid || 0).toLocaleString("id-ID")}</Text>
-                  <Text style={styles.paymentText}>Kembali: Rp {(item.change || 0).toLocaleString("id-ID")}</Text>
-                  <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ alignItems: 'flex-end', marginRight: 12 }}>
+                  <Text style={styles.paidText}>Dibayar: Rp {(item.paid || 0).toLocaleString("id-ID")}</Text>
+                  <Text style={styles.changeText}>Kembali: Rp {(item.change || 0).toLocaleString("id-ID")}</Text>
+                  <View style={{ flexDirection: 'row', gap: 3, marginTop: 3 }}>
                     {(item.points_earned || 0) > 0 && (
                       <View style={styles.historyPointBadge}>
                         <Text style={styles.historyPointText}>+{item.points_earned} Pts</Text>
@@ -258,73 +311,77 @@ const styles = StyleSheet.create({
   },
   saleCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 3,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    elevation: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
   },
   saleHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 10,
+  },
+  idBadge: {
+    backgroundColor: "#EEF2FF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   saleId: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
     color: "#3B82F6",
   },
   saleDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6B7280",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#F3F4F6",
-    marginVertical: 12,
   },
   saleBody: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  label: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginBottom: 2,
+    alignItems: "center",
   },
   totalAmount: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#111827",
   },
-  paymentSection: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
+  paymentMethodText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
   },
-  paymentInfo: {
-    flex: 1,
-    alignItems: "flex-end",
-  },
-  paymentText: {
+  customerNameText: {
     fontSize: 12,
     color: "#374151",
+    marginTop: 2,
+  },
+  paidText: {
+    fontSize: 11,
+    color: "#374151",
+    fontWeight: "600",
+  },
+  changeText: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginTop: 2,
   },
   editBtnSmall: {
     backgroundColor: "#EFF6FF",
-    paddingVertical: 4,
+    paddingVertical: 3,
     paddingHorizontal: 8,
-    borderRadius: 6,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: "#BFDBFE",
   },
   editBtnSmallText: {
     color: "#3B82F6",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "bold",
   },
   emptyContainer: {
@@ -337,14 +394,14 @@ const styles = StyleSheet.create({
   },
   historyPointBadge: {
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 0.5,
     borderColor: '#D1FAE5',
   },
   historyPointText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     color: '#059669',
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
     View,
     Text,
@@ -7,7 +7,7 @@ import {
     ActivityIndicator,
     RefreshControl,
 } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useFocusEffect } from "@react-navigation/native";
 import { getDB } from "../database/initDB";
 import { CustomerPointsHistory } from "../types/database";
 
@@ -16,33 +16,62 @@ export default function CustomerPointsHistoryScreen() {
     const { customerId, customerName } = route.params;
 
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [history, setHistory] = useState<CustomerPointsHistory[]>([]);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const PAGE_SIZE = 20;
 
-    useEffect(() => {
-        loadHistory();
-    }, [customerId]);
-
-    const loadHistory = async () => {
+    const loadHistory = useCallback(async (page: number = 0) => {
         try {
-            setLoading(true);
+            const isInitialLoad = page === 0;
+            if (isInitialLoad) {
+                setLoading(true);
+            } else {
+                setLoadingMore(true);
+            }
+
+            const offset = page * PAGE_SIZE;
             const db = await getDB();
             const data = await db.getAllAsync<CustomerPointsHistory>(
-                "SELECT * FROM customer_points_history WHERE customer_id = ? ORDER BY created_at DESC",
-                [customerId]
+                "SELECT * FROM customer_points_history WHERE customer_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                [customerId, PAGE_SIZE, offset]
             );
-            setHistory(data);
+
+            if (isInitialLoad) {
+                setHistory(data);
+                setCurrentPage(0);
+            } else {
+                setHistory(prev => [...prev, ...data]);
+                setCurrentPage(page);
+            }
+
+            setHasMore(data.length === PAGE_SIZE);
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
             setRefreshing(false);
         }
-    };
+    }, [customerId]);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadHistory(0);
+        }, [loadHistory])
+    );
 
     const onRefresh = () => {
         setRefreshing(true);
-        loadHistory();
+        loadHistory(0);
+    };
+
+    const handleEndReached = () => {
+        if (!loadingMore && !loading && hasMore) {
+            loadHistory(currentPage + 1);
+        }
     };
 
     const renderItem = ({ item }: { item: CustomerPointsHistory }) => (
@@ -90,6 +119,15 @@ export default function CustomerPointsHistoryScreen() {
                     renderItem={renderItem}
                     contentContainerStyle={styles.listContent}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                    onEndReached={handleEndReached}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={
+                        loadingMore ? (
+                            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                                <ActivityIndicator size="small" color="#111827" />
+                            </View>
+                        ) : null
+                    }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <Text style={styles.emptyText}>Belum ada riwayat poin.</Text>

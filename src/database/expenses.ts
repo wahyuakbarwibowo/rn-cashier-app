@@ -8,9 +8,14 @@ export interface Expense {
   created_at?: string;
 }
 
-export const getExpenses = async (): Promise<Expense[]> => {
+export const getExpenses = async (limit?: number, offset?: number): Promise<Expense[]> => {
   const db = await getDB();
-  return await db.getAllAsync<Expense>("SELECT * FROM expenses ORDER BY created_at DESC");
+  const pageSize = limit || 20;
+  const pageOffset = offset || 0;
+  return await db.getAllAsync<Expense>(
+    "SELECT * FROM expenses ORDER BY created_at DESC LIMIT ? OFFSET ?",
+    [pageSize, pageOffset]
+  );
 };
 
 export const addExpense = async (expense: Omit<Expense, "id">): Promise<number> => {

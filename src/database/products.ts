@@ -23,9 +23,14 @@ export const addProduct = async (product: Product): Promise<void> => {
 };
 
 // Ambil semua produk
-export const getProducts = async (): Promise<Product[]> => {
+export const getProducts = async (limit?: number, offset?: number): Promise<Product[]> => {
   const db = await getDB();
-  const result = await db.getAllAsync<Product>("SELECT * FROM products ORDER BY id DESC");
+  const pageSize = limit || 20;
+  const pageOffset = offset || 0;
+  const result = await db.getAllAsync<Product>(
+    "SELECT * FROM products ORDER BY id DESC LIMIT ? OFFSET ?",
+    [pageSize, pageOffset]
+  );
   return result;
 };
 

@@ -7,7 +7,6 @@ export type DrawerParamList = {
   PurchaseForm: { addProductId?: number };
   SalesTransaction: { addProductId?: number };
   SalesHistory: undefined;
-  SaleDetail: { saleId: number };
   Reports: undefined;
   Settings: undefined;
   Customers: undefined;
@@ -19,13 +18,18 @@ export type DrawerParamList = {
   Expenses: undefined;
   LowStock: undefined;
   Backup: undefined;
-  ProductDetail: { product: Product };
   DigitalHistory: undefined;
-  DigitalDetail: { trxId: number };
   DigitalProductsMaster: undefined;
   DigitalCategoriesMaster: undefined;
   DigitalReports: undefined;
   ProfitLoss: undefined;
   TopProducts: undefined;
+};
+
+export type RootStackParamList = {
+  Main: undefined;
+  SaleDetail: { saleId: number };
+  ProductDetail: { product: Product };
+  DigitalDetail: { trxId: number };
   CustomerPointsHistory: { customerId: number; customerName: string };
-}
+};

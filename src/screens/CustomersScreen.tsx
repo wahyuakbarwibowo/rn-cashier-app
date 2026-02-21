@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from "../database/customers";
 import { Customer } from "../types/database";
 
@@ -23,21 +24,57 @@ export default function CustomersScreen() {
   const [address, setAddress] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
 
-  useEffect(() => {
-    loadCustomers();
-  }, []);
-
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async (page: number = 0) => {
     try {
-      setLoading(true);
-      const data = await getCustomers();
-      setCustomers(data);
+      const isInitialLoad = page === 0;
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const offset = page * PAGE_SIZE;
+      const data = await getCustomers(PAGE_SIZE, offset);
+
+      if (isInitialLoad) {
+        setCustomers(data);
+        setCurrentPage(0);
+      } else {
+        setCustomers(prev => [...prev, ...data]);
+        setCurrentPage(page);
+      }
+
+      setHasMore(data.length === PAGE_SIZE);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
     }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCustomers(0);
+    }, [loadCustomers])
+  );
+
+  const handleEndReached = () => {
+    if (!loadingMore && !loading && hasMore) {
+      loadCustomers(currentPage + 1);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadCustomers(0);
   };
 
   const handleSave = async () => {
@@ -137,6 +174,22 @@ export default function CustomersScreen() {
           <FlatList
             data={customers}
             keyExtractor={(item) => item.id!.toString()}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#E11D48']}
+              />
+            }
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color="#111827" />
+                </View>
+              ) : null
+            }
             renderItem={({ item }) => (
               <View style={styles.customerItem}>
                 <View style={{ flex: 1 }}>

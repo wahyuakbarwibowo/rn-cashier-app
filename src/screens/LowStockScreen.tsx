@@ -6,6 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { getProducts } from "../database/products";
@@ -14,27 +16,33 @@ import { Product } from "../types/database";
 export default function LowStockScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<any>();
 
-  const loadLowStock = async () => {
+  const loadLowStock = useCallback(async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (!isRefreshing) setLoading(true);
       const allProducts = await getProducts();
-      // Filter products with stock < 10 (or whatever threshold)
       const lowStock = allProducts.filter(p => (p.stock || 0) < 10);
       setProducts(lowStock);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       loadLowStock();
-    }, [])
+    }, [loadLowStock])
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadLowStock(true);
+  }, [loadLowStock]);
 
   return (
     <View style={styles.container}>
@@ -46,6 +54,13 @@ export default function LowStockScreen() {
       <FlatList
         data={products}
         keyExtractor={(item) => item.id!.toString()}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#E11D48']}
+          />
+        }
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.row}>

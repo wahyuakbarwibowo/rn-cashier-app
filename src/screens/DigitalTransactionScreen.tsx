@@ -144,9 +144,16 @@ export default function DigitalTransactionScreen() {
 
   const loadCategories = async () => {
     const data = await getDigitalCategories();
-    setCategories(data);
-    if (data.length > 0 && !category) {
-      setCategory(data[0].name);
+    // Taruh kategori default (PULSA) di paling kiri
+    const defaultCat = "PULSA";
+    const sorted = [...data].sort((a, b) => {
+      if (a.name === defaultCat) return -1;
+      if (b.name === defaultCat) return 1;
+      return 0;
+    });
+    setCategories(sorted);
+    if (sorted.length > 0 && !category) {
+      setCategory(sorted[0].name);
     }
   };
 
@@ -302,6 +309,7 @@ export default function DigitalTransactionScreen() {
     } catch (e) {
       console.error("Transaction error:", e);
       Alert.alert("Error", "Gagal menyimpan transaksi");
+    } finally {
       setIsSubmitting(false);
     }
   };

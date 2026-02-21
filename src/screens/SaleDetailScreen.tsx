@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   StyleSheet,
   FlatList,
   Alert,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import { useRoute, useNavigation, useFocusEffect } from "@react-navigation/native";
 import {
   Card,
   Text,
@@ -28,7 +28,7 @@ type SaleWithMeta = Sale & {
 
 export default function SaleDetailScreen() {
   const route = useRoute<any>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { saleId } = route.params;
 
@@ -37,9 +37,11 @@ export default function SaleDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [printing, setPrinting] = useState(false);
 
-  useEffect(() => {
-    loadSaleDetail();
-  }, [saleId]);
+  useFocusEffect(
+    useCallback(() => {
+      loadSaleDetail();
+    }, [saleId])
+  );
 
   const loadSaleDetail = async () => {
     try {
@@ -80,7 +82,7 @@ export default function SaleDetailScreen() {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    });
+    }) + " WIB";
   };
 
   if (loading) {
@@ -232,14 +234,7 @@ export default function SaleDetailScreen() {
               style={styles.backButton}
               contentStyle={styles.buttonContent}
               labelStyle={styles.buttonLabel}
-              onPress={() => {
-                const params = route.params as any;
-                if (params?.from === "SalesHistory") {
-                  navigation.navigate("SalesHistory" as never);
-                } else {
-                  navigation.goBack();
-                }
-              }}
+              onPress={() => navigation.goBack()}
             >
               Kembali
             </Button>

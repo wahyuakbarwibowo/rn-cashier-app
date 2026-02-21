@@ -134,7 +134,13 @@ export default function TopProductsScreen() {
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderProductItem}
             contentContainerStyle={styles.listContent}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#E11D48']}
+              />
+            }
             ListHeaderComponent={
               <View style={styles.listHeader}>
                 <Text style={styles.headerTitle}>10 Produk Terlaris 🏆</Text>
